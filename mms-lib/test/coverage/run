@@ -1,0 +1,38 @@
+#!/bin/bash
+#
+# This script requires lcov to be installed
+#
+
+TESTS="mms_codec read_report retrieve retrieve_cancel"
+FLAVOR="release"
+
+pushd `dirname $0` > /dev/null
+COV_DIR="$PWD"
+pushd .. > /dev/null
+TEST_DIR="$PWD"
+pushd .. > /dev/null
+BASE_DIR="$PWD"
+popd > /dev/null
+popd > /dev/null
+popd > /dev/null
+
+for t in $TESTS ; do
+    make -C "$TEST_DIR/$t" clean
+done
+
+for t in $TESTS ; do
+    make GCOV=1 -C "$TEST_DIR/$t" $FLAVOR || exit 1
+done
+
+for t in $TESTS ; do
+    pushd "$TEST_DIR/$t"
+    build/$FLAVOR/test_$t || exit 1
+    popd
+done
+
+FULL_COV="$COV_DIR/full.gcov"
+MMSLIB_COV="$COV_DIR/mms-lib.gcov"
+rm -f "$FULL_COV" "$MMSLIB_COV"
+lcov -c -d "$BASE_DIR/build/$FLAVOR" -b "$BASE_DIR" -o "$FULL_COV" || exit 1
+lcov -e "$FULL_COV" "$BASE_DIR/src/*" -o "$MMSLIB_COV" || exit 1
+genhtml "$MMSLIB_COV" --output-directory "$COV_DIR/results" || exit 1

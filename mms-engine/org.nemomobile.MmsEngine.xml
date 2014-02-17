@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE node PUBLIC
+  "-//freedesktop//DTD D-Bus Object Introspection 1.0//EN"
+  "http://standards.freedesktop.org/dbus/1.0/introspect.dtd">
+<node>
+  <interface name="org.nemomobile.MmsEngine">
+
+    <!--
+        ===============================================================
+
+        Cancels sending, receiving or any other activity related to
+        the specified message. This needs to be done when message is
+        being deleted before it has been completely received/sent.
+
+        ===============================================================
+    -->
+    <method name="cancel">
+      <!--
+          Database record id.
+      -->
+      <arg direction="in" type="i" name="recId"/>
+    </method> 
+
+    <!--
+        ===============================================================
+        ======================== R E C E I V E ========================
+        ===============================================================
+    -->
+
+    <!--
+        ===============================================================
+
+        Initiates manual receive. Does nothing if this message is being
+        processed. If processing is deferred due to a network error,
+        wakes it up and retries immediately.
+
+        ===============================================================
+    -->
+    <method name="receiveMessage">
+      <!--
+          Database record id.
+      -->
+      <arg direction="in" type="i" name="recId"/>
+      <!--
+          Subscriber identity. This must be IMSI of the SIM received the
+          original push message.
+      -->
+      <arg direction="in" type="s" name="imsi"/>
+      <!--
+          Automatic vs manual mode. If this is TRUE then MMS engine
+          will automatically retry in case of a network error.
+          Otherwise, it will wait for another receiveMessage call.
+      -->
+      <arg direction="in" type="b" name="auto"/>
+      <!--
+          Raw push message.
+      -->
+      <arg direction="in" type="ay" name="data">
+        <annotation name="org.gtk.GDBus.C.ForceGVariant" value="true"/>
+      </arg>
+    </method>
+
+    <!--
+        ===============================================================
+
+        Send a read report.
+
+        ===============================================================
+    -->
+    <method name="sendReadReport">
+      <!--
+          Database record id.
+      -->
+      <arg direction="in" type="i" name="recId"/>
+      <!--
+          Subscriber identity. This must be IMSI of the SIM received the
+          original message.
+      -->
+      <arg direction="in" type="s" name="imsi"/>
+      <!--
+          Message-ID.
+      -->
+      <arg direction="in" type="s" name="mmsId"/>
+      <!--
+          Sender of the original message (recipient of the read report)
+      -->
+      <arg direction="in" type="s" name="to"/>
+      <!--
+          Read status:
+
+          0: Read
+          1: Deleted without reading
+      -->
+      <arg direction="in" type="i" name="status"/>
+    </method> 
+
+    <!--
+        ===============================================================
+        =========================== S E N D ===========================
+        ===============================================================
+    -->
+
+    <!--
+        ===============================================================
+
+        Send a message.
+
+        ===============================================================
+    -->
+    <method name="sendMessage">
+      <!--
+          Database record id.
+      -->
+      <arg direction="in" type="i" name="recId"/>
+      <!--
+          Subscriber identity. If empty, MMS engine can use any
+          available SIM to send the message. The actual IMSI is
+          returned by this call and must be stored in the database.
+      -->
+      <arg direction="in" type="s" name="imsi"/>
+      <!--
+          To: list.
+      -->
+      <arg direction="in" type="as" name="to"/>
+      <!--
+          Cc: list.
+      -->
+      <arg direction="in" type="as" name="cc"/>
+      <!--
+          Bcc: list.
+      -->
+      <arg direction="in" type="as" name="bcc"/>
+      <!--
+          Message subject.
+      -->
+      <arg direction="in" type="s" name="subject"/>
+      <!--
+          Request delivery report:
+
+          TRUE:  Yes, please
+          FALSE: No, thank you
+      -->
+      <arg direction="in" type="b" name="deliveryReport"/>
+      <!--
+          Request read report:
+
+          TRUE:  Yes, please
+          FALSE: No, thank you
+      -->
+      <arg direction="in" type="b" name="readReport"/>
+      <!--
+          Each variant in the parts array is (sss):
+
+          s - file name
+          s - content type (including charset)
+          s - content id (optional)
+
+          If SMIL attachment is missing, MMS engine will automatically
+          generate one from a template. In that case content ids are
+          generated by the MMS engine, if they are empty.
+      -->
+      <arg direction="in" type="av" name="parts"/>
+      <!--
+          The actual IMSI that will be used to send this message.
+          Should be stored in the database.
+      -->
+      <arg direction="out" type="s" name="imsiActual"/>
+    </method> 
+
+    <!--
+        ===============================================================
+        ================== M I S C E L L A N E O U S ==================
+        ===============================================================
+    -->
+
+    <!-- Handles calls from push-forwarder plugin -->
+    <method name="push">
+      <arg type="s" name="imsi" direction="in"/>
+      <arg type="s" name="from" direction="in"/>
+      <arg type="u" name="remote_time" direction="in"/>
+      <arg type="u" name="local_time" direction="in"/>
+      <arg type="i" name="dst_port" direction="in"/>
+      <arg type="i" name="src_port" direction="in"/>
+      <arg type="s" name="content_type" direction="in"/>
+      <arg type="ay" name="data" direction="in">
+        <annotation name="org.gtk.GDBus.C.ForceGVariant" value="true"/>
+      </arg>
+    </method>
+
+    <!-- Handles calls from push-agent service -->
+    <method name="pushNotify">
+      <arg type="s" name="imsi" direction="in"/>
+      <arg type="s" name="content_type" direction="in"/>
+      <arg type="ay" name="data" direction="in">
+        <annotation name="org.gtk.GDBus.C.ForceGVariant" value="true"/>
+      </arg>
+    </method>
+
+    <method name="setLogLevel">
+      <arg type="s" name="module" direction="in"/>
+      <arg type="i" name="level" direction="in"/>
+    </method>
+
+    <method name="setLogType">
+      <arg type="s" name="type" direction="in"/>
+    </method>
+
+    <method name="test"/>
+
+  </interface>
+</node>
