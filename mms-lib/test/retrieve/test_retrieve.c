@@ -18,6 +18,7 @@
 
 #include "mms_log.h"
 #include "mms_codec.h"
+#include "mms_file_util.h"
 #include "mms_lib_log.h"
 #include "mms_lib_util.h"
 #include "mms_dispatcher.h"
@@ -40,6 +41,7 @@ typedef struct test_desc {
     const char* rc_file;
     unsigned int status;
     const char* content_type;
+    const char* attic_file;
     MMS_RECEIVE_STATE expected_state;
     enum mms_message_type reply_msg;
     int flags;
@@ -51,6 +53,7 @@ typedef struct test_desc {
 
 typedef struct test {
     const TestDesc* desc;
+    const MMSConfig* config;
     MMSDispatcherDelegate delegate;
     MMSConnMan* cm;
     MMSHandler* handler;
@@ -71,6 +74,7 @@ static const TestDesc retrieve_tests[] = {
         "m-retrieve.conf",
         SOUP_STATUS_OK,
         MMS_CONTENT_TYPE,
+        NULL,
         MMS_RECEIVE_STATE_DECODING,
         MMS_MESSAGE_TYPE_ACKNOWLEDGE_IND,
         0
@@ -81,6 +85,7 @@ static const TestDesc retrieve_tests[] = {
         "m-retrieve.conf",
         SOUP_STATUS_OK,
         MMS_CONTENT_TYPE,
+        NULL,
         MMS_RECEIVE_STATE_DECODING,
         MMS_MESSAGE_TYPE_ACKNOWLEDGE_IND,
         TEST_DEFER_RECEIVE
@@ -90,6 +95,7 @@ static const TestDesc retrieve_tests[] = {
         "m-notification.ind",
         NULL,
         SOUP_STATUS_NOT_FOUND,
+        NULL,
         NULL,
         MMS_RECEIVE_STATE_DOWNLOAD_ERROR,
         MMS_MESSAGE_TYPE_NONE,
@@ -101,6 +107,7 @@ static const TestDesc retrieve_tests[] = {
         NULL,
         SOUP_STATUS_TRY_AGAIN,
         NULL,
+        NULL,
         MMS_RECEIVE_STATE_DOWNLOAD_ERROR,
         MMS_MESSAGE_TYPE_NONE,
         0
@@ -111,6 +118,7 @@ static const TestDesc retrieve_tests[] = {
         "not-allowed.html",
         SOUP_STATUS_BAD_REQUEST,
         "text/html",
+        NULL,
         MMS_RECEIVE_STATE_DOWNLOAD_ERROR,
         MMS_MESSAGE_TYPE_NONE,
         0
@@ -121,6 +129,7 @@ static const TestDesc retrieve_tests[] = {
         "not-found.html",
         SOUP_STATUS_NOT_FOUND,
         "text/html",
+        NULL,
         MMS_RECEIVE_STATE_DOWNLOAD_ERROR,
         MMS_MESSAGE_TYPE_NONE,
         0
@@ -131,6 +140,7 @@ static const TestDesc retrieve_tests[] = {
         "garbage",
         SOUP_STATUS_OK,
         MMS_CONTENT_TYPE,
+        NULL,
         MMS_RECEIVE_STATE_DECODING_ERROR,
         MMS_MESSAGE_TYPE_NOTIFYRESP_IND,
         0
@@ -141,6 +151,7 @@ static const TestDesc retrieve_tests[] = {
         NULL,
         0,
         NULL,
+        "000/push.pdu",
         MMS_RECEIVE_STATE_INVALID,
         MMS_MESSAGE_TYPE_NONE,
         TEST_PUSH_HANDLING_FAILURE_OK
@@ -151,6 +162,7 @@ static const TestDesc retrieve_tests[] = {
         NULL,
         0,
         NULL,
+        "000/push.pdu",
         MMS_RECEIVE_STATE_INVALID,
         MMS_MESSAGE_TYPE_NONE,
         TEST_PUSH_HANDLING_FAILURE_OK
@@ -161,6 +173,7 @@ static const TestDesc retrieve_tests[] = {
         NULL,
         0,
         NULL,
+        NULL,
         MMS_RECEIVE_STATE_INVALID,
         MMS_MESSAGE_TYPE_NONE,
         0
@@ -170,6 +183,7 @@ static const TestDesc retrieve_tests[] = {
         "m-delivery.ind",
         NULL,
         0,
+        NULL,
         NULL,
         MMS_RECEIVE_STATE_INVALID,
         MMS_MESSAGE_TYPE_NONE,
@@ -182,27 +196,28 @@ void
 test_finish(
     Test* test)
 {
-    const char* name = test->desc->name;
+    const TestDesc* desc = test->desc;
+    const char* name = desc->name;
     if (test->ret == RET_OK) {
         MMS_RECEIVE_STATE state;
         state = mms_handler_test_receive_state(test->handler, NULL);
-        if (state != test->desc->expected_state) {
+        if (state != desc->expected_state) {
             test->ret = RET_ERR;
             MMS_ERR("Test %s state %d, expected %d", name, state,
-                test->desc->expected_state);
+                desc->expected_state);
         } else {
             const void* resp_data = NULL;
             gsize resp_len = 0;
             GBytes* reply = test_http_get_post_data(test->http);
             if (reply) resp_data = g_bytes_get_data(reply, &resp_len);
             if (resp_len > 0) {
-                if (test->desc->reply_msg) {
+                if (desc->reply_msg) {
                     MMSPdu* pdu = g_new0(MMSPdu, 1);
                     if (mms_message_decode(resp_data, resp_len, pdu)) {
-                        if (pdu->type != test->desc->reply_msg) {
+                        if (pdu->type != desc->reply_msg) {
                             test->ret = RET_ERR;
                             MMS_ERR("Test %s reply %u, expected %u", name,
-                                pdu->type, test->desc->reply_msg);
+                                pdu->type, desc->reply_msg);
                         }
                     } else {
                         test->ret = RET_ERR;
@@ -213,11 +228,43 @@ test_finish(
                     test->ret = RET_ERR;
                     MMS_ERR("Test %s expects no reply", name);
                 }
-            } else if (test->desc->reply_msg) {
+            } else if (desc->reply_msg) {
                 test->ret = RET_ERR;
                 MMS_ERR("Test %s expects reply", name);
             }
         }
+    }
+    if (test->ret == RET_OK && desc->attic_file) {
+        gboolean ok = FALSE;
+        const char* dir = desc->dir ? desc->dir : desc->name;
+        char* f1 = g_strconcat(DATA_DIR, dir, "/", desc->ni_file, NULL);
+        char* f2 = g_strconcat(test->config->root_dir, "/" MMS_ATTIC_DIR "/",
+            desc->attic_file, NULL);
+        GMappedFile* m1 = g_mapped_file_new(f1, FALSE, NULL);
+        if (m1) {
+            GMappedFile* m2 = g_mapped_file_new(f2, FALSE, NULL);
+            if (m2) {
+                const gsize len = g_mapped_file_get_length(m1);
+                if (len == g_mapped_file_get_length(m2)) {
+                    const void* ptr1 = g_mapped_file_get_contents(m1);
+                    const void* ptr2 = g_mapped_file_get_contents(m2);
+                    ok = !memcmp(ptr1, ptr2, len);
+                }
+                g_mapped_file_unref(m2);
+          }
+            g_mapped_file_unref(m1);
+        }
+        if (ok) {
+            char* dir = g_path_get_dirname(f2);
+            remove(f2);
+            remove(dir);
+            g_free(dir);
+        } else {
+            test->ret = RET_ERR;
+            MMS_ERR("%s is not identical to %s", f2, f1);
+        }
+        g_free(f1);
+        g_free(f2);
     }
     MMS_INFO("Test %s %s", name, (test->ret == RET_OK) ? "OK" : "FAILED");
     mms_handler_test_reset(test->handler);
@@ -265,6 +312,7 @@ test_init(
     char* rc = desc->rc_file ? g_strconcat(DATA_DIR, dir, "/",
         desc->rc_file, NULL) : NULL;
     memset(test, 0, sizeof(*test));
+    test->config = config;
     test->notification_ind = g_mapped_file_new(ni, FALSE, &error);
     if (test->notification_ind) {
         if (rc) test->retrieve_conf = g_mapped_file_new(rc, FALSE, &error);
@@ -342,8 +390,8 @@ test_retrieve_once(
             }
         } else {
             if (desc->flags & TEST_PUSH_HANDLING_FAILURE_OK) {
-                MMS_INFO("Test %s OK", desc->name);
                 test.ret = RET_OK;
+                test_finish(&test);
             } else {
                 MMS_INFO("Test %s FAILED", desc->name);
             }
@@ -415,6 +463,7 @@ int main(int argc, char* argv[])
         MMS_VERBOSE("Temporary directory %s", tmpd);
         config.root_dir = tmpd;
         config.idle_secs = 0;
+        config.attic_enabled = TRUE;
         ret = test_retrieve(&config, test_name);
         remove(tmpd);
         g_free(tmpd);
