@@ -26,6 +26,7 @@ struct test_http {
     GBytes* req_bytes;
     int resp_status;
     char* resp_content_type;
+    gboolean disconnected;
 };
 
 static
@@ -46,12 +47,12 @@ test_http_callback(
         soup_message_set_status(msg, SOUP_STATUS_NOT_IMPLEMENTED);
     } else {
         TestHttp* http = data;
-	if (msg->request_body->length) {
+        if (msg->request_body->length) {
             SoupBuffer* request = soup_message_body_flatten(msg->request_body);
             if (http->req_bytes) g_bytes_unref(http->req_bytes);
             http->req_bytes = g_bytes_new_with_free_func(request->data,
                 request->length, (GDestroyNotify)soup_buffer_free, request);
-	}
+        }
         soup_message_set_status(msg, http->resp_status);
         soup_message_headers_set_content_type(msg->response_headers,
             http->resp_content_type ? http->resp_content_type : "text/plain",
@@ -91,7 +92,10 @@ void
 test_http_close(
     TestHttp* http)
 {
-    soup_server_quit(http->server);
+    if (http && !http->disconnected) {
+        http->disconnected = TRUE;
+        soup_server_disconnect(http->server);
+    }
 }
 
 TestHttp*
