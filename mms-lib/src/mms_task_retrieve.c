@@ -66,11 +66,12 @@ mms_task_retrieve_finish_transfer(
     MMSTaskRetrieve* retrieve)
 {
     if (retrieve->tx) {
+        MMSHttpTransfer* tx = retrieve->tx;
         g_signal_handler_disconnect(retrieve->tx->message,
             retrieve->got_chunk_signal_id);
         retrieve->got_chunk_signal_id = 0;
-        mms_http_transfer_free(retrieve->tx);
         retrieve->tx = NULL;
+        mms_http_transfer_free(tx);
     }
 }
 
@@ -99,7 +100,6 @@ mms_task_retrieve_finished(
     gpointer user_data)
 {
     MMSTaskRetrieve* retrieve = user_data;
-    MMS_ASSERT(retrieve->tx && (retrieve->tx->session == session));
     if (retrieve->tx && (retrieve->tx->session == session)) {
         MMS_TASK_STATE next_state = MMS_TASK_STATE_SLEEP;
         MMSTask* task = &retrieve->task;
@@ -145,7 +145,7 @@ mms_task_retrieve_finished(
         /* Switch the state */
         mms_task_set_state(task, next_state);
     } else {
-        MMS_VERBOSE_("ignoring stale completion message");
+        MMS_VERBOSE_("Ignoring stale completion message");
     }
 }
 
