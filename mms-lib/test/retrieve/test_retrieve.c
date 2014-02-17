@@ -251,13 +251,13 @@ test_finish(
                     ok = !memcmp(ptr1, ptr2, len);
                 }
                 g_mapped_file_unref(m2);
-          }
+            }
             g_mapped_file_unref(m1);
         }
         if (ok) {
             char* dir = g_path_get_dirname(f2);
             remove(f2);
-            remove(dir);
+            rmdir(dir);
             g_free(dir);
         } else {
             test->ret = RET_ERR;
