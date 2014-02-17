@@ -174,24 +174,6 @@ typedef gboolean (*header_handler)(struct wsp_header_iter *, void *);
 typedef gboolean (*header_encoder)(struct file_buffer *, enum mms_header,
 									void *);
 
-char *mms_content_type_get_param_value(const char *content_type,
-						const char *param_name)
-{
-	struct wsp_text_header_iter iter;
-
-	if (wsp_text_header_iter_init(&iter, content_type) == FALSE)
-		return NULL;
-
-	while (wsp_text_header_iter_param_next(&iter) == TRUE) {
-		const char *key = wsp_text_header_iter_get_key(&iter);
-
-		if (g_str_equal(key, param_name) == TRUE)
-			return g_strdup(wsp_text_header_iter_get_value(&iter));
-	}
-
-	return NULL;
-}
-
 static const char *charset_index2string(unsigned int index)
 {
 	int low = 0;
@@ -1947,22 +1929,4 @@ gboolean mms_message_encode(struct mms_message *msg, int fd)
 	}
 
 	return FALSE;
-}
-
-const char *mms_message_status_get_string(enum mms_message_status status)
-{
-	switch (status) {
-	case MMS_MESSAGE_STATUS_DOWNLOADED:
-		return "downloaded";
-	case MMS_MESSAGE_STATUS_RECEIVED:
-		return "received";
-	case MMS_MESSAGE_STATUS_READ:
-		return "read";
-	case MMS_MESSAGE_STATUS_SENT:
-		return "sent";
-	case MMS_MESSAGE_STATUS_DRAFT:
-		return "draft";
-	}
-
-	return NULL;
 }
