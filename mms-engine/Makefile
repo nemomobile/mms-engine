@@ -145,7 +145,7 @@ RELEASE_EXE = $(RELEASE_BUILD_DIR)/$(EXE)
 
 debug: $(DEBUG_DEPS) $(DEBUG_EXE)
 
-release: $(RELEASE_DEPS) $(RELEASE_EXE) 
+release: $(RELEASE_DEPS) $(RELEASE_EXE)
 
 clean:
 	rm -fr $(BUILD_DIR) $(SRC_DIR)/*~
@@ -214,4 +214,4 @@ $(DEBUG_EXE): $(DEBUG_EXE_DEPS) $(DEBUG_OBJS)
 
 $(RELEASE_EXE): $(RELEASE_EXE_DEPS) $(RELEASE_OBJS)
 	$(LD) $(RELEASE_FLAGS) $(RELEASE_OBJS) $(RELEASE_LIBS) -o $@
-	strip $@
+#	strip $@
