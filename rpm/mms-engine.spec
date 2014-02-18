@@ -32,7 +32,7 @@ MMS engine
 %setup -q -n %{name}-%{version}
 
 %build
-make -C %{src} release
+make -C %{src} KEEP_SYMBOLS=1 release
 
 %install
 rm -rf %{buildroot}

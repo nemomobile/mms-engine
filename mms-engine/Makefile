@@ -1,4 +1,4 @@
-# -*- Mode: makefile -*-
+# -*- Mode: gnu-makefile -*-
 
 .PHONY: all debug release clean cleaner
 .PHONY: mms_lib_debug_lib mms_lib_release_lib
@@ -78,6 +78,15 @@ CFLAGS = $(shell pkg-config --cflags $(PKGS)) -I. -I$(GEN_DIR) \
  -I$(MMS_LIB_DIR)/include -I$(MMS_OFONO_DIR)/include \
  -I$(MMS_HANDLER_DIR)/include -MMD
 
+ifndef KEEP_SYMBOLS
+KEEP_SYMBOLS = 0
+endif
+
+ifneq ($(KEEP_SYMBOLS),0)
+RELEASE_FLAGS += -g
+SUBMAKE_OPTS += KEEP_SYMBOLS=1
+endif
+
 DEBUG_CFLAGS = $(DEBUG_FLAGS) $(DEBUG_DEFS) $(CFLAGS)
 RELEASE_CFLAGS = $(RELEASE_FLAGS) $(RELEASE_DEFS) $(CFLAGS)
 
@@ -151,9 +160,9 @@ clean:
 	rm -fr $(BUILD_DIR) $(SRC_DIR)/*~
 
 cleaner: clean
-	make -C $(MMS_LIB_DIR) clean
-	make -C $(MMS_OFONO_DIR) clean
-	make -C $(MMS_HANDLER_DIR) clean
+	make -C $(MMS_LIB_DIR) $(SUBMAKE_OPTS) clean
+	make -C $(MMS_OFONO_DIR) $(SUBMAKE_OPTS) clean
+	make -C $(MMS_HANDLER_DIR) $(SUBMAKE_OPTS) clean
 
 $(GEN_DIR):
 	mkdir -p $@
@@ -165,22 +174,22 @@ $(RELEASE_BUILD_DIR):
 	mkdir -p $@
 
 mms_lib_debug_lib:
-	make -C $(MMS_LIB_DIR) debug
+	make -C $(MMS_LIB_DIR) $(SUBMAKE_OPTS) debug
 
 mms_lib_release_lib:
-	make -C $(MMS_LIB_DIR) release
+	make -C $(MMS_LIB_DIR) $(SUBMAKE_OPTS) release
 
 mms_ofono_debug_lib:
-	make -C $(MMS_OFONO_DIR) debug
+	make -C $(MMS_OFONO_DIR) $(SUBMAKE_OPTS) debug
 
 mms_ofono_release_lib:
-	make -C $(MMS_OFONO_DIR) release
+	make -C $(MMS_OFONO_DIR) $(SUBMAKE_OPTS) release
 
 mms_handler_debug_lib:
-	make -C $(MMS_HANDLER_DIR) debug
+	make -C $(MMS_HANDLER_DIR) $(SUBMAKE_OPTS) debug
 
 mms_handler_release_lib:
-	make -C $(MMS_HANDLER_DIR) release
+	make -C $(MMS_HANDLER_DIR) $(SUBMAKE_OPTS) release
 
 $(MMS_LIB_DEBUG_LIB): mms_lib_debug_lib
 
@@ -214,4 +223,6 @@ $(DEBUG_EXE): $(DEBUG_EXE_DEPS) $(DEBUG_OBJS)
 
 $(RELEASE_EXE): $(RELEASE_EXE_DEPS) $(RELEASE_OBJS)
 	$(LD) $(RELEASE_FLAGS) $(RELEASE_OBJS) $(RELEASE_LIBS) -o $@
-#	strip $@
+ifeq ($(KEEP_SYMBOLS),0)
+	strip $@
+endif

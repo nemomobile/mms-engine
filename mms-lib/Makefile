@@ -1,4 +1,4 @@
-# -*- Mode: makefile -*-
+# -*- Mode: gnu-makefile -*-
 
 .PHONY: clean all debug release
 
@@ -49,12 +49,25 @@ endif
 
 CC = $(CROSS_COMPILE)gcc
 LD = $(CC)
+ARFLAGS = rc
+DEBUG_FLAGS = -g
+RELEASE_FLAGS = -O2
+DEBUG_DEFS = -DDEBUG
+RELEASE_DEFS =
 WARNINGS = -Wall
 INCLUDES = -I$(SRC_DIR) -I$(INCLUDE_DIR)
 CFLAGS += $(WARNINGS) $(INCLUDES) $(shell pkg-config --cflags $(PKGS)) -MMD
-DEBUG_CFLAGS = -g -DDEBUG $(CFLAGS)
-RELEASE_CFLAGS = -O2 $(CFLAGS)
-ARFLAGS = rc
+
+ifndef KEEP_SYMBOLS
+KEEP_SYMBOLS = 0
+endif
+
+ifneq ($(KEEP_SYMBOLS),0)
+RELEASE_FLAGS += -g
+endif
+
+DEBUG_CFLAGS = $(DEBUG_FLAGS) $(DEBUG_DEFS) $(CFLAGS)
+RELEASE_CFLAGS = $(RELEASE_FLAGS) $(RELEASE_DEFS) $(CFLAGS)
 
 #
 # Files
