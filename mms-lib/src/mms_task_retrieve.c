@@ -170,7 +170,7 @@ mms_task_retrieve_start(
     if (fd >= 0) {
         /* Set up the transfer */
         retrieve->tx = mms_http_transfer_new(task->config,
-            connection, "GET", retrieve->uri, fd);
+            connection, SOUP_METHOD_GET, retrieve->uri, fd);
         if (retrieve->tx) {
             /* Start the transfer */
             SoupMessage* message = retrieve->tx->message;

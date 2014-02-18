@@ -135,7 +135,7 @@ mms_task_upload_start(
             /* Set up the transfer */
             up->bytes_total = st.st_size;
             up->tx = mms_http_transfer_new(up->task.config, connection,
-                "POST", connection->mmsc, fd);
+                SOUP_METHOD_POST, connection->mmsc, fd);
             if (up->tx) {
                 /* Headers */
                 SoupMessage* msg = up->tx->message;
