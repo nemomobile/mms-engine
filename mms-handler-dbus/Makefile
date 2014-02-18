@@ -1,4 +1,4 @@
-# -*- Mode: gnu-makefile -*-
+# -*- Mode: makefile-gmake -*-
 
 .PHONY: clean all debug release
 

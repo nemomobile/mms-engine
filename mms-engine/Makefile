@@ -1,4 +1,4 @@
-# -*- Mode: gnu-makefile -*-
+# -*- Mode: makefile-gmake -*-
 
 .PHONY: all debug release clean cleaner
 .PHONY: mms_lib_debug_lib mms_lib_release_lib
