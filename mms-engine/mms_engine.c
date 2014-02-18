@@ -34,7 +34,7 @@ struct mms_engine {
     MMSLogModule** log_modules;
     int log_count;
     GDBusConnection* engine_bus;
-    OrgNemomobileMmsEngine* service;
+    OrgNemomobileMmsEngine* proxy;
     GMainLoop* loop;
     gboolean stopped;
     gboolean keep_running;
@@ -119,12 +119,12 @@ mms_engine_start_timeout_schedule(
 static
 gboolean
 mms_engine_handle_test(
-    OrgNemomobileMmsEngine* service,
+    OrgNemomobileMmsEngine* proxy,
     GDBusMethodInvocation* call,
     MMSEngine* engine)
 {
     MMS_DEBUG("Test");
-    org_nemomobile_mms_engine_complete_test(service, call);
+    org_nemomobile_mms_engine_complete_test(proxy, call);
     return TRUE;
 }
 #endif /* ENABLE_TEST */
@@ -133,7 +133,7 @@ mms_engine_handle_test(
 static
 gboolean
 mms_engine_handle_receive_message(
-    OrgNemomobileMmsEngine* service,
+    OrgNemomobileMmsEngine* proxy,
     GDBusMethodInvocation* call,
     int database_id,
     const char* imsi,
@@ -152,7 +152,7 @@ mms_engine_handle_receive_message(
             if (mms_dispatcher_start(engine->dispatcher)) {
                 mms_engine_start_timeout_cancel(engine);
             }
-            org_nemomobile_mms_engine_complete_receive_message(service, call);
+            org_nemomobile_mms_engine_complete_receive_message(proxy, call);
         } else {
             g_dbus_method_invocation_return_error(call, G_DBUS_ERROR,
                 G_DBUS_ERROR_FAILED, "Unable to receive message");
@@ -170,7 +170,7 @@ mms_engine_handle_receive_message(
 static
 gboolean
 mms_engine_handle_send_read_report(
-    OrgNemomobileMmsEngine* service,
+    OrgNemomobileMmsEngine* proxy,
     GDBusMethodInvocation* call,
     const char* id,
     const char* imsi,
@@ -186,7 +186,7 @@ mms_engine_handle_send_read_report(
         if (mms_dispatcher_start(engine->dispatcher)) {
             mms_engine_start_timeout_cancel(engine);
         }
-        org_nemomobile_mms_engine_complete_send_read_report(service, call);
+        org_nemomobile_mms_engine_complete_send_read_report(proxy, call);
     } else {
         g_dbus_method_invocation_return_error(call, G_DBUS_ERROR,
             G_DBUS_ERROR_FAILED, "Error submitting read report");
@@ -198,14 +198,14 @@ mms_engine_handle_send_read_report(
 static
 gboolean
 mms_engine_handle_cancel(
-    OrgNemomobileMmsEngine* service,
+    OrgNemomobileMmsEngine* proxy,
     GDBusMethodInvocation* call,
     const char* id,
     MMSEngine* engine)
 {
     MMS_DEBUG_("%s", id);
     mms_dispatcher_cancel(engine->dispatcher, id);
-    org_nemomobile_mms_engine_complete_cancel(service, call);
+    org_nemomobile_mms_engine_complete_cancel(proxy, call);
     return TRUE;
 }
 
@@ -274,7 +274,7 @@ mms_engine_handle_push(
 static
 gboolean
 mms_engine_handle_set_log_level(
-    OrgNemomobileMmsEngine* service,
+    OrgNemomobileMmsEngine* proxy,
     GDBusMethodInvocation* call,
     const char* module,
     gint level,
@@ -293,7 +293,7 @@ mms_engine_handle_set_log_level(
     } else {
         mms_log_default.level = level;
     }
-    org_nemomobile_mms_engine_complete_set_log_level(service, call);
+    org_nemomobile_mms_engine_complete_set_log_level(proxy, call);
     return TRUE;
 }
 
@@ -301,14 +301,14 @@ mms_engine_handle_set_log_level(
 static
 gboolean
 mms_engine_handle_set_log_type(
-    OrgNemomobileMmsEngine* service,
+    OrgNemomobileMmsEngine* proxy,
     GDBusMethodInvocation* call,
     const char* type,
     MMSEngine* engine)
 {
     MMS_DEBUG_("%s", type);
     mms_log_set_type(type, MMS_APP_LOG_PREFIX);
-    org_nemomobile_mms_engine_complete_set_log_type(service, call);
+    org_nemomobile_mms_engine_complete_set_log_type(proxy, call);
     return TRUE;
 }
 
@@ -336,32 +336,32 @@ mms_engine_new(
         mms->config = config;
         mms->log_modules = log_modules;
         mms->log_count = log_count;
-        mms->service = org_nemomobile_mms_engine_skeleton_new();
+        mms->proxy = org_nemomobile_mms_engine_skeleton_new();
         mms->push_signal_id =
-            g_signal_connect(mms->service, "handle-push",
+            g_signal_connect(mms->proxy, "handle-push",
             G_CALLBACK(mms_engine_handle_push), mms);
         mms->push_notify_signal_id =
-            g_signal_connect(mms->service, "handle-push-notify",
+            g_signal_connect(mms->proxy, "handle-push-notify",
             G_CALLBACK(mms_engine_handle_push_notify), mms);
         mms->cancel_signal_id =
-            g_signal_connect(mms->service, "handle-cancel",
+            g_signal_connect(mms->proxy, "handle-cancel",
             G_CALLBACK(mms_engine_handle_cancel), mms);
         mms->receive_signal_id =
-            g_signal_connect(mms->service, "handle-receive-message",
+            g_signal_connect(mms->proxy, "handle-receive-message",
             G_CALLBACK(mms_engine_handle_receive_message), mms);
         mms->read_report_signal_id =
-            g_signal_connect(mms->service, "handle-send-read-report",
+            g_signal_connect(mms->proxy, "handle-send-read-report",
             G_CALLBACK(mms_engine_handle_send_read_report), mms);
         mms->set_log_level_signal_id =
-            g_signal_connect(mms->service, "handle-set-log-level",
+            g_signal_connect(mms->proxy, "handle-set-log-level",
             G_CALLBACK(mms_engine_handle_set_log_level), mms);
         mms->set_log_type_signal_id =
-            g_signal_connect(mms->service, "handle-set-log-type",
+            g_signal_connect(mms->proxy, "handle-set-log-type",
             G_CALLBACK(mms_engine_handle_set_log_type), mms);
 
 #ifdef ENABLE_TEST
         mms->test_signal_id =
-            g_signal_connect(mms->service, "handle-test",
+            g_signal_connect(mms->proxy, "handle-test",
             G_CALLBACK(mms_engine_handle_test), mms);
 #endif
 
@@ -415,7 +415,7 @@ mms_engine_unregister(
 {
     if (engine->engine_bus) {
         g_dbus_interface_skeleton_unexport(
-            G_DBUS_INTERFACE_SKELETON(engine->service));
+            G_DBUS_INTERFACE_SKELETON(engine->proxy));
         g_object_unref(engine->engine_bus);
         engine->engine_bus = NULL;
     }
@@ -429,7 +429,7 @@ mms_engine_register(
 {
     mms_engine_unregister(engine);
     if (g_dbus_interface_skeleton_export(
-        G_DBUS_INTERFACE_SKELETON(engine->service), bus,
+        G_DBUS_INTERFACE_SKELETON(engine->proxy), bus,
         MMS_ENGINE_PATH, error)) {
         g_object_ref(engine->engine_bus = bus);
         return TRUE;
@@ -476,19 +476,19 @@ mms_engine_dispose(
     MMS_ASSERT(!e->loop);
     mms_engine_unregister(e);
     mms_engine_start_timeout_cancel(e);
-    if (e->service) {
+    if (e->proxy) {
 #ifdef ENABLE_TEST
-        g_signal_handler_disconnect(e->service, e->test_signal_id);
+        g_signal_handler_disconnect(e->proxy, e->test_signal_id);
 #endif
-        g_signal_handler_disconnect(e->service, e->push_signal_id);
-        g_signal_handler_disconnect(e->service, e->push_notify_signal_id);
-        g_signal_handler_disconnect(e->service, e->receive_signal_id);
-        g_signal_handler_disconnect(e->service, e->read_report_signal_id);
-        g_signal_handler_disconnect(e->service, e->cancel_signal_id);
-        g_signal_handler_disconnect(e->service, e->set_log_level_signal_id);
-        g_signal_handler_disconnect(e->service, e->set_log_type_signal_id);
-        g_object_unref(e->service);
-        e->service = NULL;
+        g_signal_handler_disconnect(e->proxy, e->push_signal_id);
+        g_signal_handler_disconnect(e->proxy, e->push_notify_signal_id);
+        g_signal_handler_disconnect(e->proxy, e->receive_signal_id);
+        g_signal_handler_disconnect(e->proxy, e->read_report_signal_id);
+        g_signal_handler_disconnect(e->proxy, e->cancel_signal_id);
+        g_signal_handler_disconnect(e->proxy, e->set_log_level_signal_id);
+        g_signal_handler_disconnect(e->proxy, e->set_log_type_signal_id);
+        g_object_unref(e->proxy);
+        e->proxy = NULL;
     }
     if (e->dispatcher) {
         mms_dispatcher_set_delegate(e->dispatcher, NULL);
