@@ -20,7 +20,8 @@
 MMSConnection*
 mms_connection_test_new(
     const char* imsi,
-    unsigned short port);
+    unsigned short port,
+    gboolean proxy);
 
 #endif /* TEST_CONNECTION_H */
 

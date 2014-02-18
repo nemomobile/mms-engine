@@ -3,7 +3,7 @@
 # This script requires lcov to be installed
 #
 
-TESTS="mms_codec read_report retrieve retrieve_cancel"
+TESTS="mms_codec read_report retrieve retrieve_cancel retrieve_no_proxy"
 FLAVOR="release"
 
 pushd `dirname $0` > /dev/null

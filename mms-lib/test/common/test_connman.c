@@ -23,8 +23,9 @@ MMS_LOG_MODULE_DEFINE("mms-connman-test");
 typedef MMSConnManClass MMSConnManTestClass;
 typedef struct mms_connman_test {
     MMSConnMan cm;
-    MMSConnection* connection;
+    MMSConnection* conn;
     unsigned short port;
+    gboolean proxy;
 } MMSConnManTest;
 
 G_DEFINE_TYPE(MMSConnManTest, mms_connman_test, MMS_TYPE_CONNMAN);
@@ -35,10 +36,12 @@ G_DEFINE_TYPE(MMSConnManTest, mms_connman_test, MMS_TYPE_CONNMAN);
 void
 mms_connman_test_set_port(
     MMSConnMan* cm,
-    unsigned short port)
+    unsigned short port,
+    gboolean proxy)
 {
     MMSConnManTest* test = MMS_CONNMAN_TEST(cm);
     test->port = port;
+    test->proxy = proxy;
 }
 
 void
@@ -46,11 +49,11 @@ mms_connman_test_close_connection(
     MMSConnMan* cm)
 {
     MMSConnManTest* test = MMS_CONNMAN_TEST(cm);
-    if (test->connection) {
+    if (test->conn) {
         MMS_DEBUG("Closing connection...");
-        mms_connection_close(test->connection);
-        mms_connection_unref(test->connection);
-        test->connection = NULL;
+        mms_connection_close(test->conn);
+        mms_connection_unref(test->conn);
+        test->conn = NULL;
     }
 }
 
@@ -64,8 +67,8 @@ mms_connman_test_open_connection(
     MMSConnManTest* test = MMS_CONNMAN_TEST(cm);
     mms_connman_test_close_connection(cm);
     if (test->port) {
-        test->connection = mms_connection_test_new(imsi, test->port);
-        return mms_connection_ref(test->connection);
+        test->conn = mms_connection_test_new(imsi, test->port, test->proxy);
+        return mms_connection_ref(test->conn);
     } else {
         return NULL;
     }

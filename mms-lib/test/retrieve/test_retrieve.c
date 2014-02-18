@@ -203,7 +203,7 @@ test_finish(
         state = mms_handler_test_receive_state(test->handler, NULL);
         if (state != desc->expected_state) {
             test->ret = RET_ERR;
-            MMS_ERR("Test %s state %d, expected %d", name, state,
+            MMS_ERR("%s state %d, expected %d", name, state,
                 desc->expected_state);
         } else {
             const void* resp_data = NULL;
@@ -216,21 +216,21 @@ test_finish(
                     if (mms_message_decode(resp_data, resp_len, pdu)) {
                         if (pdu->type != desc->reply_msg) {
                             test->ret = RET_ERR;
-                            MMS_ERR("Test %s reply %u, expected %u", name,
+                            MMS_ERR("%s reply %u, expected %u", name,
                                 pdu->type, desc->reply_msg);
                         }
                     } else {
                         test->ret = RET_ERR;
-                        MMS_ERR("Test %s can't decode reply message", name);
+                        MMS_ERR("%s can't decode reply message", name);
                     }
                     mms_message_free(pdu);
                 } else {
                     test->ret = RET_ERR;
-                    MMS_ERR("Test %s expects no reply", name);
+                    MMS_ERR("%s expects no reply", name);
                 }
             } else if (desc->reply_msg) {
                 test->ret = RET_ERR;
-                MMS_ERR("Test %s expects reply", name);
+                MMS_ERR("%s expects reply", name);
             }
         }
     }
@@ -266,7 +266,7 @@ test_finish(
         g_free(f1);
         g_free(f2);
     }
-    MMS_INFO("Test %s %s", name, (test->ret == RET_OK) ? "OK" : "FAILED");
+    MMS_INFO("%s %s", name, (test->ret == RET_OK) ? "OK" : "FAILED");
     mms_handler_test_reset(test->handler);
     g_main_loop_quit(test->loop);
 }
@@ -291,7 +291,7 @@ test_timeout(
     Test* test = data;
     test->timeout_id = 0;
     test->ret = RET_TIMEOUT;
-    MMS_INFO("Test %s TIMEOUT", test->desc->name);
+    MMS_INFO("%s TIMEOUT", test->desc->name);
     if (test->http) test_http_close(test->http);
     mms_connman_test_close_connection(test->cm);
     mms_dispatcher_cancel(test->disp, NULL);
@@ -317,6 +317,7 @@ test_init(
     if (test->notification_ind) {
         if (rc) test->retrieve_conf = g_mapped_file_new(rc, FALSE, &error);
         if (test->retrieve_conf || !rc) {
+            guint port;
             g_mapped_file_ref(test->notification_ind);
             test->desc = desc;
             test->cm = mms_connman_test_new();
@@ -328,7 +329,8 @@ test_init(
             mms_dispatcher_set_delegate(test->disp, &test->delegate);
             test->http = test_http_new(test->retrieve_conf,
                 test->desc->content_type, test->desc->status);
-            mms_connman_test_set_port(test->cm, test_http_get_port(test->http));
+            port = test_http_get_port(test->http);
+            mms_connman_test_set_port(test->cm, port, TRUE);
             if (desc->flags & TEST_DEFER_RECEIVE) {
                 mms_handler_test_defer_receive(test->handler, test->disp);
             }
@@ -386,14 +388,14 @@ test_retrieve_once(
                 test.ret = RET_OK;
                 g_main_loop_run(test.loop);
             } else {
-                MMS_INFO("Test %s FAILED", desc->name);
+                MMS_INFO("%s FAILED", desc->name);
             }
         } else {
             if (desc->flags & TEST_PUSH_HANDLING_FAILURE_OK) {
                 test.ret = RET_OK;
                 test_finish(&test);
             } else {
-                MMS_INFO("Test %s FAILED", desc->name);
+                MMS_INFO("%s FAILED", desc->name);
             }
         }
         g_bytes_unref(push);

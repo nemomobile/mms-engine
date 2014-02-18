@@ -99,7 +99,7 @@ test_init(
     test->delegate.fn_done = test_done;
     mms_dispatcher_set_delegate(test->disp, &test->delegate);
     test->http = test_http_new(NULL, NULL, SOUP_STATUS_OK);
-    mms_connman_test_set_port(test->cm, test_http_get_port(test->http));
+    mms_connman_test_set_port(test->cm, test_http_get_port(test->http), TRUE);
     test->ret = RET_ERR;
 }
 

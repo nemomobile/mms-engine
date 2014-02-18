@@ -23,7 +23,8 @@ mms_connman_test_new(void);
 void
 mms_connman_test_set_port(
     MMSConnMan* cm,
-    unsigned short port);
+    unsigned short port,
+    gboolean proxy);
 
 void
 mms_connman_test_close_connection(

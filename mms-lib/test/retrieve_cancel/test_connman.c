@@ -59,7 +59,7 @@ mms_connman_test_open_connection(
         return NULL;
     } else {
         test->fail = TRUE;
-        return mms_connection_test_new(imsi, 0);
+        return mms_connection_test_new(imsi, 0, FALSE);
     }
 }
 

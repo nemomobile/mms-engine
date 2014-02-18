@@ -58,14 +58,19 @@ test_connection_test_open(
 MMSConnection*
 mms_connection_test_new(
     const char* imsi,
-    unsigned short port)
+    unsigned short port,
+    gboolean proxy)
 {
     MMSConnectionTest* test = g_object_new(MMS_TYPE_CONNECTION_TEST, NULL);
     test->imsi = g_strdup(imsi);
-    test->mmsc = g_strdup("http://mmsc");
     if (port) {
-        test->mmsproxy = g_strdup_printf("127.0.0.1:%hu", port);
         test->netif = g_strdup("lo");
+        if (proxy) {
+            test->mmsc = g_strdup("http://mmsc");
+            test->mmsproxy = g_strdup_printf("127.0.0.1:%hu", port);
+        } else {
+            test->mmsc = g_strdup_printf("http://127.0.0.1:%hu", port);
+        }
     }
     test->state = MMS_CONNECTION_STATE_OPENING;
     g_idle_add(test_connection_test_open, mms_connection_ref(test));

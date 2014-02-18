@@ -55,7 +55,7 @@ test_done(
     MMSDispatcher* dispatcher)
 {
     Test* test = MMS_CAST(delegate,Test,delegate);
-    MMS_INFO("%s test %s", test->desc->name, (test->ret == RET_OK) ?
+    MMS_INFO("%s %s", test->desc->name, (test->ret == RET_OK) ?
         "OK" : "FAILED");
     g_main_loop_quit(test->loop);
 }
@@ -68,7 +68,7 @@ test_timeout(
     Test* test = data;
     test->timeout_id = 0;
     test->ret = RET_TIMEOUT;
-    MMS_INFO("%s test TIMEOUT", test->desc->name);
+    MMS_INFO("%s TIMEOUT", test->desc->name);
     mms_dispatcher_cancel(test->disp, NULL);
     return FALSE;
 }

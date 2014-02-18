@@ -12,6 +12,7 @@ mms-lib/test/mms_lib_test.opt
 mms-lib/test/read_report/build
 mms-lib/test/retrieve/build
 mms-lib/test/retrieve_cancel/build
+mms-lib/test/retrieve_no_proxy/build
 mms-ofono/mms-ofono.pro.user
 mms-ofono/build
 mms-handler-dbus/mms-handler-dbus.pro.user
