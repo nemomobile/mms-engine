@@ -25,6 +25,7 @@
 typedef struct mms_app_options {
     GBusType bus_type;
     gboolean keep_running;
+    char* dir;
     MMSConfig config;
 } MMSAppOptions;
 
@@ -165,7 +166,7 @@ mms_app_parse_options(
         { "session", 0, 0, G_OPTION_ARG_NONE, &session_bus,
           "Use session bus (default is system)", NULL },
         { "root-dir", 'd', 0, G_OPTION_ARG_FILENAME,
-          (void*)&opt->config.root_dir, root_dir_help, "DIR" },
+          &opt->dir, root_dir_help, "DIR" },
         { "retry-secs", 'r', 0, G_OPTION_ARG_INT,
           &opt->config.retry_secs, retry_secs_help, "SEC" },
         { "idle-secs", 'i', 0, G_OPTION_ARG_INT,
@@ -200,6 +201,7 @@ mms_app_parse_options(
 
     if (ok) {
         MMS_INFO("Starting");
+        if (opt->dir) opt->config.root_dir = opt->dir;
         if (session_bus) {
             MMS_DEBUG("Attaching to session bus");
             opt->bus_type = G_BUS_TYPE_SESSION;
@@ -257,5 +259,6 @@ int main(int argc, char* argv[])
     if (mms_log_func == mms_log_syslog) {
         closelog();
     }
+    g_free(opt.dir);
     return result;
 }
