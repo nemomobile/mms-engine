@@ -212,12 +212,13 @@
           Indicates the current state of affairs:
 
           0 (Encoding):  Encoding the message
-          1 (Sending):   Transmitting the data
-          2 (Deferred):  Network trouble, need to retry
-          3 (NoSpace):   No space left, delete something and try again
-          4 (SendError): Failed to send the message
-          5 (Refused):   Provider refused to accept the message
-          6 (Sent):      Message sent (accepted by provider)
+          1 (TooBig):    Message is too big
+          2 (Sending):   Transmitting the data
+          3 (Deferred):  Network trouble, need to retry
+          4 (NoSpace):   No space left, delete something and try again
+          5 (SendError): Failed to send the message
+          6 (Refused):   Operator refused to accept the message
+          7 (Sent):      Message sent (accepted by the operator)
       -->
       <arg direction="in" type="i" name="state"/>
     </method>
