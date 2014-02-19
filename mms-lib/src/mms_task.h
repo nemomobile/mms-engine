@@ -20,7 +20,7 @@
 /* Claim MMS 1.1 support */
 #define MMS_VERSION MMS_MESSAGE_VERSION_1_1
 
-/* mmsutil.h */
+/* mms_codec.h */
 typedef enum mms_message_notify_status MMSNotifyStatus;
 
 /* Task state */
