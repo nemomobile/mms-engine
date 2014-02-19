@@ -409,6 +409,21 @@ mms_dispatcher_queue_task(
     g_queue_push_tail(disp->tasks, mms_task_ref(task));
 }
 
+static
+gboolean
+mms_dispatcher_queue_and_unref_task(
+    MMSDispatcher* disp,
+    MMSTask* task)
+{
+    if (task) {
+        mms_dispatcher_queue_task(disp, task);
+        mms_task_unref(task);
+        return TRUE;
+    } else {
+        return FALSE;
+    }
+}
+
 /**
  * Creates a WAP push receive task and adds it to the queue.
  */
@@ -418,15 +433,8 @@ mms_dispatcher_handle_push(
     const char* imsi,
     GBytes* push)
 {
-    MMSTask* task = mms_task_notification_new(disp->config, disp->handler,
-        imsi, push);
-    if (task) {
-        mms_dispatcher_queue_task(disp, task);
-        mms_task_unref(task);
-        return TRUE;
-    } else {
-        return FALSE;
-    }
+    return mms_dispatcher_queue_and_unref_task(disp,
+        mms_task_notification_new(disp->config, disp->handler, imsi, push));
 }
 
 /**
@@ -445,13 +453,9 @@ mms_dispatcher_receive_message(
     if (pdu) {
         MMS_ASSERT(pdu->type == MMS_MESSAGE_TYPE_NOTIFICATION_IND);
         if (pdu->type == MMS_MESSAGE_TYPE_NOTIFICATION_IND) {
-            MMSTask* task = mms_task_retrieve_new(disp->config,
-                disp->handler, id, imsi, pdu);
-            if (task) {
-                mms_dispatcher_queue_task(disp, task);
-                mms_task_unref(task);
-                ok = TRUE;
-            }
+            ok = mms_dispatcher_queue_and_unref_task(disp,
+                mms_task_retrieve_new(disp->config, disp->handler,
+                    id, imsi, pdu));
         }
         mms_message_free(pdu);
     } else {
@@ -472,15 +476,9 @@ mms_dispatcher_send_read_report(
     const char* to,
     MMSReadStatus status)
 {
-    gboolean ok = FALSE;
-    MMSTask* task = mms_task_read_new(disp->config, disp->handler, id, imsi,
-        message_id, to, status);
-    if (task) {
-        mms_dispatcher_queue_task(disp, task);
-        mms_task_unref(task);
-        ok = TRUE;
-    }
-    return ok;
+    return mms_dispatcher_queue_and_unref_task(disp,
+        mms_task_read_new(disp->config, disp->handler,
+            id, imsi, message_id, to, status));
 }
 
 /**
