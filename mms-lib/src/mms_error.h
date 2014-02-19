@@ -50,7 +50,6 @@ static inline void mms_error_static(GError** error, MMSLibError code,   \
 }
 #endif /* MMS_LOG_VARARGS */
 
-
 #endif /* JOLLA_MMS_ERROR_H */
 
 /*
