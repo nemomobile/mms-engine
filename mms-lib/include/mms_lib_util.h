@@ -26,7 +26,8 @@ typedef enum {
     MMS_LIB_ERROR_IO,
     MMS_LIB_ERROR_EXPIRED,
     MMS_LIB_ERROR_NOSIM,
-    MMS_LIB_ERROR_ARGS
+    MMS_LIB_ERROR_ARGS,
+    MMS_LIB_ERROR_UNSUPPORTED
 } MMSLibError;
 
 /* One-time initialization */
