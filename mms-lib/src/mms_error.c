@@ -25,7 +25,7 @@ mms_error_valist(
 {
     if (error) {
         va_list args2;
-        va_copy(args2, args);
+        G_VA_COPY(args2, args);
         g_propagate_error(error,
         g_error_new_valist(MMS_LIB_ERROR, code, format, args2));
         va_end(args2);
