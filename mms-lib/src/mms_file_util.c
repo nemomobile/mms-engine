@@ -28,8 +28,10 @@ mms_remove_file_and_dir(
     const char* file)
 {
     char* dir = g_path_get_dirname(file);
-    remove(file);
-    remove(dir);
+    unlink(file);
+    if (rmdir(dir) == 0) {
+        MMS_VERBOSE("Deleted %s", dir);
+    }
     g_free(dir);
 }
 

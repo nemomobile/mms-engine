@@ -118,8 +118,17 @@ mms_task_finalize(
     MMS_VERBOSE_("%p", task);
     MMS_ASSERT(!task->delegate);
     MMS_ASSERT(!task->wakeup_id);
+    if (task->id) {
+        if (!task->config->keep_temp_files) {
+            char* dir = mms_task_dir(task);
+            if (rmdir(dir) == 0) {
+                MMS_VERBOSE("Deleted %s", dir);
+            }
+            g_free(dir);
+        }
+        g_free(task->id);
+    }
     g_free(task->name);
-    g_free(task->id);
     g_free(task->imsi);
     mms_handler_unref(task->handler);
     G_OBJECT_CLASS(mms_task_parent_class)->finalize(object);

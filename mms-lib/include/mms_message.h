@@ -35,6 +35,7 @@ struct _mms_message {
     MMS_PRIORITY priority;                  /* Message priority */
     char* cls;                              /* Message class */
     gboolean read_report_req;               /* Request for read report */
+    char* msg_dir;                          /* Delete when done if empty */
     char* parts_dir;                        /* Where parts are stored */
     GSList* parts;                          /* Message parts */
     int flags;                              /* Message flags: */

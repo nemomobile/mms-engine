@@ -52,8 +52,20 @@ mms_message_finalize(
     g_slist_foreach(msg->parts, mms_message_part_free, msg);
     g_slist_free(msg->parts);
     if (msg->parts_dir) {
-        if (!(msg->flags & MMS_MESSAGE_FLAG_KEEP_FILES)) remove(msg->parts_dir);
+        if (!(msg->flags & MMS_MESSAGE_FLAG_KEEP_FILES)) {
+            if (rmdir(msg->parts_dir) == 0) {
+                MMS_VERBOSE("Deleted %s", msg->parts_dir);
+            }
+        }
         g_free(msg->parts_dir);
+    }
+    if (msg->msg_dir) {
+        if (!(msg->flags & MMS_MESSAGE_FLAG_KEEP_FILES)) {
+            if (rmdir(msg->msg_dir) == 0) {
+                MMS_VERBOSE("Deleted %s", msg->msg_dir);
+            }
+        }
+        g_free(msg->msg_dir);
     }
 }
 

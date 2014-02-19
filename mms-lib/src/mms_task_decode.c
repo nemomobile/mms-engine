@@ -124,6 +124,7 @@ mms_task_decode_process_retrieve_conf(
     }
 
     msg->id = g_strdup(task->id);
+    msg->msg_dir = g_strdup(dir);
     msg->message_id = g_strdup(rc->msgid);
     msg->from = mms_strip_address_type(g_strdup(rc->from));
     msg->to = mms_split_address_list(rc->to);
