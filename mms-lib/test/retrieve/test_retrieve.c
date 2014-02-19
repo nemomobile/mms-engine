@@ -266,7 +266,7 @@ test_finish(
         g_free(f1);
         g_free(f2);
     }
-    MMS_INFO("%s %s", name, (test->ret == RET_OK) ? "OK" : "FAILED");
+    MMS_INFO("%s: %s", (test->ret == RET_OK) ? "OK" : "FAILED", name);
     mms_handler_test_reset(test->handler);
     g_main_loop_quit(test->loop);
 }

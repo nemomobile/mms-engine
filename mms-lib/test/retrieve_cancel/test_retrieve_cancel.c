@@ -55,8 +55,8 @@ test_done(
     MMSDispatcher* dispatcher)
 {
     Test* test = MMS_CAST(delegate,Test,delegate);
-    MMS_INFO("%s %s", test->desc->name, (test->ret == RET_OK) ?
-        "OK" : "FAILED");
+    MMS_INFO("%s: %s", (test->ret == RET_OK) ? "OK" : "FAILED",
+        test->desc->name);
     g_main_loop_quit(test->loop);
 }
 
