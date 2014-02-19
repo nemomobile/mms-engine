@@ -211,11 +211,6 @@ mms_task_publish_new(
     MMSHandler* handler,
     MMSMessage* msg);
 
-MMSTask*
-mms_task_delete_new(
-    const MMSConfig* config,
-    const char* uuid);
-
 #endif /* JOLLA_MMS_TASK_H */
 
 /*
