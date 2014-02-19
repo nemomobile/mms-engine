@@ -135,19 +135,12 @@
       -->
       <arg direction="in" type="s" name="subject"/>
       <!--
-          Request delivery report:
+          Flags:
 
-          TRUE:  Yes, please
-          FALSE: No, thank you
+          0x01  Request delivery report
+          0x02  Request read report
       -->
-      <arg direction="in" type="b" name="deliveryReport"/>
-      <!--
-          Request read report:
-
-          TRUE:  Yes, please
-          FALSE: No, thank you
-      -->
-      <arg direction="in" type="b" name="readReport"/>
+      <arg direction="in" type="u" name="flags"/>
       <!--
           Each variant in the parts array is (sss):
 
