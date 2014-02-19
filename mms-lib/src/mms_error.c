@@ -24,8 +24,11 @@ mms_error_valist(
     va_list args)
 {
     if (error) {
+        va_list args2;
+        va_copy(args2, args);
         g_propagate_error(error,
-        g_error_new_valist(MMS_LIB_ERROR, code, format, args));
+        g_error_new_valist(MMS_LIB_ERROR, code, format, args2));
+        va_end(args2);
     }
     mms_logv(module, MMS_LOGLEVEL_ERR, format, args);
 }
@@ -41,7 +44,7 @@ mms_error(
     va_list args;
     va_start(args, format);
     mms_error_valist(module, error, code, format, args);
-    va_end (args);
+    va_end(args);
 }
 
 /*
