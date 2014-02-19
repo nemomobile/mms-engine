@@ -19,6 +19,7 @@
 
 typedef struct mms_connman_class {
     GObjectClass parent;
+    char* (*fn_default_imsi)(MMSConnMan* cm);
     MMSConnection* (*fn_open_connection)(MMSConnMan* cm, const char* imsi,
         gboolean user_request);
 } MMSConnManClass;
@@ -33,6 +34,14 @@ mms_connman_ref(
 
 void
 mms_connman_unref(
+    MMSConnMan* cm);
+
+/**
+ * Returns default (first available) IMSI or NULL if SIM is not present
+ * or not configured. Caller must g_free() the returned string.
+ */
+char*
+mms_connman_default_imsi(
     MMSConnMan* cm);
 
 /**

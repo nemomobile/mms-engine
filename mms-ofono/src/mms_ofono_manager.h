@@ -26,6 +26,10 @@ mms_ofono_manager_free(
     MMSOfonoManager* ofono);
 
 MMSOfonoModem*
+mms_ofono_manager_default_modem(
+    MMSOfonoManager* ofono);
+
+MMSOfonoModem*
 mms_ofono_manager_modem_for_imsi(
     MMSOfonoManager* ofono,
     const char* imsi);

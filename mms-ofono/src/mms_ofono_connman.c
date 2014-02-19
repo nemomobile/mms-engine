@@ -38,6 +38,24 @@ G_DEFINE_TYPE(MMSOfonoConnMan, mms_ofono_connman, MMS_TYPE_CONNMAN);
     MMS_TYPE_OFONO_CONNMAN, MMSOfonoConnMan))
 
 /**
+ * Returns IMSI of the default SIM
+ */
+static
+char*
+mms_ofono_connman_default_imsi(
+    MMSConnMan* cm)
+{
+    MMSOfonoConnMan* ofono = MMS_OFONO_CONNMAN(cm);
+    if (ofono->man) {
+        MMSOfonoModem* modem = mms_ofono_manager_default_modem(ofono->man);
+        if (modem && modem->imsi) {
+            return g_strdup(modem->imsi);
+        }
+    }
+    return NULL;
+}
+
+/**
  * Creates a new connection or returns the reference to an aready active one.
  * The caller must release the reference.
  */
@@ -153,6 +171,7 @@ void
 mms_ofono_connman_class_init(
     MMSOfonoConnManClass* klass)
 {
+    klass->fn_default_imsi = mms_ofono_connman_default_imsi;
     klass->fn_open_connection = mms_ofono_connman_open_connection;
     G_OBJECT_CLASS(klass)->dispose = mms_ofono_connman_dispose;
 }

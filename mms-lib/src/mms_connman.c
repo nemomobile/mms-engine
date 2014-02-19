@@ -56,6 +56,23 @@ mms_connman_init(
 }
 
 /**
+ * Returns default (first available) IMSI or NULL if SIM is not present
+ * or not configured. Caller must g_free() the returned string.
+ */
+char*
+mms_connman_default_imsi(
+    MMSConnMan* cm)
+{
+    if (cm) {
+        MMSConnManClass* klass = MMS_CONNMAN_GET_CLASS(cm);
+        if (klass->fn_default_imsi) {
+            return klass->fn_default_imsi(cm);
+        }
+    }
+    return NULL;
+}
+
+/**
  * Creates a new connection or returns the reference to an aready active one.
  * The caller must release the reference.
  */

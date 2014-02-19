@@ -156,6 +156,21 @@ mms_ofono_manager_modem_imsi_find_cb(
 }
 
 MMSOfonoModem*
+mms_ofono_manager_default_modem(
+    MMSOfonoManager* ofono)
+{
+    if (g_hash_table_size(ofono->modems) > 0) {
+        GHashTableIter iter;
+        gpointer key, value = NULL;
+        g_hash_table_iter_init(&iter, ofono->modems);
+        if (g_hash_table_iter_next(&iter, &key, &value)) {
+            return value;
+        }
+    }
+    return NULL;
+}
+
+MMSOfonoModem*
 mms_ofono_manager_modem_for_imsi(
     MMSOfonoManager* ofono,
     const char* imsi)
