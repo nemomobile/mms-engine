@@ -121,7 +121,8 @@ mms_handler_test_receive(
     MMS_DEBUG("Initiating receive of message %s", rec->id);
     rec->receive_message_id = 0;
     rec->dispatcher = NULL;
-    mms_dispatcher_receive_message(disp, rec->id, rec->imsi, TRUE, rec->data);
+    mms_dispatcher_receive_message(disp, rec->id, rec->imsi,
+        TRUE, rec->data, NULL);
     mms_dispatcher_start(disp);
     mms_dispatcher_unref(disp);
     return FALSE;

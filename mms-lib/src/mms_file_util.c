@@ -14,6 +14,8 @@
 
 #include "mms_file_util.h"
 #include "mms_log.h"
+#include "mms_error.h"
+
 #include <fcntl.h>
 
 #ifndef O_BINARY
@@ -45,7 +47,8 @@ int
 mms_create_file(
     const char* dir,
     const char* file,
-    char** path)
+    char** path,
+    GError** error)
 {
     int fd = -1;
     int err = g_mkdir_with_parents(dir, MMS_DIR_PERM);
@@ -53,14 +56,16 @@ mms_create_file(
         char* fname = g_strconcat(dir, "/", file, NULL);
         fd = open(fname, O_CREAT|O_RDWR|O_TRUNC|O_BINARY, MMS_FILE_PERM);
         if (fd < 0) {
-            MMS_ERR("Failed to create %s: %s", fname, strerror(errno));
+            MMS_ERROR(error, MMS_LIB_ERROR_FILE,
+                "Failed to create file %s: %s", fname, strerror(errno));
         } else if (path) {
             *path = fname;
             fname = NULL;
         }
         g_free(fname);
     } else {
-        MMS_ERR("Failed to create directory %s: %s", dir, strerror(errno));
+        MMS_ERROR(error, MMS_LIB_ERROR_FILE,
+            "Failed to create directory %s: %s", dir, strerror(errno));
     }
     return fd;
 }

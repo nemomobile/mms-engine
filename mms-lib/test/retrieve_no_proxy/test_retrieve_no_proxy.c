@@ -199,8 +199,9 @@ test_retrieve_no_proxy(
 {
     Test test;
     if (test_init(&test, config)) {
+        GError* error = NULL;
         if (mms_dispatcher_handle_push(test.disp, "TestConnection",
-            test.notification_ind)) {
+            test.notification_ind, &error)) {
             if (mms_dispatcher_start(test.disp)) {
                 test.ret = RET_OK;
                 g_main_loop_run(test.loop);
@@ -208,6 +209,7 @@ test_retrieve_no_proxy(
                 MMS_INFO("FAILED");
             }
         } else {
+            g_error_free(error);
             MMS_INFO("FAILED");
         }
         test_finalize(&test);

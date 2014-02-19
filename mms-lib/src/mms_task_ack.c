@@ -26,7 +26,7 @@ mms_task_ack_create_pdu_file(
 {
     char* path = NULL;
     char* dir = mms_message_dir(config, id);
-    int fd = mms_create_file(dir, MMS_ACKNOWLEDGE_IND_FILE, &path);
+    int fd = mms_create_file(dir, MMS_ACKNOWLEDGE_IND_FILE, &path, NULL);
     if (fd >= 0) {
         MMSPdu* pdu = g_new0(MMSPdu, 1);
         pdu->type = MMS_MESSAGE_TYPE_ACKNOWLEDGE_IND;

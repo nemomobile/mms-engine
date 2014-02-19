@@ -17,6 +17,7 @@ SOURCES += \
   src/mms_codec.c \
   src/mms_connection.c \
   src/mms_connman.c \
+  src/mms_error.c \
   src/mms_dispatcher.c \
   src/mms_file_util.c \
   src/mms_handler.c \
@@ -36,6 +37,7 @@ SOURCES += \
 
 HEADERS += \
   src/mms_codec.h \
+  src/mms_error.h \
   src/mms_file_util.h \
   src/mms_task.h \
   src/mms_util.h \

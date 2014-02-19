@@ -166,15 +166,18 @@ test_once(
     const TestDesc* desc)
 {
     Test test;
+    GError* error = NULL;
     MMS_VERBOSE(">>>>>>>>>>>>>> %s <<<<<<<<<<<<<<", desc->name);
     test_init(&test, config, desc);
-    if (mms_dispatcher_handle_push(test.disp, "IMSI", test.pdu)) {
+    if (mms_dispatcher_handle_push(test.disp, "IMSI", test.pdu, &error)) {
         mms_connman_set_connection_requested_cb(test.cm, test_connect, &test);
         mms_handler_set_message_id_cb(test.handler, test_msg_id, &test);
         if (mms_dispatcher_start(test.disp)) {
             test.ret = RET_OK;
             g_main_loop_run(test.loop);
         }
+    } else {
+        g_error_free(error);
     }
     test_finalize(&test);
     return test.ret;

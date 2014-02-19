@@ -127,9 +127,10 @@ test_read_report(
     const MMSConfig* config)
 {
     Test test;
+    GError* error = NULL;
     test_init(&test, config);
     if (mms_dispatcher_send_read_report(test.disp, "1", "IMSI",
-        "MessageID", "+358501111111", MMS_READ_STATUS_READ)) {
+        "MessageID", "+358501111111", MMS_READ_STATUS_READ, &error)) {
         if (mms_dispatcher_start(test.disp)) {
             test.ret = RET_OK;
             g_main_loop_run(test.loop);
@@ -137,6 +138,7 @@ test_read_report(
             MMS_INFO("FAILED");
         }
     } else {
+        g_error_free(error);
         MMS_INFO("FAILED");
     }
     test_finalize(&test);

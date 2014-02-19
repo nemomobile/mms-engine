@@ -43,7 +43,8 @@ int
 mms_create_file(
     const char* dir,
     const char* fname,
-    char** path);
+    char** path,
+    GError** error);
 
 gboolean
 mms_write_file(

@@ -147,15 +147,17 @@ mms_engine_handle_receive_message(
     if (imsi && bytes && len) {
         char* id = g_strdup_printf("%d", database_id);
         GBytes* push = g_bytes_new(bytes, len);
+        GError* error = NULL;
         if (mms_dispatcher_receive_message(engine->dispatcher, id, imsi,
-            automatic, push)) {
+            automatic, push, &error)) {
             if (mms_dispatcher_start(engine->dispatcher)) {
                 mms_engine_start_timeout_cancel(engine);
             }
             org_nemomobile_mms_engine_complete_receive_message(proxy, call);
         } else {
             g_dbus_method_invocation_return_error(call, G_DBUS_ERROR,
-                G_DBUS_ERROR_FAILED, "Unable to receive message");
+                G_DBUS_ERROR_FAILED, "%s", MMS_ERRMSG(error));
+            g_error_free(error);
         }
         g_bytes_unref(push);
         g_free(id);
@@ -179,17 +181,19 @@ mms_engine_handle_send_read_report(
     int read_status, /*  0: Read  1: Deleted without reading */
     MMSEngine* engine)
 {
+    GError* error = NULL;
     MMS_DEBUG_("%s %s %s %s %d", id, imsi, message_id, to, read_status);
     if (mms_dispatcher_send_read_report(engine->dispatcher, id, imsi,
         message_id, to, (read_status == 1) ? MMS_READ_STATUS_DELETED :
-        MMS_READ_STATUS_READ)) {
+        MMS_READ_STATUS_READ, &error)) {
         if (mms_dispatcher_start(engine->dispatcher)) {
             mms_engine_start_timeout_cancel(engine);
         }
         org_nemomobile_mms_engine_complete_send_read_report(proxy, call);
     } else {
         g_dbus_method_invocation_return_error(call, G_DBUS_ERROR,
-            G_DBUS_ERROR_FAILED, "Error submitting read report");
+            G_DBUS_ERROR_FAILED, "%s", MMS_ERRMSG(error));
+        g_error_free(error);
     }
     return TRUE;
 }
@@ -236,15 +240,17 @@ mms_engine_handle_push_notify(
         g_dbus_method_invocation_return_error(call, G_DBUS_ERROR,
             G_DBUS_ERROR_FAILED, "No data provided");
     } else {
+        GError* err = NULL;
         GBytes* msg = g_bytes_new(bytes, len);
-        if (mms_dispatcher_handle_push(engine->dispatcher, imsi, msg)) {
+        if (mms_dispatcher_handle_push(engine->dispatcher, imsi, msg, &err)) {
             if (mms_dispatcher_start(engine->dispatcher)) {
                 mms_engine_start_timeout_cancel(engine);
             }
             org_nemomobile_mms_engine_complete_push(proxy, call);
         } else {
             g_dbus_method_invocation_return_error(call, G_DBUS_ERROR,
-                G_DBUS_ERROR_FAILED, "Unable to handle push message");
+                G_DBUS_ERROR_FAILED, "%s", MMS_ERRMSG(err));
+            g_error_free(err);
         }
         g_bytes_unref(msg);
     }

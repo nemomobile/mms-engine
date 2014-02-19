@@ -57,7 +57,8 @@ gboolean
 mms_dispatcher_handle_push(
     MMSDispatcher* dispatcher,
     const char* imsi,
-    GBytes* push);
+    GBytes* push,
+    GError** error);
 
 gboolean
 mms_dispatcher_receive_message(
@@ -65,7 +66,8 @@ mms_dispatcher_receive_message(
     const char* id,
     const char* imsi,
     gboolean automatic,
-    GBytes* push);
+    GBytes* push,
+    GError** error);
 
 gboolean
 mms_dispatcher_send_read_report(
@@ -74,7 +76,8 @@ mms_dispatcher_send_read_report(
     const char* imsi,
     const char* message_id,
     const char* to,
-    MMSReadStatus status);
+    MMSReadStatus status,
+    GError** error);
 
 void
 mms_dispatcher_cancel(

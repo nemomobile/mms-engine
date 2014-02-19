@@ -22,6 +22,7 @@
 /* Logging */
 #define MMS_LOG_MODULE_NAME mms_task_retrieve_log
 #include "mms_lib_log.h"
+#include "mms_error.h"
 MMS_LOG_MODULE_DEFINE("mms-task-retrieve");
 
 /* Class definition */
@@ -166,7 +167,7 @@ mms_task_retrieve_start(
     retrieve->bytes_received = 0;
 
     /* Create new temporary file */
-    fd = mms_create_file(dir, MMS_RETRIEVE_CONF_FILE, &file);
+    fd = mms_create_file(dir, MMS_RETRIEVE_CONF_FILE, &file, NULL);
     if (fd >= 0) {
         /* Set up the transfer */
         retrieve->tx = mms_http_transfer_new(task->config,
@@ -292,7 +293,8 @@ mms_task_retrieve_new(
     MMSHandler* handler,
     const char* id,
     const char* imsi,
-    const MMSPdu* pdu)
+    const MMSPdu* pdu,
+    GError** error)
 {
     const time_t now = time(NULL);
 
@@ -307,7 +309,7 @@ mms_task_retrieve_new(
         retrieve->transaction_id = g_strdup(pdu->transaction_id);
         return &retrieve->task;
     } else {
-        MMS_ERR("Message already expired");
+        MMS_ERROR(error, MMS_LIB_ERROR_EXPIRED, "Message already expired");
     }
     return NULL;
 }

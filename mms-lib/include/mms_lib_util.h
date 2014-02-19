@@ -17,6 +17,16 @@
 
 #include "mms_lib_types.h"
 
+/* Error reporting */
+GQuark mms_lib_error_quark(void);
+#define MMS_LIB_ERROR mms_lib_error_quark()
+typedef enum {
+    MMS_LIB_ERROR_ENCODE,
+    MMS_LIB_ERROR_DECODE,
+    MMS_LIB_ERROR_FILE,
+    MMS_LIB_ERROR_EXPIRED
+} MMSLibError;
+
 /* One-time initialization */
 void
 mms_lib_init(void);

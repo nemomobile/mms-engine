@@ -21,6 +21,7 @@
 /* Logging */
 #define MMS_LOG_MODULE_NAME mms_task_notification_log
 #include "mms_lib_log.h"
+#include "mms_error.h"
 MMS_LOG_MODULE_DEFINE("mms-task-notification");
 
 /* Class definition */
@@ -117,7 +118,7 @@ mms_task_notification_ind(
             /* Schedule the download task */
             if (!mms_task_queue_and_unref(task->delegate,
                     mms_task_retrieve_new(task->config, task->handler,
-                        task->id, task->imsi, ind->pdu))) {
+                        task->id, task->imsi, ind->pdu, NULL))) {
                 mms_handler_message_receive_state_changed(task->handler, id,
                     MMS_RECEIVE_STATE_DOWNLOAD_ERROR);
             }
@@ -252,9 +253,11 @@ mms_task_notification_new(
     const MMSConfig* config,
     MMSHandler* handler,
     const char* imsi,
-    GBytes* bytes)
+    GBytes* bytes,
+    GError** error)
 {
     MMSPdu* pdu = mms_decode_bytes(bytes);
+    MMS_ASSERT(!error || !(*error));
     if (pdu) {
         MMSTaskNotification* ind;
 
@@ -276,7 +279,7 @@ mms_task_notification_new(
         }
         return &ind->task;
     } else {
-        MMS_ERR("Unable to parse MMS push data");
+        MMS_ERROR(error, MMS_LIB_ERROR_DECODE, "Failed to decode MMS PDU");
         mms_task_notification_unrecornized(config, bytes);
         return NULL;
     }

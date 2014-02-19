@@ -26,6 +26,7 @@
 /* Logging */
 #define MMS_LOG_MODULE_NAME mms_dispatcher_log
 #include "mms_lib_log.h"
+#include "mms_error.h"
 MMS_LOG_MODULE_DEFINE("mms-dispatcher");
 
 struct mms_dispatcher {
@@ -431,10 +432,12 @@ gboolean
 mms_dispatcher_handle_push(
     MMSDispatcher* disp,
     const char* imsi,
-    GBytes* push)
+    GBytes* push,
+    GError** error)
 {
     return mms_dispatcher_queue_and_unref_task(disp,
-        mms_task_notification_new(disp->config, disp->handler, imsi, push));
+        mms_task_notification_new(disp->config, disp->handler,
+            imsi, push, error));
 }
 
 /**
@@ -446,7 +449,8 @@ mms_dispatcher_receive_message(
     const char* id,
     const char* imsi,
     gboolean automatic,
-    GBytes* bytes)
+    GBytes* bytes,
+    GError** error)
 {
     gboolean ok = FALSE;
     MMSPdu* pdu = mms_decode_bytes(bytes);
@@ -455,11 +459,11 @@ mms_dispatcher_receive_message(
         if (pdu->type == MMS_MESSAGE_TYPE_NOTIFICATION_IND) {
             ok = mms_dispatcher_queue_and_unref_task(disp,
                 mms_task_retrieve_new(disp->config, disp->handler,
-                    id, imsi, pdu));
+                    id, imsi, pdu, error));
         }
         mms_message_free(pdu);
     } else {
-        MMS_ERR("Unable to parse MMS push data");
+        MMS_ERROR(error, MMS_LIB_ERROR_DECODE, "Failed to decode MMS PDU");
     }
     return ok;
 }
@@ -474,11 +478,12 @@ mms_dispatcher_send_read_report(
     const char* imsi,
     const char* message_id,
     const char* to,
-    MMSReadStatus status)
+    MMSReadStatus status,
+    GError** error)
 {
     return mms_dispatcher_queue_and_unref_task(disp,
         mms_task_read_new(disp->config, disp->handler,
-            id, imsi, message_id, to, status));
+            id, imsi, message_id, to, status, error));
 }
 
 /**

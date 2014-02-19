@@ -15,6 +15,7 @@
 #include "mms_task.h"
 #include "mms_log.h"
 #include "mms_codec.h"
+#include "mms_error.h"
 #include "mms_file_util.h"
 
 static
@@ -24,11 +25,12 @@ mms_task_read_create_pdu_file(
     const char* id,
     const char* message_id,
     const char* to,
-    MMSReadStatus status)
+    MMSReadStatus status,
+    GError** err)
 {
     char* path = NULL;
     char* dir = mms_message_dir(config, id);
-    int fd = mms_create_file(dir, MMS_READ_REC_IND_FILE, &path);
+    int fd = mms_create_file(dir, MMS_READ_REC_IND_FILE, &path, err);
     if (fd >= 0) {
         MMSPdu* pdu = g_new0(MMSPdu, 1);
         pdu->type = MMS_MESSAGE_TYPE_READ_REC_IND;
@@ -39,6 +41,7 @@ mms_task_read_create_pdu_file(
         pdu->ri.to = g_strdup(to);
         time(&pdu->ri.date);
         if (!mms_message_encode(pdu, fd)) {
+            MMS_ERROR(err, MMS_LIB_ERROR_ENCODE, "Failed to encode %s", path);
             g_free(path);
             path = NULL;
         }
@@ -58,11 +61,12 @@ mms_task_read_new(
     MMSHandler* h,
     const char* id,
     const char* imsi,
-    const char* message_id,
+    const char* msg_id,
     const char* to,
-    MMSReadStatus rs)
+    MMSReadStatus rs,
+    GError** err)
 {
-    char* path = mms_task_read_create_pdu_file(cfg, id, message_id, to, rs);
+    char* path = mms_task_read_create_pdu_file(cfg, id, msg_id, to, rs, err);
     if (path) {
         MMSTask* task = mms_task_upload_new(cfg, h, "Read", id, imsi, path);
         g_free(path);

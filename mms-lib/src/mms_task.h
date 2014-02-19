@@ -150,7 +150,8 @@ mms_task_notification_new(
     const MMSConfig* config,
     MMSHandler* handler,
     const char* imsi,
-    GBytes* bytes);
+    GBytes* bytes,
+    GError** error);
 
 MMSTask*
 mms_task_retrieve_new(
@@ -158,7 +159,8 @@ mms_task_retrieve_new(
     MMSHandler* handler,
     const char* id,
     const char* imsi,
-    const MMSPdu* pdu);
+    const MMSPdu* pdu,
+    GError** error);
 
 MMSTask*
 mms_task_decode_new(
@@ -203,7 +205,8 @@ mms_task_read_new(
     const char* imsi,
     const char* message_id,
     const char* to,
-    MMSReadStatus status);
+    MMSReadStatus status,
+    GError** error);
 
 MMSTask*
 mms_task_publish_new(

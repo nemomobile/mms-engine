@@ -24,6 +24,15 @@
 #define MMS_DEFAULT_IDLE_SECS       (20)
 
 /**
+ * MMS error domain
+ */
+GQuark
+mms_lib_error_quark()
+{
+    return g_quark_from_static_string("mms-lib-error-quark");
+}
+
+/**
  * One-time initialization
  */
 void

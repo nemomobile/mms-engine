@@ -380,10 +380,12 @@ test_retrieve_once(
 {
     Test test;
     if (test_init(&test, config, desc)) {
+        GError* error = NULL;
         GBytes* push = g_bytes_new_static(
             g_mapped_file_get_contents(test.notification_ind),
             g_mapped_file_get_length(test.notification_ind));
-        if (mms_dispatcher_handle_push(test.disp, "TestConnection", push)) {
+        if (mms_dispatcher_handle_push(test.disp, "TestConnection",
+            push, &error)) {
             if (mms_dispatcher_start(test.disp)) {
                 test.ret = RET_OK;
                 g_main_loop_run(test.loop);
@@ -391,6 +393,7 @@ test_retrieve_once(
                 MMS_INFO("%s FAILED", desc->name);
             }
         } else {
+            g_error_free(error);
             if (desc->flags & TEST_PUSH_HANDLING_FAILURE_OK) {
                 test.ret = RET_OK;
                 test_finish(&test);
