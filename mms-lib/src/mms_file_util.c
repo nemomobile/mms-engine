@@ -56,7 +56,7 @@ mms_create_file(
         char* fname = g_strconcat(dir, "/", file, NULL);
         fd = open(fname, O_CREAT|O_RDWR|O_TRUNC|O_BINARY, MMS_FILE_PERM);
         if (fd < 0) {
-            MMS_ERROR(error, MMS_LIB_ERROR_FILE,
+            MMS_ERROR(error, MMS_LIB_ERROR_IO,
                 "Failed to create file %s: %s", fname, strerror(errno));
         } else if (path) {
             *path = fname;
@@ -64,7 +64,7 @@ mms_create_file(
         }
         g_free(fname);
     } else {
-        MMS_ERROR(error, MMS_LIB_ERROR_FILE,
+        MMS_ERROR(error, MMS_LIB_ERROR_IO,
             "Failed to create directory %s: %s", dir, strerror(errno));
     }
     return fd;

@@ -23,7 +23,7 @@ GQuark mms_lib_error_quark(void);
 typedef enum {
     MMS_LIB_ERROR_ENCODE,
     MMS_LIB_ERROR_DECODE,
-    MMS_LIB_ERROR_FILE,
+    MMS_LIB_ERROR_IO,
     MMS_LIB_ERROR_EXPIRED
 } MMSLibError;
 
