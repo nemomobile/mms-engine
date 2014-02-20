@@ -27,12 +27,9 @@
 #  include <direct.h>
 #else
 #  include <unistd.h>
-#  include <fcntl.h>
 #endif
 
-#ifndef O_BINARY
-#  define O_BINARY 0
-#endif
+#include <fcntl.h>
 
 #include <glib.h>
 #include <glib-object.h>
