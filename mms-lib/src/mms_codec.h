@@ -157,7 +157,7 @@ struct mms_read_ind {
 };
 
 struct mms_attachment {
-	unsigned char *data;
+	const unsigned char *data;
 	size_t offset;
 	size_t length;
 	char *content_type;
