@@ -34,6 +34,10 @@
 #include <glib.h>
 #include <glib-object.h>
 
+#ifndef O_BINARY
+#  define O_BINARY (0)
+#endif
+
 /* Static configuration, chosen at startup and never changing since then */
 typedef struct mms_config {
     const char* root_dir;       /* Root directory for storing MMS files */
