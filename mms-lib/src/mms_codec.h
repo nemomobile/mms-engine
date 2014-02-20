@@ -31,14 +31,6 @@ enum mms_message_type {
 	MMS_MESSAGE_TYPE_READ_ORIG_IND =		136,
 };
 
-enum mms_message_status {
-	MMS_MESSAGE_STATUS_DOWNLOADED,
-	MMS_MESSAGE_STATUS_RECEIVED,
-	MMS_MESSAGE_STATUS_READ,
-	MMS_MESSAGE_STATUS_SENT,
-	MMS_MESSAGE_STATUS_DRAFT
-};
-
 enum mms_message_rsp_status {
 	MMS_MESSAGE_RSP_STATUS_OK =					128,
 	MMS_MESSAGE_RSP_STATUS_ERR_UNSUPPORTED_MESSAGE =		136,
@@ -119,7 +111,6 @@ struct mms_notification_ind {
 };
 
 struct mms_retrieve_conf {
-	enum mms_message_status status;
 	char *from;
 	char *to;
 	char *cc;
@@ -131,7 +122,6 @@ struct mms_retrieve_conf {
 };
 
 struct mms_send_req {
-	enum mms_message_status status;
 	char *to;
 	time_t date;
 	char *content_type;
