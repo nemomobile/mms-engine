@@ -144,6 +144,10 @@ mms_task_queue_and_unref(
     MMSTaskDelegate* delegate,
     MMSTask* task);
 
+const char*
+mms_task_make_id(
+    MMSTask* task);
+
 /* Create particular types of tasks */
 MMSTask*
 mms_task_notification_new(

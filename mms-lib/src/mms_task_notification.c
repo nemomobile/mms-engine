@@ -38,23 +38,6 @@ G_DEFINE_TYPE(MMSTaskNotification, mms_task_notification, MMS_TYPE_TASK);
    MMS_TYPE_TASK_NOTIFICATION, MMSTaskNotification))
 
 /**
- * Generates dummy task id if necessary.
- */
-static
-void
-mms_task_notification_make_id(
-    MMSTask* task)
-{
-    if (!task->id) {
-        char* tmpl = g_strconcat(task->config->root_dir,
-            "/" MMS_MESSAGE_DIR "/XXXXXX" , NULL);
-        char* dir = g_mkdtemp_full(tmpl, MMS_DIR_PERM);
-        if (dir) task->id = g_path_get_basename(dir);
-        g_free(tmpl);
-    }
-}
-
-/**
  * Writes the datagram to a file in the message directory.
  */
 static
@@ -65,7 +48,7 @@ mms_task_notification_write_file(
 {
     char* dir;
     gboolean ok;
-    mms_task_notification_make_id(&ind->task);
+    mms_task_make_id(&ind->task);
     dir = mms_task_dir(&ind->task);
     ok = mms_write_bytes(dir, file, ind->push, NULL);
     g_free(dir);
@@ -126,7 +109,7 @@ mms_task_notification_ind(
             g_free(id);
         }
     } else if (!mms_task_retry(task)) {
-        mms_task_notification_make_id(task);
+        mms_task_make_id(task);
         mms_task_queue_and_unref(task->delegate,
             mms_task_notifyresp_new(task->config, task->handler, task->id,
                 task->imsi, ind->pdu->transaction_id,

@@ -298,6 +298,23 @@ mms_task_queue_and_unref(
     return ok;
 }
 
+/**
+ * Generates dummy task id if necessary.
+ */
+const char*
+mms_task_make_id(
+    MMSTask* task)
+{
+    if (!task->id) {
+        char* tmpl = g_strconcat(task->config->root_dir,
+            "/" MMS_MESSAGE_DIR "/XXXXXX" , NULL);
+        char* dir = g_mkdtemp_full(tmpl, MMS_DIR_PERM);
+        if (dir) task->id = g_path_get_basename(dir);
+        g_free(tmpl);
+    }
+    return task->id;
+}
+
 /*
  * Local Variables:
  * mode: C
