@@ -38,15 +38,11 @@ mms_lib_error_quark()
 void
 mms_lib_init(void)
 {
-#ifdef __GNUC__
-#  pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
     /* g_type_init has been deprecated since version 2.36
      * the type system is initialised automagically since then */
+    G_GNUC_BEGIN_IGNORE_DEPRECATIONS;
     g_type_init();
-#ifdef __GNUC__
-#  pragma GCC diagnostic pop
-#endif
+    G_GNUC_END_IGNORE_DEPRECATIONS;
 }
 
 /**
