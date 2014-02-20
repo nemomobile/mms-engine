@@ -67,6 +67,11 @@ void MmsHandler::messageReceiveStateChanged(QString recId, int state)
     qDebug() << "messageReceiveStateChanged" << recId << state;
 }
 
+void MmsHandler::messageSendStateChanged(QString recId, int state)
+{
+    qDebug() << "messageSendStateChanged" << recId << state;
+}
+
 void MmsHandler::messageReceived(QString recId, QString mmsId, QString from,
     QStringList to, QStringList cc, QString subj, uint date, int priority,
     QString cls, bool readReport, MmsPartList parts)

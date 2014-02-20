@@ -33,6 +33,7 @@ public Q_SLOTS:
     void messageReceived(QString recId, QString mmsId, QString from,
         QStringList to, QStringList cc, QString subj, uint date, int priority,
         QString cls, bool readReport, MmsPartList parts);
+    void messageSendStateChanged(QString recId, int state);
 
 private:
     bool m_isRegistered;
