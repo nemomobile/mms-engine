@@ -16,12 +16,6 @@
 #include "mms_log.h"
 #include "mms_error.h"
 
-#include <fcntl.h>
-
-#ifndef O_BINARY
-#  define O_BINARY 0
-#endif
-
 /**
  * Removes both the file and the directory containing it, if it's empty.
  */
