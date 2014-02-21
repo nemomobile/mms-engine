@@ -41,7 +41,7 @@ mms_strip_address_type(
     char* address)
 {
     if (address) {
-        char* type = g_strrstr(g_strstrip(address), "/TYPE=");
+        char* type = g_strrstr(g_strstrip(address), MMS_ADDRESS_TYPE_SUFFIX);
         if (type) *type = 0;
     }
     return address;

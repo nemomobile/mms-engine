@@ -57,6 +57,10 @@ mms_http_transfer_free(
 G_INLINE_FUNC char* mms_strip(char* str)
     { return str ? g_strstrip(str) : NULL; }
 
+/* Address type suffices */
+#define MMS_ADDRESS_TYPE_SUFFIX         "/TYPE="
+#define MMS_ADDRESS_TYPE_SUFFIX_PHONE   MMS_ADDRESS_TYPE_SUFFIX "PLMN"
+
 #endif /* JOLLA_MMS_UTIL_H */
 
 /*
