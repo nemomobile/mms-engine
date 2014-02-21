@@ -1527,16 +1527,17 @@ static gboolean encode_content_type(struct file_buffer *fb,
 	const char *ct_str;
 	const char *uninitialized_var(type);
 	const char *uninitialized_var(start);
-	struct wsp_text_header_iter iter;
+	struct wsp_text_header_iter* iter;
 
-	if (wsp_text_header_iter_init(&iter, *hdr) == FALSE)
+	iter = wsp_text_header_iter_new(*hdr);
+	if (iter == NULL)
 		return FALSE;
 
 	if (g_ascii_strcasecmp("Content-Type",
-			wsp_text_header_iter_get_key(&iter)) != 0)
-		return FALSE;
+			wsp_text_header_iter_get_key(iter)) != 0)
+		goto fail;
 
-	ct_str = wsp_text_header_iter_get_value(&iter);
+	ct_str = wsp_text_header_iter_get_value(iter);
 
 	if (wsp_get_well_known_content_type(ct_str, &ct) == TRUE)
 		ct_len = 1;
@@ -1548,15 +1549,15 @@ static gboolean encode_content_type(struct file_buffer *fb,
 	type_len = 0;
 	start_len = 0;
 
-	while (wsp_text_header_iter_param_next(&iter) == TRUE) {
+	while (wsp_text_header_iter_param_next(iter) == TRUE) {
 		if (g_ascii_strcasecmp("type",
-				wsp_text_header_iter_get_key(&iter)) == 0) {
-			type = wsp_text_header_iter_get_value(&iter);
+				wsp_text_header_iter_get_key(iter)) == 0) {
+			type = wsp_text_header_iter_get_value(iter);
 			type_len = strlen(type) + 1;
 			len += 1 + type_len;
 		} else if (g_ascii_strcasecmp("start",
-				wsp_text_header_iter_get_key(&iter)) == 0) {
-			start = wsp_text_header_iter_get_value(&iter);
+				wsp_text_header_iter_get_key(iter)) == 0) {
+			start = wsp_text_header_iter_get_value(iter);
 			start_len = strlen(start) + 1;
 			len += 1 + start_len;
 		}
@@ -1567,18 +1568,18 @@ static gboolean encode_content_type(struct file_buffer *fb,
 
 	ptr = fb_request(fb, 1);
 	if (ptr == NULL)
-		return FALSE;
+		goto fail;
 
 	*ptr = header | 0x80;
 
 	/* Encode content type value length */
 	if (fb_put_value_length(fb, len) == FALSE)
-		return FALSE;
+		goto fail;
 
 	/* Encode content type including parameters */
 	ptr = fb_request(fb, ct_len);
 	if (ptr == NULL)
-		return FALSE;
+		goto fail;
 
 	if (ct_len == 1)
 		*ptr = ct | 0x80;
@@ -1589,7 +1590,7 @@ static gboolean encode_content_type(struct file_buffer *fb,
 		ptr = fb_request_field(fb, WSP_PARAMETER_TYPE_CONTENT_TYPE,
 							type_len);
 		if (ptr == NULL)
-			return FALSE;
+			goto fail;
 
 		strcpy(ptr, type);
 	}
@@ -1598,12 +1599,17 @@ static gboolean encode_content_type(struct file_buffer *fb,
 		ptr = fb_request_field(fb, WSP_PARAMETER_TYPE_START_DEFUNCT,
 							start_len);
 		if (ptr == NULL)
-			return FALSE;
+			goto fail;
 
 		strcpy(ptr, start);
 	}
 
+	wsp_text_header_iter_free(iter);
 	return TRUE;
+
+fail:
+	wsp_text_header_iter_free(iter);
+	return FALSE;
 }
 
 static header_encoder encoder_for_type(enum mms_header header)
@@ -1686,20 +1692,21 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 	unsigned char ctp_val[MAX_ENC_VALUE_BYTES];
 	unsigned char cs_val[MAX_ENC_VALUE_BYTES];
 	unsigned int cs;
-	struct wsp_text_header_iter iter;
+	struct wsp_text_header_iter* iter;
 
 	/*
 	 * Compute Headers length: content-type [+ params] [+ content-id]
 	 * ex. : "Content-Type:text/plain; charset=us-ascii"
 	 */
-	if (wsp_text_header_iter_init(&iter, part->content_type) == FALSE)
+	iter = wsp_text_header_iter_new(part->content_type);
+	if (iter == NULL)
 		return FALSE;
 
 	if (g_ascii_strcasecmp("Content-Type",
-				wsp_text_header_iter_get_key(&iter)) != 0)
-		return FALSE;
+				wsp_text_header_iter_get_key(iter)) != 0)
+		goto fail;
 
-	ct_str = wsp_text_header_iter_get_value(&iter);
+	ct_str = wsp_text_header_iter_get_value(iter);
 
 	if (wsp_get_well_known_content_type(ct_str, &ct) == TRUE)
 		ct_len = 1;
@@ -1710,22 +1717,22 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 
 	cs_len = 0;
 
-	while (wsp_text_header_iter_param_next(&iter) == TRUE) {
-		const char *key = wsp_text_header_iter_get_key(&iter);
+	while (wsp_text_header_iter_param_next(iter) == TRUE) {
+		const char *key = wsp_text_header_iter_get_key(iter);
 
 		if (g_ascii_strcasecmp("charset", key) == 0) {
-			cs_str = wsp_text_header_iter_get_value(&iter);
+			cs_str = wsp_text_header_iter_get_value(iter);
 			if (cs_str == NULL)
-				return FALSE;
+				goto fail;
 
 			len += 1;
 
 			if (wsp_get_well_known_charset(cs_str, &cs) == FALSE)
-				return FALSE;
+				goto fail;
 
 			if (wsp_encode_integer(cs, cs_val, MAX_ENC_VALUE_BYTES,
 							&cs_len) == FALSE)
-				return FALSE;
+				goto fail;
 
 			len += cs_len;
 		}
@@ -1733,7 +1740,7 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 
 	if (wsp_encode_value_length(len, ctp_val, MAX_ENC_VALUE_BYTES,
 							&ctp_len) == FALSE)
-		return FALSE;
+		goto fail;
 
 	len += ctp_len;
 
@@ -1746,22 +1753,22 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 
 	/* Encode total headers length */
 	if (fb_put_uintvar(fb, len) == FALSE)
-		return FALSE;
+		goto fail;
 
 	/* Encode data length */
 	if (fb_put_uintvar(fb, part->length) == FALSE)
-		return FALSE;
+		goto fail;
 
 	/* Encode content-type */
 	ptr = fb_request(fb, ctp_len);
 	if (ptr == NULL)
-		return FALSE;
+		goto fail;
 
 	memcpy(ptr, &ctp_val, ctp_len);
 
 	ptr = fb_request(fb, ct_len);
 	if (ptr == NULL)
-		return FALSE;
+		goto fail;
 
 	if (ct_len == 1)
 		ptr[0] = ct | 0x80;
@@ -1772,7 +1779,7 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 	if (cs_len > 0) {
 		ptr = fb_request_field(fb, WSP_PARAMETER_TYPE_CHARSET, cs_len);
 		if (ptr == NULL)
-			return FALSE;
+			goto fail;
 
 		memcpy(ptr, &cs_val, cs_len);
 	}
@@ -1781,10 +1788,15 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 	if (part->content_id != NULL) {
 		if (encode_quoted_string(fb, MMS_PART_HEADER_CONTENT_ID,
 						&part->content_id) == FALSE)
-			return FALSE;
+			goto fail;
 	}
 
+	wsp_text_header_iter_free(iter);
 	return TRUE;
+
+fail:
+	wsp_text_header_iter_free(iter);
+	return FALSE;
 }
 
 static gboolean mms_encode_send_req_part(struct mms_attachment *part,
