@@ -174,6 +174,263 @@ typedef gboolean (*header_handler)(struct wsp_header_iter *, void *);
 typedef gboolean (*header_encoder)(struct file_buffer *, enum mms_header,
 									void *);
 
+/*
+ * mms_parse_http_content_type() parses HTTP media type as defined
+ * in section 3.7 "Media Types" of the HTTP/1.1 specification. The
+ * grammar is defined as follows:
+ *
+ * media-type     = type "/" subtype *( ";" parameter )
+ * type           = token
+ * subtype        = token
+ * parameter      = attribute "=" value
+ * attribute      = token
+ * value          = token | quoted-string
+ * token          = 1*<any CHAR except CTLs or separators>
+ * quoted-string  = ( <"> *(qdtext | quoted-pair ) <"> )
+ * qdtext         = <any TEXT except <">>
+ * quoted-pair    = "\" CHAR
+ *
+ * Returns the NULL terminated array of strings which consists of the
+ * type/subtype part followed by attribute + value pairs. For example,
+ * this string:
+ *
+ *   "text/html; charset=ISO-8859-4"
+ *
+ * would be parsed into the followring:
+ *
+ *   "text/html"
+ *   "charset"
+ *   "ISO-8859-4"
+ *   NULL
+ *
+ * The caller is responsible for deallocating the returned string
+ * with g_strfreev
+ */
+
+/*
+ * token          = 1*<any CHAR except CTLs or separators>
+ * CHAR           = <any US-ASCII character (octets 0 - 127)>
+ * CTL            = <any US-ASCII control character
+ *                 (octets 0 - 31) and DEL (127)>
+ * separators     = "(" | ")" | "<" | ">" | "@"
+ *                | "," | ";" | ":" | "\" | <">
+ *                | "/" | "[" | "]" | "?" | "="
+ *                | "{" | "}" | SP | HT
+ */
+static const char http_token[] = {
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,	/* 0x00    -   0x0f */
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,	/* 0x10    -   0x1f */
+	0,1,0,1,1,1,1,1,0,0,1,1,0,1,1,0,	/*  !"#$%&'()*+,-./ */
+	1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,	/* 0123456789:;<=>? */
+	0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,	/* @ABCDEFGHIJKLMNO */
+	1,1,1,1,1,1,1,1,1,1,1,0,0,0,1,1,	/* PQRSTUVWXYZ[\]^_ */
+	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,	/* `abcdefghijklmno */
+	1,1,1,1,1,1,1,1,1,1,1,0,1,0,1,0,	/* pqrstuvwxyz{|}~  */
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 	/* 0x80 - 0xFF      */
+};
+
+/*
+ * quoted-string  = ( <"> *(qdtext | quoted-pair ) <"> )
+ * quoted-pair    = "\" CHAR
+ * qdtext         = <any TEXT except <">>
+ * TEXT           = <any OCTET except CTLs,
+ *                  but including LWS>
+ * CTL            = <any US-ASCII control character
+ *                 (octets 0 - 31) and DEL (127)>
+ */
+static const char http_qdtext[] = {
+	0,0,0,0,0,0,0,0,0,0,1,0,0,1,0,0,	/* 0x00 - 0x0f      */
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,	/* 0x10 - 0x1f      */
+	1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,	/*  !"#$%&'()*+,-./ */
+	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,	/* 0123456789:;<=>? */
+	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,	/* @ABCDEFGHIJKLMNO */
+	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,	/* PQRSTUVWXYZ[\]^_ */
+	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,	/* `abcdefghijklmno */
+	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,	/* pqrstuvwxyz{|}~  */
+	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 	/* 0x80 - 0xFF      */
+};
+
+static const char http_space[] = {
+	0,0,0,0,0,0,0,0,0,1,1,0,0,1,0,0,	/* 0x00 - 0x0f      */
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,	/* 0x10 - 0x1f      */
+	1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,	/*  !"#$%&'()*+,-./ */
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,	/* 0123456789:;<=>? */
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,	/* @ABCDEFGHIJKLMNO */
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,	/* PQRSTUVWXYZ[\]^_ */
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,	/* `abcdefghijklmno */
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,	/* pqrstuvwxyz{|}~  */
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 	/* 0x80 - 0xFF      */
+};
+
+static const unsigned char *mms_parse_skip_spaces(const unsigned char *ptr)
+{
+	while (http_space[*ptr]) ptr++;
+	return ptr;
+}
+
+static gboolean mms_is_http_token(const unsigned char *ptr)
+{
+	if (ptr && *ptr) {
+		while (*ptr) {
+			if (!http_token[*ptr++]) {
+				return FALSE;
+			}
+		}
+		return TRUE;
+	}
+	return FALSE;
+}
+
+static const unsigned char *mms_parse_http_token(const unsigned char *ptr,
+								GString *token)
+{
+	int len = 0;
+	ptr = mms_parse_skip_spaces(ptr);
+	while (http_token[*ptr]) {
+		g_string_append_c(token, *ptr);
+		ptr++;
+		len++;
+	}
+	return len > 0 ? mms_parse_skip_spaces(ptr) : NULL;
+}
+
+static const unsigned char *mms_parse_quoted_string(const unsigned char *ptr,
+								GString *value)
+{
+	ptr = mms_parse_skip_spaces(ptr);
+	if (*ptr == '"') {
+		ptr++;
+		while (*ptr == '\\' || http_qdtext[*ptr]) {
+			if (*ptr == '\\') {
+				ptr++;
+				if (*ptr) g_string_append_c(value, *ptr++);
+			} else {
+				g_string_append_c(value, *ptr++);
+			}
+		}
+		if (*ptr == '"') {
+			ptr++;
+			return mms_parse_skip_spaces(ptr+1);
+		}
+	}
+	return NULL;
+}
+
+static void mms_parse_collect_value(GPtrArray *output, GString *value)
+{
+	g_ptr_array_add(output, g_strdup(value->str));
+	g_string_truncate(value, 0);
+}
+
+static gboolean mms_parse_parameters(const unsigned char *ptr,
+					GString *token, GPtrArray *output)
+{
+	g_string_truncate(token, 0);
+	ptr = mms_parse_skip_spaces(ptr);
+	while (ptr && *ptr == ';') {
+		if ((ptr = mms_parse_http_token(ptr+1, token)) != NULL) {
+			if (*ptr == '=') {
+				mms_parse_collect_value(output, token);
+				ptr = mms_parse_skip_spaces(ptr+1);
+				ptr = (*ptr == '"') ?
+					mms_parse_quoted_string(ptr, token) :
+					mms_parse_http_token(ptr, token);
+				if (ptr) {
+					mms_parse_collect_value(output, token);
+				}
+			} else {
+				return FALSE; /* Missing = */
+			}
+
+		}
+	}
+	return ptr && !*ptr;
+}
+
+static const unsigned char *mms_parse_type(const unsigned char *ptr,
+							GString *token)
+{
+	ptr = mms_parse_http_token(ptr, token);
+	if (ptr && *ptr == '/') {
+		g_string_append_c(token, *ptr++);
+		return mms_parse_http_token(ptr, token);
+	}
+	return NULL;
+}
+
+char **mms_parse_http_content_type(const char *str)
+{
+	gboolean ok = FALSE;
+	GPtrArray *output = NULL;
+	GString *tmp = g_string_new(NULL);
+	const unsigned char *ptr = mms_parse_type((unsigned char*)str, tmp);
+	if (ptr) {
+		output = g_ptr_array_new();
+		mms_parse_collect_value(output, tmp);
+		ok = mms_parse_parameters(ptr, tmp, output);
+	}
+	g_string_free(tmp, TRUE);
+	if (ok) {
+		g_ptr_array_add(output, NULL);
+		return (char**)g_ptr_array_free(output, FALSE);
+	}
+	if (output) {
+		g_ptr_array_set_free_func(output, g_free);
+		g_ptr_array_free(output, TRUE);
+	}
+	return NULL;
+}
+
+char *mms_unparse_http_content_type(char **ct)
+{
+	if (ct && ct[0]) {
+		int i;
+		GString *str = g_string_new(ct[0]);
+		for (i = 1; ct[i]; i += 2) {
+			const char *val = ct[i+1];
+			g_string_append(str, "; ");
+			g_string_append(str, ct[i]);
+			g_string_append_c(str, '=');
+			if (mms_is_http_token((unsigned char*)val)) {
+				g_string_append(str, val);
+			} else {
+				g_string_append_c(str, '"');
+				while (*val) {
+					const unsigned char uval = *val;
+					if (!http_qdtext[uval]) {
+						g_string_append_c(str, '\\');
+					}
+					g_string_append_c(str, *val++);
+				}
+				g_string_append_c(str, '"');
+			}
+		}
+		return g_string_free(str, FALSE);
+	}
+	return NULL;
+}
+
 static const char *charset_index2string(unsigned int index)
 {
 	int low = 0;
@@ -1517,6 +1774,7 @@ static gboolean encode_text_array_element(struct file_buffer *fb,
 static gboolean encode_content_type(struct file_buffer *fb,
 				enum mms_header header, void *user)
 {
+	int i;
 	char *ptr;
 	char **hdr = user;
 	unsigned int len;
@@ -1527,17 +1785,13 @@ static gboolean encode_content_type(struct file_buffer *fb,
 	const char *ct_str;
 	const char *uninitialized_var(type);
 	const char *uninitialized_var(start);
-	struct wsp_text_header_iter* iter;
+	char **parsed = mms_parse_http_content_type(*hdr);
+	gboolean ok = FALSE;
 
-	iter = wsp_text_header_iter_new(*hdr);
-	if (iter == NULL)
+	if (parsed == NULL)
 		return FALSE;
 
-	if (g_ascii_strcasecmp("Content-Type",
-			wsp_text_header_iter_get_key(iter)) != 0)
-		goto fail;
-
-	ct_str = wsp_text_header_iter_get_value(iter);
+	ct_str = parsed[0];
 
 	if (wsp_get_well_known_content_type(ct_str, &ct) == TRUE)
 		ct_len = 1;
@@ -1549,37 +1803,39 @@ static gboolean encode_content_type(struct file_buffer *fb,
 	type_len = 0;
 	start_len = 0;
 
-	while (wsp_text_header_iter_param_next(iter) == TRUE) {
-		if (g_ascii_strcasecmp("type",
-				wsp_text_header_iter_get_key(iter)) == 0) {
-			type = wsp_text_header_iter_get_value(iter);
+	for (i = 1; parsed[i]; i += 2) {
+		const char *attribute = parsed[i];
+		const char *value = parsed[i+1];
+		if (g_ascii_strcasecmp(attribute, "type") == 0) {
+			type = value;
 			type_len = strlen(type) + 1;
 			len += 1 + type_len;
-		} else if (g_ascii_strcasecmp("start",
-				wsp_text_header_iter_get_key(iter)) == 0) {
-			start = wsp_text_header_iter_get_value(iter);
+		} else if (g_ascii_strcasecmp(attribute, "start") == 0) {
+			start = value;
 			start_len = strlen(start) + 1;
 			len += 1 + start_len;
 		}
 	}
 
-	if (len == 1)
-		return encode_short(fb, header, &ct);
+	if (len == 1) {
+		ok = encode_short(fb, header, &ct);
+		goto done;
+	}
 
 	ptr = fb_request(fb, 1);
 	if (ptr == NULL)
-		goto fail;
+		goto done;
 
 	*ptr = header | 0x80;
 
 	/* Encode content type value length */
 	if (fb_put_value_length(fb, len) == FALSE)
-		goto fail;
+		goto done;
 
 	/* Encode content type including parameters */
 	ptr = fb_request(fb, ct_len);
 	if (ptr == NULL)
-		goto fail;
+		goto done;
 
 	if (ct_len == 1)
 		*ptr = ct | 0x80;
@@ -1590,7 +1846,7 @@ static gboolean encode_content_type(struct file_buffer *fb,
 		ptr = fb_request_field(fb, WSP_PARAMETER_TYPE_CONTENT_TYPE,
 							type_len);
 		if (ptr == NULL)
-			goto fail;
+			goto done;
 
 		strcpy(ptr, type);
 	}
@@ -1599,17 +1855,16 @@ static gboolean encode_content_type(struct file_buffer *fb,
 		ptr = fb_request_field(fb, WSP_PARAMETER_TYPE_START_DEFUNCT,
 							start_len);
 		if (ptr == NULL)
-			goto fail;
+			goto done;
 
 		strcpy(ptr, start);
 	}
 
-	wsp_text_header_iter_free(iter);
-	return TRUE;
+	ok = TRUE;
 
-fail:
-	wsp_text_header_iter_free(iter);
-	return FALSE;
+done:
+	g_strfreev(parsed);
+	return ok;
 }
 
 static header_encoder encoder_for_type(enum mms_header header)
@@ -1680,6 +1935,7 @@ static header_encoder encoder_for_type(enum mms_header header)
 static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 						struct file_buffer *fb)
 {
+	int i;
 	char *ptr;
 	unsigned int len;
 	unsigned int ct;
@@ -1692,21 +1948,13 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 	unsigned char ctp_val[MAX_ENC_VALUE_BYTES];
 	unsigned char cs_val[MAX_ENC_VALUE_BYTES];
 	unsigned int cs;
-	struct wsp_text_header_iter* iter;
+	char **parsed = mms_parse_http_content_type(part->content_type);
+	gboolean ok = FALSE;
 
-	/*
-	 * Compute Headers length: content-type [+ params] [+ content-id]
-	 * ex. : "Content-Type:text/plain; charset=us-ascii"
-	 */
-	iter = wsp_text_header_iter_new(part->content_type);
-	if (iter == NULL)
+	if (parsed == NULL)
 		return FALSE;
 
-	if (g_ascii_strcasecmp("Content-Type",
-				wsp_text_header_iter_get_key(iter)) != 0)
-		goto fail;
-
-	ct_str = wsp_text_header_iter_get_value(iter);
+	ct_str = parsed[0];
 
 	if (wsp_get_well_known_content_type(ct_str, &ct) == TRUE)
 		ct_len = 1;
@@ -1717,22 +1965,20 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 
 	cs_len = 0;
 
-	while (wsp_text_header_iter_param_next(iter) == TRUE) {
-		const char *key = wsp_text_header_iter_get_key(iter);
+	for (i = 1; parsed[i]; i += 2) {
+		const char *key = parsed[i];
 
 		if (g_ascii_strcasecmp("charset", key) == 0) {
-			cs_str = wsp_text_header_iter_get_value(iter);
-			if (cs_str == NULL)
-				goto fail;
+			cs_str = parsed[i+1];
 
 			len += 1;
 
 			if (wsp_get_well_known_charset(cs_str, &cs) == FALSE)
-				goto fail;
+				goto done;
 
 			if (wsp_encode_integer(cs, cs_val, MAX_ENC_VALUE_BYTES,
 							&cs_len) == FALSE)
-				goto fail;
+				goto done;
 
 			len += cs_len;
 		}
@@ -1740,7 +1986,7 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 
 	if (wsp_encode_value_length(len, ctp_val, MAX_ENC_VALUE_BYTES,
 							&ctp_len) == FALSE)
-		goto fail;
+		goto done;
 
 	len += ctp_len;
 
@@ -1753,22 +1999,22 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 
 	/* Encode total headers length */
 	if (fb_put_uintvar(fb, len) == FALSE)
-		goto fail;
+		goto done;
 
 	/* Encode data length */
 	if (fb_put_uintvar(fb, part->length) == FALSE)
-		goto fail;
+		goto done;
 
 	/* Encode content-type */
 	ptr = fb_request(fb, ctp_len);
 	if (ptr == NULL)
-		goto fail;
+		goto done;
 
 	memcpy(ptr, &ctp_val, ctp_len);
 
 	ptr = fb_request(fb, ct_len);
 	if (ptr == NULL)
-		goto fail;
+		goto done;
 
 	if (ct_len == 1)
 		ptr[0] = ct | 0x80;
@@ -1779,7 +2025,7 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 	if (cs_len > 0) {
 		ptr = fb_request_field(fb, WSP_PARAMETER_TYPE_CHARSET, cs_len);
 		if (ptr == NULL)
-			goto fail;
+			goto done;
 
 		memcpy(ptr, &cs_val, cs_len);
 	}
@@ -1788,15 +2034,14 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 	if (part->content_id != NULL) {
 		if (encode_quoted_string(fb, MMS_PART_HEADER_CONTENT_ID,
 						&part->content_id) == FALSE)
-			goto fail;
+			goto done;
 	}
 
-	wsp_text_header_iter_free(iter);
-	return TRUE;
+	ok = TRUE;
 
-fail:
-	wsp_text_header_iter_free(iter);
-	return FALSE;
+done:
+	g_strfreev(parsed);
+	return ok;
 }
 
 static gboolean mms_encode_send_req_part(struct mms_attachment *part,

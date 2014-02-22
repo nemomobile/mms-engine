@@ -181,7 +181,9 @@ struct mms_message {
 	};
 };
 
+char **mms_parse_http_content_type(const char *str);
+char *mms_unparse_http_content_type(char **ct);
 gboolean mms_message_decode(const unsigned char *pdu,
-						unsigned int len, struct mms_message *out);
+				unsigned int len, struct mms_message *out);
 gboolean mms_message_encode(struct mms_message *msg, int fd);
 void mms_message_free(struct mms_message *msg);

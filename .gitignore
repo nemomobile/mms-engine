@@ -6,6 +6,7 @@ mms-lib/build
 mms-lib/test/coverage/full.gcov
 mms-lib/test/coverage/mms-lib.gcov
 mms-lib/test/coverage/results
+mms-lib/test/media_type/build
 mms-lib/test/mms_codec/build
 mms-lib/test/mms_lib_test.ncb
 mms-lib/test/mms_lib_test.opt
