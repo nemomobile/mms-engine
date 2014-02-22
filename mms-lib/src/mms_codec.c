@@ -50,6 +50,8 @@
 #define TFR
 #endif
 
+#define QUOTE (127)
+
 enum mms_message_value_bool {
 	MMS_MESSAGE_VALUE_BOOL_YES =		128,
 	MMS_MESSAGE_VALUE_BOOL_NO =		129,
@@ -1718,11 +1720,13 @@ static gboolean encode_text(struct file_buffer *fb,
 	unsigned int len;
 
 	len = strlen(*text) + 1;
+	if ((*text)[0] & 0x80) len++;
 
 	ptr = fb_request_field(fb, header, len);
 	if (ptr == NULL)
 		return FALSE;
 
+	if ((*text)[0] & 0x80) *ptr++ = QUOTE;
 	strcpy(ptr, *text);
 
 	return TRUE;
@@ -1945,6 +1949,7 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 	const char *uninitialized_var(cs_str);
 	unsigned int ctp_len;
 	unsigned int cid_len;
+	unsigned int cloc_len;
 	unsigned char ctp_val[MAX_ENC_VALUE_BYTES];
 	unsigned char cs_val[MAX_ENC_VALUE_BYTES];
 	unsigned int cs;
@@ -1997,6 +2002,14 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 	} else
 		cid_len = 0;
 
+	/* Compute content-location header length : text-string */
+	if (part->content_location != NULL) {
+		cloc_len = 1 + strlen(part->content_location) + 1;
+		if (part->content_location[0] & 0x80) cloc_len++;
+		len += cloc_len;
+	} else
+		cloc_len = 0;
+
 	/* Encode total headers length */
 	if (fb_put_uintvar(fb, len) == FALSE)
 		goto done;
@@ -2034,6 +2047,13 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 	if (part->content_id != NULL) {
 		if (encode_quoted_string(fb, MMS_PART_HEADER_CONTENT_ID,
 						&part->content_id) == FALSE)
+			goto done;
+	}
+
+	/* Encode content-location */
+	if (part->content_location != NULL) {
+		if (encode_text(fb, MMS_PART_HEADER_CONTENT_LOCATION,
+					&part->content_location) == FALSE)
 			goto done;
 	}
 
