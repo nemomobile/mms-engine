@@ -330,7 +330,6 @@ static const unsigned char *mms_parse_quoted_string(const unsigned char *ptr,
 			}
 		}
 		if (*ptr == '"') {
-			ptr++;
 			return mms_parse_skip_spaces(ptr+1);
 		}
 	}

@@ -42,12 +42,12 @@ static const TestDesc media_type_tests[] = {
         (char**)parsed_basic
     },{
         "Quotes",
-        "application/octet-stream; foo = \"\\ quoted \\\"text\\\" \" ",
+        "application/octet-stream; foo = \"\\ quoted \\\"text\\\" \"",
         "application/octet-stream; foo=\" quoted \\\"text\\\" \"",
         (char**)parsed_quotes
     },{
         "Parameters",
-        "type/subtype; p1=v1 ; p2=\"v2\" ",
+        "type/subtype; p1=v1 ; p2=\"v2\"",
         "type/subtype; p1=v1; p2=v2",
         (char**)parsed_parameters
     },{
