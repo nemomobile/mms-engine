@@ -199,7 +199,11 @@
     <!--
         ===============================================================
 
-        Message send state update.
+        Message send state update. These are intermediate states.
+        Once the message has been uploaded to MMSC and operator
+        accepts it for delivery, messageSent notification will be
+        issued and there will be no messageSendStateChanged calls
+        for this message anymore.
 
         ===============================================================
     -->
@@ -218,9 +222,32 @@
           4 (NoSpace):   No space left, delete something and try again
           5 (SendError): Failed to send the message
           6 (Refused):   Operator refused to accept the message
-          7 (Sent):      Message sent (accepted by the operator)
       -->
       <arg direction="in" type="i" name="state"/>
+    </method>
+
+    <!--
+        ===============================================================
+
+        Message send notification. Means that message has been queued
+        for delivery and lets the handler know what MMS message id has
+        been assigned to it by the operator.
+
+        ===============================================================
+    -->
+    <method name="messageSent">
+      <!--
+          Database record id.
+      -->
+      <arg direction="in" type="s" name="recId"/>
+      <!--
+          Message-ID.
+
+          Message id is assigned by the operator when it accepts
+          the message for delivery. This string will identify the
+          message in deliveryReport and readReport notifications.
+      -->
+      <arg direction="in" type="s" name="mmsId"/>
     </method>
 
     <!--
