@@ -75,6 +75,7 @@ test_files(
 int main(int argc, char* argv[])
 {
     const char* mms_files[] = {
+        "data/m-acknowledge.ind",
         "data/m-notification_1.0.ind",
         "data/m-notification_1.1.ind",
         "data/m-notification_1.2.ind",
