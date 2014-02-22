@@ -162,6 +162,7 @@ struct mms_attachment {
 	size_t length;
 	char *content_type;
 	char *content_id;
+	char *content_location;
 };
 
 struct mms_message {

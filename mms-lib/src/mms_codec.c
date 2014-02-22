@@ -1173,9 +1173,8 @@ static const char *decode_attachment_charset(const unsigned char *pdu,
 	return NULL;
 }
 
-static gboolean extract_content_id(struct wsp_header_iter *iter, void *user)
+static gboolean extract_quoted_string(struct wsp_header_iter *iter, char **out)
 {
-	char **out = user;
 	const unsigned char *p;
 	unsigned int l;
 	const char *text;
@@ -1212,11 +1211,12 @@ static gboolean attachment_parse_headers(struct wsp_header_iter *iter,
 
 		switch (h) {
 		case MMS_PART_HEADER_CONTENT_ID:
-			if (extract_content_id(iter, &part->content_id)
-								== FALSE)
+			if (!extract_quoted_string(iter, &part->content_id))
 				return FALSE;
 			break;
 		case MMS_PART_HEADER_CONTENT_LOCATION:
+			if (!extract_text(iter, &part->content_location))
+				return FALSE;
 			break;
 		}
 	}
@@ -1230,6 +1230,7 @@ static void free_attachment(gpointer data, gpointer user_data)
 
 	g_free(attach->content_type);
 	g_free(attach->content_id);
+	g_free(attach->content_location);
 
 	g_free(attach);
 }
