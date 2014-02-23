@@ -66,6 +66,12 @@ void MmsAdaptor::messageSendStateChanged(const QString &recId, int state)
     QMetaObject::invokeMethod(parent(), "messageSendStateChanged", Q_ARG(QString, recId), Q_ARG(int, state));
 }
 
+void MmsAdaptor::messageSent(const QString &recId, const QString &mmsId)
+{
+    // handle method call org.nemomobile.MmsHandler.messageSent
+    QMetaObject::invokeMethod(parent(), "messageSent", Q_ARG(QString, recId), Q_ARG(QString, mmsId));
+}
+
 void MmsAdaptor::readReport(const QString &imsi, const QString &mmsId, const QString &recipient, int status)
 {
     // handle method call org.nemomobile.MmsHandler.readReport

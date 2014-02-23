@@ -9,8 +9,8 @@
  * before re-generating it.
  */
 
-#ifndef MMSADAPTOR_H_1390561457
-#define MMSADAPTOR_H_1390561457
+#ifndef MMSADAPTOR_H_1393114488
+#define MMSADAPTOR_H_1393114488
 
 #include "mmspart.h"
 
@@ -64,6 +64,10 @@ class MmsAdaptor: public QDBusAbstractAdaptor
 "      <arg direction=\"in\" type=\"s\" name=\"recId\"/>\n"
 "      <arg direction=\"in\" type=\"i\" name=\"state\"/>\n"
 "    </method>\n"
+"    <method name=\"messageSent\">\n"
+"      <arg direction=\"in\" type=\"s\" name=\"recId\"/>\n"
+"      <arg direction=\"in\" type=\"s\" name=\"mmsId\"/>\n"
+"    </method>\n"
 "    <method name=\"deliveryReport\">\n"
 "      <arg direction=\"in\" type=\"s\" name=\"imsi\"/>\n"
 "      <arg direction=\"in\" type=\"s\" name=\"mmsId\"/>\n"
@@ -89,6 +93,7 @@ public Q_SLOTS: // METHODS
     void messageReceiveStateChanged(const QString &recId, int state);
     void messageReceived(const QString &recId, const QString &mmsId, const QString &from, const QStringList &to, const QStringList &cc, const QString &subject, uint date, int priority, const QString &cls, bool readReport, MmsPartList parts);
     void messageSendStateChanged(const QString &recId, int state);
+    void messageSent(const QString &recId, const QString &mmsId);
     void readReport(const QString &imsi, const QString &mmsId, const QString &recipient, int status);
 Q_SIGNALS: // SIGNALS
 };
