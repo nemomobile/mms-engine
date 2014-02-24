@@ -98,6 +98,7 @@ enum mms_header {
 
 enum mms_part_header {
 	MMS_PART_HEADER_CONTENT_LOCATION =	0x0e,
+	MMS_PART_HEADER_CONTENT_DISPOSITION =	0x2e,
 	MMS_PART_HEADER_CONTENT_ID =		0x40,
 };
 
@@ -1951,16 +1952,20 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 	unsigned int ctp_len;
 	unsigned int cid_len;
 	unsigned int cloc_len;
+	unsigned int cd_len;
 	unsigned char ctp_val[MAX_ENC_VALUE_BYTES];
 	unsigned char cs_val[MAX_ENC_VALUE_BYTES];
+	unsigned char cd_val[MAX_ENC_VALUE_BYTES];
 	unsigned int cs;
 	char **parsed = mms_parse_http_content_type(part->content_type);
 	gboolean ok = FALSE;
+	gboolean is_smil;
 
 	if (parsed == NULL)
 		return FALSE;
 
 	ct_str = parsed[0];
+	is_smil = strcmp(ct_str, "application/smil") == 0;
 
 	if (wsp_get_well_known_content_type(ct_str, &ct) == TRUE)
 		ct_len = 1;
@@ -2005,11 +2010,22 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 
 	/* Compute content-location header length : text-string */
 	if (part->content_location != NULL) {
-		cloc_len = 1 + strlen(part->content_location) + 1;
+		cloc_len = strlen(part->content_location);
 		if (part->content_location[0] & 0x80) cloc_len++;
-		len += cloc_len;
+		len += cloc_len + 2;
 	} else
 		cloc_len = 0;
+
+	/* Compute content-disposition length */
+	if (!is_smil && part->content_location != NULL) {
+		cd_len = 2 + cloc_len + 1;
+		if (wsp_encode_value_length(cd_len, cd_val, MAX_ENC_VALUE_BYTES,
+							&cd_len) == FALSE)
+			goto done;
+		len += 1 + cd_len + 2 + cloc_len + 1;
+	} else {
+		cd_len = 0;
+	}
 
 	/* Encode total headers length */
 	if (fb_put_uintvar(fb, len) == FALSE)
@@ -2056,6 +2072,21 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 		if (encode_text(fb, MMS_PART_HEADER_CONTENT_LOCATION,
 					&part->content_location) == FALSE)
 			goto done;
+	}
+
+	/* Encode content-disposition */
+	if (cd_len) {
+		ptr = fb_request_field(fb, MMS_PART_HEADER_CONTENT_DISPOSITION,
+							cd_len + cloc_len + 3);
+		if (ptr == NULL)
+			goto done;
+
+		memcpy(ptr, &cd_val, cd_len);
+		ptr += cd_len;
+		*ptr++ = 0x82; /* Inline = <Octet 130> */
+		*ptr++ = WSP_PARAMETER_TYPE_FILENAME_DEFUNCT | 0x80;
+		strcpy(ptr, part->content_location);
+		ptr[cloc_len] = 0;
 	}
 
 	ok = TRUE;
