@@ -85,7 +85,8 @@ int main(int argc, char* argv[])
         "data/m-retrieve_1.1.conf",
         "data/m-retrieve_1.2.conf",
         "data/m-notifyresp.ind",
-        "data/m-read-rec.ind"
+        "data/m-read-rec.ind",
+        "data/m-send.conf"
     };
     mms_log_stdout_timestamp = FALSE;
     mms_log_default.level = MMS_LOGLEVEL_INFO;
