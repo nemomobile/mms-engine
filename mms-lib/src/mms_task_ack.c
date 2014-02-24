@@ -13,51 +13,48 @@
  */
 
 #include "mms_task.h"
-#include "mms_log.h"
-#include "mms_codec.h"
+#include "mms_task_http.h"
 #include "mms_file_util.h"
+#include "mms_codec.h"
 
 static
-char*
-mms_task_ack_create_pdu_file(
+const char*
+mms_task_ack_encode(
     const MMSConfig* config,
     const char* id,
     const char* transaction_id)
 {
-    char* path = NULL;
+    const char* result = NULL;
+    const char* file = MMS_ACKNOWLEDGE_IND_FILE;
     char* dir = mms_message_dir(config, id);
-    int fd = mms_create_file(dir, MMS_ACKNOWLEDGE_IND_FILE, &path, NULL);
+    int fd = mms_create_file(dir, file, NULL, NULL);
     if (fd >= 0) {
         MMSPdu* pdu = g_new0(MMSPdu, 1);
         pdu->type = MMS_MESSAGE_TYPE_ACKNOWLEDGE_IND;
         pdu->version = MMS_VERSION;
         pdu->transaction_id = g_strdup(transaction_id);
         pdu->ai.report = config->send_dr;
-        if (!mms_message_encode(pdu, fd)) {
-            g_free(path);
-            path = NULL;
-        }
+        if (mms_message_encode(pdu, fd)) result = file;
         mms_message_free(pdu);
         close(fd);
     }
     g_free(dir);
-    return path;
+    return result;
 }
 
 /* Create MMS delivery acknowledgement task */
 MMSTask*
 mms_task_ack_new(
-    const MMSConfig* cfg,
-    MMSHandler* h,
+    const MMSConfig* config,
+    MMSHandler* handler,
     const char* id,
     const char* imsi,
-    const char* transaction_id)
+    const char* tx_id)
 {
-    char* path = mms_task_ack_create_pdu_file(cfg, id, transaction_id);
-    if (path) {
-        MMSTask* task = mms_task_upload_new(cfg, h, "Ack", id, imsi, path);
-        g_free(path);
-        return task;
+    const char* file = mms_task_ack_encode(config, id, tx_id);
+    if (file) {
+        return mms_task_http_alloc(0, config, handler, "Ack",
+            id, imsi, NULL, NULL, file);
     }
     return NULL;
 }

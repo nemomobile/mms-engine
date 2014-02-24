@@ -23,12 +23,14 @@ void
 mms_remove_file_and_dir(
     const char* file)
 {
-    char* dir = g_path_get_dirname(file);
-    unlink(file);
-    if (rmdir(dir) == 0) {
-        MMS_VERBOSE("Deleted %s", dir);
+    if (file) {
+        char* dir = g_path_get_dirname(file);
+        unlink(file);
+        if (rmdir(dir) == 0) {
+            MMS_VERBOSE("Deleted %s", dir);
+        }
+        g_free(dir);
     }
-    g_free(dir);
 }
 
 /**

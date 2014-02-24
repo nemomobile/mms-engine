@@ -87,6 +87,10 @@ GType mms_task_get_type(void);
 #define MMS_TASK_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST((klass), \
         MMS_TYPE_TASK, MMSTaskClass))
 
+void
+mms_task_init_class(
+    MMSTaskClass* klass);
+
 void*
 mms_task_alloc(
     GType type,
@@ -173,15 +177,6 @@ mms_task_decode_new(
     const char* id,
     const char* imsi,
     const char* transaction_id,
-    const char* file);
-
-MMSTask*
-mms_task_upload_new(
-    const MMSConfig* config,
-    MMSHandler* handler,
-    const char* name,
-    const char* id,
-    const char* imsi,
     const char* file);
 
 MMSTask*

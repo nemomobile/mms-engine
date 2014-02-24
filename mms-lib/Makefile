@@ -18,8 +18,8 @@ all: debug release
 SRC = mms_codec.c mms_connection.c mms_connman.c mms_dispatcher.c \
   mms_error.c mms_handler.c mms_lib_util.c mms_file_util.c mms_log.c \
   mms_message.c mms_task.c mms_task_ack.c mms_task_decode.c \
-  mms_task_notification.c mms_task_notifyresp.c mms_task_publish.c \
-  mms_task_read.c mms_task_retrieve.c mms_task_upload.c mms_util.c
+  mms_task_http.c mms_task_notification.c mms_task_notifyresp.c \
+  mms_task_publish.c mms_task_read.c mms_task_retrieve.c mms_util.c
 
 #
 # Directories

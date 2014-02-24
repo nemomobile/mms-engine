@@ -16,14 +16,6 @@
 #define JOLLA_MMS_UTIL_H
 
 #include "mms_lib_types.h"
-#include <libsoup/soup.h>
-
-typedef struct mms_http_transfer {
-    MMSConnection* connection;
-    SoupSession* session;
-    SoupMessage* message;
-    int fd;
-} MMSHttpTransfer;
 
 char*
 mms_strip_address_type(
@@ -36,22 +28,6 @@ mms_split_address_list(
 MMSPdu*
 mms_decode_bytes(
     GBytes* bytes);
-
-SoupURI*
-mms_parse_http_uri(
-    const char* raw_uri);
-
-MMSHttpTransfer*
-mms_http_transfer_new(
-    const MMSConfig* config,
-    MMSConnection* connection,
-    const char* method,
-    const char* uri,
-    int fd);
-
-void
-mms_http_transfer_free(
-    MMSHttpTransfer* tx);
 
 /* NULL-resistant variant of g_strstrip */
 G_INLINE_FUNC char* mms_strip(char* str)

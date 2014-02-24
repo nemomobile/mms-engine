@@ -13,36 +13,34 @@
  */
 
 #include "mms_task.h"
-#include "mms_log.h"
-#include "mms_codec.h"
+#include "mms_task_http.h"
 #include "mms_file_util.h"
+#include "mms_codec.h"
 
 static
-char*
-mms_task_notifyresp_create_pdu_file(
+const char*
+mms_task_notifyresp_encode(
     const MMSConfig* config,
     const char* id,
     const char* transaction_id,
     MMSNotifyStatus status)
 {
-    char* path = NULL;
+    const char* result = NULL;
+    const char* file = MMS_NOTIFYRESP_IND_FILE;
     char* dir = mms_message_dir(config, id);
-    int fd = mms_create_file(dir, MMS_NOTIFYRESP_IND_FILE, &path, NULL);
+    int fd = mms_create_file(dir, file, NULL, NULL);
     if (fd >= 0) {
         MMSPdu* pdu = g_new0(MMSPdu, 1);
         pdu->type = MMS_MESSAGE_TYPE_NOTIFYRESP_IND;
         pdu->version = MMS_VERSION;
         pdu->transaction_id = g_strdup(transaction_id);
         pdu->nri.notify_status = status;
-        if (!mms_message_encode(pdu, fd)) {
-            g_free(path);
-            path = NULL;
-        }
+        if (mms_message_encode(pdu, fd)) result = file;
         mms_message_free(pdu);
         close(fd);
     }
     g_free(dir);
-    return path;
+    return result;
 }
 
 /**
@@ -50,19 +48,17 @@ mms_task_notifyresp_create_pdu_file(
  */
 MMSTask*
 mms_task_notifyresp_new(
-    const MMSConfig* cfg,
+    const MMSConfig* config,
     MMSHandler* handler,
     const char* id,
     const char* imsi,
     const char* tx_id,
     MMSNotifyStatus ns)
 {
-    char* path = mms_task_notifyresp_create_pdu_file(cfg, id, tx_id, ns);
-    if (path) {
-        MMSTask* task = mms_task_upload_new(cfg, handler, "NotifyResp",
-            id, imsi, path);
-        g_free(path);
-        return task;
+    const char* file = mms_task_notifyresp_encode(config, id, tx_id, ns);
+    if (file) {
+        return mms_task_http_alloc(0, config, handler, "NotifyResp",
+            id, imsi, NULL, NULL, file);
     }
     return NULL;
 }

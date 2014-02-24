@@ -21,12 +21,11 @@
     log(mms_dispatcher_log)\
     log(mms_handler_log)\
     log(mms_message_log)\
-    log(mms_util_log)\
     log(mms_task_log)\
+    log(mms_task_http_log)\
     log(mms_task_decode_log)\
     log(mms_task_notification_log)\
     log(mms_task_retrieve_log)\
-    log(mms_task_upload_log)\
     log(mms_task_publish_log)\
     log(mms_connman_log)\
     log(mms_connection_log)

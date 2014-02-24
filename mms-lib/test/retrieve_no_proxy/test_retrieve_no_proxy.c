@@ -232,7 +232,6 @@ int main(int argc, char* argv[])
         argc--;
     } else {
         mms_log_default.level = MMS_LOGLEVEL_INFO;
-        mms_util_log.level = 
         mms_task_decode_log.level =
         mms_task_retrieve_log.level =
         mms_task_notification_log.level = MMS_LOGLEVEL_NONE;
