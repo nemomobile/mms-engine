@@ -86,6 +86,7 @@ run_test(
                     }
                 }
                 if (*p2) ok = FALSE;
+                g_free(unparsed);
             }
         }
     } else if (!test->output) {
