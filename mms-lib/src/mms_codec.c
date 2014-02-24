@@ -1777,6 +1777,11 @@ static gboolean encode_text_array_element(struct file_buffer *fb,
 	return TRUE;
 }
 
+struct content_type_par {
+	unsigned char token;
+	const char* value;
+};
+
 static gboolean encode_content_type(struct file_buffer *fb,
 				enum mms_header header, void *user)
 {
@@ -1786,11 +1791,9 @@ static gboolean encode_content_type(struct file_buffer *fb,
 	unsigned int len;
 	unsigned int ct;
 	unsigned int ct_len;
-	unsigned int type_len;
-	unsigned int start_len;
 	const char *ct_str;
-	const char *uninitialized_var(type);
-	const char *uninitialized_var(start);
+	int npar = 0;
+	struct content_type_par *par = NULL;
 	char **parsed = mms_parse_http_content_type(*hdr);
 	gboolean ok = FALSE;
 
@@ -1798,6 +1801,8 @@ static gboolean encode_content_type(struct file_buffer *fb,
 		return FALSE;
 
 	ct_str = parsed[0];
+	if (parsed[1])
+		par = g_new(struct content_type_par, g_strv_length(parsed)/2);
 
 	if (wsp_get_well_known_content_type(ct_str, &ct) == TRUE)
 		ct_len = 1;
@@ -1806,21 +1811,23 @@ static gboolean encode_content_type(struct file_buffer *fb,
 
 	len = ct_len;
 
-	type_len = 0;
-	start_len = 0;
-
 	for (i = 1; parsed[i]; i += 2) {
 		const char *attribute = parsed[i];
 		const char *value = parsed[i+1];
+		unsigned char token;
+
 		if (g_ascii_strcasecmp(attribute, "type") == 0) {
-			type = value;
-			type_len = strlen(type) + 1;
-			len += 1 + type_len;
+			token = WSP_PARAMETER_TYPE_CONTENT_TYPE;
 		} else if (g_ascii_strcasecmp(attribute, "start") == 0) {
-			start = value;
-			start_len = strlen(start) + 1;
-			len += 1 + start_len;
+			token = WSP_PARAMETER_TYPE_START_DEFUNCT;
+		} else {
+			continue;
 		}
+
+		len += 1 + strlen(value) + 1;
+		par[npar].token = token;
+		par[npar].value = value;
+		npar++;
 	}
 
 	if (len == 1) {
@@ -1848,27 +1855,19 @@ static gboolean encode_content_type(struct file_buffer *fb,
 	else
 		strcpy(ptr, ct_str);
 
-	if (type_len > 0) {
-		ptr = fb_request_field(fb, WSP_PARAMETER_TYPE_CONTENT_TYPE,
-							type_len);
+	for (i = 0; i < npar; i++) {
+		unsigned int len = strlen(par[i].value) + 1;
+		ptr = fb_request_field(fb, par[i].token, len);
 		if (ptr == NULL)
 			goto done;
 
-		strcpy(ptr, type);
-	}
-
-	if (start_len > 0) {
-		ptr = fb_request_field(fb, WSP_PARAMETER_TYPE_START_DEFUNCT,
-							start_len);
-		if (ptr == NULL)
-			goto done;
-
-		strcpy(ptr, start);
+		strcpy(ptr, par[i].value);
 	}
 
 	ok = TRUE;
 
 done:
+	g_free(par);
 	g_strfreev(parsed);
 	return ok;
 }
