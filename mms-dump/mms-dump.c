@@ -62,7 +62,7 @@ typedef gboolean
     h(PRIORITY,               "X-Mms-Priority",               0x0F, prio     )\
     h(READ_REPORT,            "X-Mms-Read-Report",            0x10, bool     )\
     h(REPORT_ALLOWED,         "X-Mms-Report-Allowed",         0x11, bool     )\
-    h(RESPONSE_STATUS,        "X-Mms-Response-Status",        0x12, short    )\
+    h(RESPONSE_STATUS,        "X-Mms-Response-Status",        0x12, respstat )\
     h(RESPONSE_TEXT,          "X-Mms-Response-Text",          0x13, etext    )\
     h(SENDER_VISIBILITY,      "X-Mms-Sender-Visibility",      0x14, short    )\
     h(STATUS,                 "X-Mms-Status",                 0x15, status   )\
@@ -437,7 +437,47 @@ mms_value_decode_status(
     return mms_value_decode_enum(type, val, len, nv, G_N_ELEMENTS(nv), flags);
 }
 
-/* Encoded-string-value */
+/* Response-status-value */
+static
+gboolean
+mms_value_decode_respstat(
+    enum wsp_value_type type,
+    const guint8* val,
+    unsigned int len,
+    unsigned int flags)
+{
+    static const struct mms_named_value nv [] = {
+        { "Ok",                                                  128 },
+        { "Error-unspecified",                                   129 },
+        { "Error- service-denied",                               130 },
+        { "Error-message-format-corrupt",                        131 },
+        { "Error-sending-address-unresolved",                    132 },
+        { "Error-message-not-found",                             133 },
+        { "Error-network-problem",                               134 },
+        { "Error- content-not-accepted",                         135 },
+        { "Error-unsupported-message",                           136 },
+        { "Error-transient-failure",                             192 },
+        { "Error-transient-sending-address-unresolved",          193 },
+        { "Error-transient-message-not-found",                   194 },
+        { "Error-transient-network-problem",                     195 },
+        { "Error-transient-partial-success",                     196 },
+        { "Error-permanent-failure",                             224 },
+        { "Error-permanent-service-denied",                      225 },
+        { "Error-permanent-message-format-corrupt",              226 },
+        { "Error-permanent-sending-address-unresolved",          227 },
+        { "Error-permanent-message-not-found",                   228 },
+        { "Error-permanent-content-not-accepted",                229 },
+        { "Error-permanent-reply-charging-limitations-not-met",  230 },
+        { "Error-permanent-reply-charging-request-not-accepted", 231 },
+        { "Error-permanent-reply-charging-forwarding-denied",    232 },
+        { "Error-permanent-reply-charging-not-supported",        233 },
+        { "Error-permanent-address-hiding-not-supported",        234 },
+        { "Error-permanent-lack-of-prepaid",                     235 }
+    };
+    return mms_value_decode_enum(type, val, len, nv, G_N_ELEMENTS(nv), flags);
+}
+
+/*/* Encoded-string-value */
 static
 gboolean
 mms_value_decode_etext(
