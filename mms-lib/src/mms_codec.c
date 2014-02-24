@@ -1008,9 +1008,10 @@ static gboolean mms_parse_headers(struct wsp_header_iter *iter,
 		p = wsp_header_iter_get_hdr(iter);
 		h = p[0] & 0x7f;
 
+		/* Stop parsing when we see an unknown header */
 		handler = handler_for_type(h);
 		if (handler == NULL)
-			return FALSE;
+			break;
 
 		/* Unsupported header, skip */
 		if (entries[h].data == NULL)
@@ -1021,9 +1022,9 @@ static gboolean mms_parse_headers(struct wsp_header_iter *iter,
 				!(entries[h].flags & HEADER_FLAG_ALLOW_MULTI))
 			continue;
 
-		/* Parse the header */
+		/* Parse the header, stop if we fail to parse it */
 		if (handler(iter, entries[h].data) == FALSE)
-			return FALSE;
+			break;
 
 		entries[h].pos = i;
 		entries[h].flags |= HEADER_FLAG_MARKED;
