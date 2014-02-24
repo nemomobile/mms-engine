@@ -544,27 +544,19 @@ mms_task_http_finalize(
 /**
  * Per class initializer
  */
+static
 void
-mms_task_http_init_class(
+mms_task_http_class_init(
     MMSTaskHttpClass* klass)
 {
     GObjectClass* object_class = G_OBJECT_CLASS(klass);
     MMSTaskClass* task_class = &klass->task;
-    mms_task_init_class(MMS_TASK_CLASS(mms_task_http_parent_class));
     task_class->fn_run = mms_task_http_run;
     task_class->fn_transmit = mms_task_http_transmit;
     task_class->fn_network_unavailable = mms_task_http_network_unavailable;
     task_class->fn_cancel = mms_task_http_cancel;
     object_class->dispose = mms_task_http_dispose;
     object_class->finalize = mms_task_http_finalize;
-}
-
-static
-void
-mms_task_http_class_init(
-    MMSTaskHttpClass* klass)
-{
-    mms_task_http_init_class(klass);
 }
 
 /**

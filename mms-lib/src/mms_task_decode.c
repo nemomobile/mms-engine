@@ -244,7 +244,6 @@ void
 mms_task_decode_class_init(
     MMSTaskDecodeClass* klass)
 {
-    mms_task_init_class(MMS_TASK_CLASS(mms_task_decode_parent_class));
     klass->fn_run = mms_task_decode_run;
     G_OBJECT_CLASS(klass)->finalize = mms_task_decode_finalize;
 }

@@ -134,20 +134,13 @@ mms_task_finalize(
     G_OBJECT_CLASS(mms_task_parent_class)->finalize(object);
 }
 
-void
-mms_task_init_class(
-    MMSTaskClass* klass)
-{
-    klass->fn_cancel = mms_task_cancel_cb;
-    G_OBJECT_CLASS(klass)->finalize = mms_task_finalize;
-}
-
 static
 void
 mms_task_class_init(
     MMSTaskClass* klass)
 {
-    mms_task_init_class(klass);
+    klass->fn_cancel = mms_task_cancel_cb;
+    G_OBJECT_CLASS(klass)->finalize = mms_task_finalize;
 }
 
 static

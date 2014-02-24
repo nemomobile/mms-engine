@@ -95,7 +95,6 @@ void
 mms_task_retrieve_class_init(
     MMSTaskRetrieveClass* klass)
 {
-    mms_task_http_init_class(MMS_TASK_HTTP_CLASS(mms_task_retrieve_parent_class));
     klass->fn_started = mms_task_retrieve_started;
     klass->fn_paused = mms_task_retrieve_paused;
     klass->fn_done = mms_task_retrieve_done;

@@ -42,10 +42,6 @@ GType mms_task_http_get_type(void);
 #define MMS_TASK_HTTP_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST((klass), \
         MMS_TYPE_TASK_HTTP, MMSTaskHttpClass))
 
-void
-mms_task_http_init_class(
-    MMSTaskHttpClass* klass);
-
 /* If send_file is not NULL, it does a POST, otherwise it's a GET */
 void*
 mms_task_http_alloc(

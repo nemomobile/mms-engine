@@ -219,7 +219,6 @@ void
 mms_task_notification_class_init(
     MMSTaskNotificationClass* klass)
 {
-    mms_task_init_class(MMS_TASK_CLASS(mms_task_notification_parent_class));
     klass->fn_run = mms_task_notification_run;
     G_OBJECT_CLASS(klass)->finalize = mms_task_notification_finalize;
 }

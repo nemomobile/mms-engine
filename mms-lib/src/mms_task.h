@@ -87,10 +87,6 @@ GType mms_task_get_type(void);
 #define MMS_TASK_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST((klass), \
         MMS_TYPE_TASK, MMSTaskClass))
 
-void
-mms_task_init_class(
-    MMSTaskClass* klass);
-
 void*
 mms_task_alloc(
     GType type,
