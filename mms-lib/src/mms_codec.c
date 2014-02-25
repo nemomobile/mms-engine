@@ -1455,6 +1455,9 @@ void mms_message_free(struct mms_message *msg)
 	switch (msg->type) {
 	case MMS_MESSAGE_TYPE_SEND_REQ:
 		g_free(msg->sr.to);
+		g_free(msg->sr.cc);
+		g_free(msg->sr.bcc);
+		g_free(msg->sr.subject);
 		g_free(msg->sr.content_type);
 		break;
 	case MMS_MESSAGE_TYPE_SEND_CONF:
@@ -1734,6 +1737,38 @@ static gboolean encode_text(struct file_buffer *fb,
 	return TRUE;
 }
 
+static gboolean encode_utf8_string(struct file_buffer *fb,
+				enum mms_header header, void *user)
+{
+	char *ptr;
+	char **text = user;
+	unsigned int len;
+
+	if (!*text)
+		return TRUE;
+
+	/* Value-length Char-set Text-string */
+
+	len = 1 + strlen(*text) + 1;
+	if ((*text)[0] & 0x80) len++;
+
+	if (fb_request_field(fb, header, 0) == NULL)
+		return FALSE;
+
+	if (fb_put_value_length(fb, len) == FALSE)
+		return FALSE;
+
+	ptr = fb_request(fb, len);
+	if (ptr == NULL)
+		return FALSE;
+
+	*ptr++ = 106 /* UTF-8 */ | 0x80;
+	if ((*text)[0] & 0x80) *ptr++ = QUOTE;
+	strcpy(ptr, *text);
+
+	return TRUE;
+}
+
 static gboolean encode_quoted_string(struct file_buffer *fb,
 				enum mms_header header, void *user)
 {
@@ -1918,7 +1953,7 @@ static header_encoder encoder_for_type(enum mms_header header)
 	case MMS_HEADER_STATUS:
 		return &encode_short;
 	case MMS_HEADER_SUBJECT:
-		return NULL;
+		return &encode_utf8_string;
 	case MMS_HEADER_TO:
 		return &encode_text_array_element;
 	case MMS_HEADER_TRANSACTION_ID:
@@ -2190,6 +2225,9 @@ static gboolean mms_encode_send_req(struct mms_message *msg,
 				MMS_HEADER_MMS_VERSION, &msg->version,
 				MMS_HEADER_FROM, &empty_from,
 				MMS_HEADER_TO, &msg->sr.to,
+				MMS_HEADER_CC, &msg->sr.cc,
+				MMS_HEADER_BCC, &msg->sr.bcc,
+				MMS_HEADER_SUBJECT, &msg->sr.subject,
 				MMS_HEADER_DELIVERY_REPORT, &msg->sr.dr,
 				MMS_HEADER_CONTENT_TYPE, &msg->sr.content_type,
 				MMS_HEADER_INVALID) == FALSE)

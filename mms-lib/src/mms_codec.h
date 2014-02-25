@@ -123,6 +123,9 @@ struct mms_retrieve_conf {
 
 struct mms_send_req {
 	char *to;
+	char *cc;
+	char *bcc;
+	char *subject;
 	time_t date;
 	char *content_type;
 	gboolean dr;
