@@ -10,6 +10,7 @@ Requires: dbus
 Requires: ofono
 
 BuildRequires: python
+BuildRequires: file-devel
 BuildRequires: pkgconfig(glib-2.0) >= 2.32
 BuildRequires: pkgconfig(libsoup-2.4) >= 2.38
 BuildRequires: pkgconfig(libwspcodec) >= 2.1
