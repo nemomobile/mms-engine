@@ -39,6 +39,7 @@ struct mms_engine {
     gboolean stopped;
     gboolean keep_running;
     guint start_timeout_id;
+    gulong send_message_id;
     gulong push_signal_id;
     gulong push_notify_signal_id;
     gulong receive_signal_id;
@@ -128,6 +129,89 @@ mms_engine_handle_test(
     return TRUE;
 }
 #endif /* ENABLE_TEST */
+
+/* org.nemomobile.MmsEngine.sendMessage */
+static
+gboolean
+mms_engine_handle_send_message(
+    OrgNemomobileMmsEngine* proxy,
+    GDBusMethodInvocation* call,
+    int database_id,
+    const char* imsi_to,
+    const char* const* to,
+    const char* const* cc,
+    const char* const* bcc,
+    const char* subject,
+    guint flags,
+    GVariant* attachments,
+    MMSEngine* engine)
+{
+    if (to && *to) {
+        unsigned int i;
+        char* to_list = g_strjoinv(",", (char**)to);
+        char* cc_list = NULL;
+        char* bcc_list = NULL;
+        char* id = NULL;
+        char* imsi;
+        MMSAttachmentInfo* parts;
+        GArray* info = g_array_sized_new(FALSE, FALSE, sizeof(*parts), 0);
+        GError* error = NULL;
+
+        /* Extract attachment info */
+        char* fn = NULL;
+        char* ct = NULL;
+        char* cid = NULL;
+        GVariantIter* iter = NULL;
+        g_variant_get(attachments, "a(sss)", &iter);
+        while (g_variant_iter_loop(iter, "(sss)", &fn, &ct, &cid)) {
+            MMSAttachmentInfo part;
+            part.file_name = g_strdup(fn);
+            part.content_type = g_strdup(ct);
+            part.content_id = g_strdup(cid);
+            g_array_append_vals(info, &part, 1);
+        }
+
+        /* Convert address lists into comma-separated strings
+         * expected by mms_dispatcher_send_message and mms_codec */
+        if (cc && *cc) cc_list = g_strjoinv(",", (char**)cc);
+        if (bcc && *bcc) bcc_list = g_strjoinv(",", (char**)bcc);
+        if (database_id > 0) id = g_strdup_printf("%u", database_id);
+
+        /* Queue the message */
+        parts = (void*)info->data;
+        imsi = mms_dispatcher_send_message(engine->dispatcher, id,
+            imsi_to, to_list, cc_list, bcc_list, subject, flags, parts,
+            info->len, &error);
+        if (imsi) {
+            if (mms_dispatcher_start(engine->dispatcher)) {
+                mms_engine_start_timeout_cancel(engine);
+            }
+            org_nemomobile_mms_engine_complete_send_message(proxy, call, imsi);
+            g_free(imsi);
+        } else {
+            g_dbus_method_invocation_return_error(call, G_DBUS_ERROR,
+                G_DBUS_ERROR_FAILED, "%s", MMS_ERRMSG(error));
+            g_error_free(error);
+        }
+
+        for (i=0; i<info->len; i++) {
+            g_free((void*)parts[i].file_name);
+            g_free((void*)parts[i].content_type);
+            g_free((void*)parts[i].content_id);
+        }
+
+        g_free(to_list);
+        g_free(cc_list);
+        g_free(bcc_list);
+        g_free(id);
+        g_array_unref(info);
+        g_variant_iter_free(iter);
+    } else {
+        g_dbus_method_invocation_return_error(call, G_DBUS_ERROR,
+            G_DBUS_ERROR_FAILED, "Missing recipient");
+    }
+    return TRUE;
+}
 
 /* org.nemomobile.MmsEngine.receiveMessage */
 static
@@ -343,6 +427,9 @@ mms_engine_new(
         mms->log_modules = log_modules;
         mms->log_count = log_count;
         mms->proxy = org_nemomobile_mms_engine_skeleton_new();
+        mms->send_message_id =
+            g_signal_connect(mms->proxy, "handle-send-message",
+            G_CALLBACK(mms_engine_handle_send_message), mms);
         mms->push_signal_id =
             g_signal_connect(mms->proxy, "handle-push",
             G_CALLBACK(mms_engine_handle_push), mms);
@@ -486,6 +573,7 @@ mms_engine_dispose(
 #ifdef ENABLE_TEST
         g_signal_handler_disconnect(e->proxy, e->test_signal_id);
 #endif
+        g_signal_handler_disconnect(e->proxy, e->send_message_id);
         g_signal_handler_disconnect(e->proxy, e->push_signal_id);
         g_signal_handler_disconnect(e->proxy, e->push_notify_signal_id);
         g_signal_handler_disconnect(e->proxy, e->receive_signal_id);

@@ -71,7 +71,7 @@ RELEASE_FLAGS = $(BASE_FLAGS) -O2
 DEBUG_DEFS = -DDEBUG
 RELEASE_DEFS =
 WARNINGS = -Wall
-LIBS = $(shell pkg-config --libs $(LIB_PKGS))
+LIBS = $(shell pkg-config --libs $(LIB_PKGS)) -lmagic
 CFLAGS = $(shell pkg-config --cflags $(PKGS)) -I$(MMS_LIB_DIR)/include \
   -I$(MMS_LIB_DIR)/src -I$(COMMON_DIR) -MMD
 

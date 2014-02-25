@@ -131,7 +131,7 @@ mms_handler_dbus_message_received(
     return ok;
 }
 
-/* Updates message state in the database */
+/* Updates message receive state in the database */
 static
 gboolean
 mms_handler_dbus_message_receive_state_changed(
@@ -146,6 +146,53 @@ mms_handler_dbus_message_receive_state_changed(
         GError* error = NULL;
         if (org_nemomobile_mms_handler_call_message_receive_state_changed_sync(
             proxy, id, state, NULL, &error)) {
+            ok = TRUE;
+        } else {
+            MMS_ERR("%s", MMS_ERRMSG(error));
+            g_error_free(error);
+        }
+    }
+    return ok;
+}
+
+/* Updates message send state in the database */
+static
+gboolean
+mms_handler_dbus_message_send_state_changed(
+    MMSHandler* handler,
+    const char* id,
+    MMS_SEND_STATE state)
+{
+    gboolean ok = FALSE;
+    OrgNemomobileMmsHandler* proxy = mms_handler_dbus_connect(handler);
+    MMS_ASSERT(id && id[0]);
+    if (id && id[0] && proxy) {
+        GError* error = NULL;
+        if (org_nemomobile_mms_handler_call_message_send_state_changed_sync(
+            proxy, id, state, NULL, &error)) {
+            ok = TRUE;
+        } else {
+            MMS_ERR("%s", MMS_ERRMSG(error));
+            g_error_free(error);
+        }
+    }
+    return ok;
+}
+
+/* Message has been sent */
+gboolean
+mms_handler_dbus_message_sent(
+    MMSHandler* handler,
+    const char* id,
+    const char* msgid)
+{
+    gboolean ok = FALSE;
+    OrgNemomobileMmsHandler* proxy = mms_handler_dbus_connect(handler);
+    MMS_ASSERT(id && id[0]);
+    if (id && id[0] && msgid && msgid[0] && proxy) {
+        GError* error = NULL;
+        if (org_nemomobile_mms_handler_call_message_sent_sync(proxy,
+            id, msgid, NULL, &error)) {
             ok = TRUE;
         } else {
             MMS_ERR("%s", MMS_ERRMSG(error));
@@ -177,6 +224,9 @@ mms_handler_dbus_class_init(
     klass->fn_message_received = mms_handler_dbus_message_received;
     klass->fn_message_receive_state_changed =
         mms_handler_dbus_message_receive_state_changed;
+    klass->fn_message_send_state_changed =
+        mms_handler_dbus_message_send_state_changed;
+    klass->fn_message_sent = mms_handler_dbus_message_sent;
     G_OBJECT_CLASS(klass)->dispose = mms_handler_dbus_dispose;
 }
 

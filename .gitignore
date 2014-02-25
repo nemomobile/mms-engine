@@ -24,3 +24,4 @@ mms-handler-dbus/test/mms_handler_dbus_client/build
 mms-dump/build
 mms-dump/mms_dump.ncb
 mms-dump/mms_dump.opt
+mms-send/build

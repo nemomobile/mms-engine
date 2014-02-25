@@ -209,6 +209,28 @@ mms_task_publish_new(
     MMSHandler* handler,
     MMSMessage* msg);
 
+MMSTask*
+mms_task_encode_new(
+    const MMSConfig* config,
+    MMSHandler* handler,
+    const char* id,
+    const char* imsi,
+    const char* to,
+    const char* cc,
+    const char* bcc,
+    const char* subject,
+    int flags,
+    const MMSAttachmentInfo* parts,
+    int nparts,
+    GError** error);
+
+MMSTask*
+mms_task_send_new(
+    const MMSConfig* config,
+    MMSHandler* handler,
+    const char* id,
+    const char* imsi);
+
 #endif /* JOLLA_MMS_TASK_H */
 
 /*

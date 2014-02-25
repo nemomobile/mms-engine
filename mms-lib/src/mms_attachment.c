@@ -1,0 +1,301 @@
+/*
+ * Copyright (C) 2013-2014 Jolla Ltd.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
+
+#include "mms_attachment.h"
+#include "mms_file_util.h"
+#include "mms_codec.h"
+
+#include <magic.h>
+
+/* Logging */
+#define MMS_LOG_MODULE_NAME mms_attachment_log
+#include "mms_lib_log.h"
+#include "mms_error.h"
+MMS_LOG_MODULE_DEFINE("mms-attachment");
+
+#define MMS_ATTACHMENT_DEFAULT_TYPE "application/octet-stream"
+
+G_DEFINE_TYPE(MMSAttachment, mms_attachment, G_TYPE_OBJECT);
+
+#define MMS_ATTACHMENT(obj) \
+    (G_TYPE_CHECK_INSTANCE_CAST((obj), MMS_TYPE_ATTACHMENT, MMSAttachment))
+#define MMS_ATTACHMENT_GET_CLASS(obj)  \
+    (G_TYPE_INSTANCE_GET_CLASS((obj), MMS_TYPE_ATTACHMENT, MMSAttachmentClass))
+
+#define REGION_TEXT     "Text"
+#define REGION_MEDIA    "Media"
+
+#define MEDIA_TEXT      "text"
+#define MEDIA_IMAGE     "img"
+#define MEDIA_VIDEO     "video"
+#define MEDIA_AUDIO     "audio"
+#define MEDIA_OTHER     "ref"
+
+static
+void
+mms_attachment_finalize(
+    GObject* object)
+{
+    MMSAttachment* at = MMS_ATTACHMENT(object);
+    g_mapped_file_unref(at->map);
+    if (!at->config->keep_temp_files &&
+        !(at->flags & MMS_ATTACHMENT_DONT_DELETE_FILES)) {
+        char* dir = g_path_get_dirname(at->file_name);
+        remove(at->file_name);
+        rmdir(dir);
+        g_free(dir);
+    }
+    g_free(at->file_name);
+    g_free(at->content_type);
+    g_free(at->content_location);
+    g_free(at->content_id);
+    G_OBJECT_CLASS(mms_attachment_parent_class)->finalize(object);
+}
+
+static
+void
+mms_attachment_class_init(
+    MMSAttachmentClass* klass)
+{
+    G_OBJECT_CLASS(klass)->finalize = mms_attachment_finalize;
+}
+
+static
+void
+mms_attachment_init(
+    MMSAttachment* attachment)
+{
+    MMS_VERBOSE_("%p", attachment);
+}
+
+static
+char*
+mms_attachment_get_path(
+    const char* file,
+    GError** error)
+{
+    char* path = g_malloc(PATH_MAX);
+    if (realpath(file, path)) {
+        if (g_file_test(path, G_FILE_TEST_IS_REGULAR)) {
+            char* fname = g_strdup(path);
+            g_free(path);
+            return fname;
+        } else {
+            MMS_ERROR(error, MMS_LIB_ERROR_IO, "%s not found", file);
+        }
+    } else {
+        MMS_ERROR(error, MMS_LIB_ERROR_IO, "%s: %s\n", file, strerror(errno));
+    }
+    return NULL;
+}
+
+gboolean
+mms_attachment_write_smil(
+    FILE* f,
+    MMSAttachment** ats,
+    int n,
+    GError** error)
+{
+    if (fputs(
+        "<!DOCTYPE smil PUBLIC \"-//W3C//DTD SMIL 1.0//EN\" "
+        "\"http://www.w3.org/TR/REC-smil/SMIL10.dtd\">\n"
+        "<smil>\n"
+        " <head>\n"
+        "  <layout>\n"
+        "   <root-layout height=\"160\" width=\"120\"/>\n"
+        "    <region fit=\"scroll\" height=\"100%\" left=\"0\" "
+             "top=\"0\" width=\"100%\" id=\"" REGION_TEXT "\"/>\n"
+        "    <region fit=\"meet\" height=\"100%\" left=\"0\" "
+             "top=\"0\" width=\"100%\" id=\"" REGION_MEDIA "\"/>\n"
+        "  </layout>\n"
+        " </head>\n"
+        " <body>\n"
+        "  <par dur=\"5000ms\">\n", f) >= 0) {
+        int i;
+        for (i=0; i<n; i++) {
+            const MMSAttachment* at = ats[i];
+            const char* elem;
+            const char* region;
+            MMS_ASSERT(!(at->flags & MMS_ATTACHMENT_SMIL));
+            if (g_str_has_prefix(at->content_type, "text/")) {
+                elem = "text";
+                region = REGION_TEXT;
+            } else {
+                region = REGION_MEDIA;
+                if (g_str_has_prefix(at->content_type, "image/")) {
+                    elem = "img";
+                } else if (g_str_has_prefix(at->content_type, "video/")) {
+                    elem = "video";
+                } else if (g_str_has_prefix(at->content_type, "audio/")) {
+                    elem = "audio";
+                } else {
+                    elem = "ref";
+                }
+            }
+            if (fprintf(f, "   <%s src=\"%s\" region=\"%s\"/>\n", elem,
+                at->content_location, region) < 0) {
+                break;
+            }
+        }
+        if (i == n && fputs("  </par>\n </body>\n</smil>\n", f) >= 0) {
+            return TRUE;
+        }
+    }
+    MMS_ERROR(error, MMS_LIB_ERROR_IO, "Error writing SMIL: %s",
+        strerror(errno));
+    return FALSE;
+}
+
+MMSAttachment*
+mms_attachment_new_smil(
+    const MMSConfig* config,
+    const char* path,
+    MMSAttachment** ats,
+    int n,
+    GError** error)
+{
+    MMSAttachment* smil = NULL;
+    int fd = open(path, O_CREAT|O_RDWR|O_TRUNC, MMS_FILE_PERM);
+    if (fd >= 0) {
+        FILE* f = fdopen(fd, "w");
+        if (f) {
+            gboolean ok = mms_attachment_write_smil(f, ats, n, error);
+            fclose(f);
+            if (ok) {
+                MMSAttachmentInfo ai;
+                ai.file_name = path;
+                ai.content_type = SMIL_CONTENT_TYPE "; charset=utf-8";
+                ai.content_id = NULL;
+                smil = mms_attachment_new(config, &ai, error);
+                MMS_ASSERT(smil && (smil->flags & MMS_ATTACHMENT_SMIL));
+            }
+        } else {
+            MMS_ERROR(error, MMS_LIB_ERROR_IO,
+                "Failed to open file %s: %s", path, strerror(errno));
+            close(fd);
+        }
+    } else {
+        MMS_ERROR(error, MMS_LIB_ERROR_IO,
+            "Failed to create file %s: %s", path, strerror(errno));
+    }
+    return smil;
+}
+
+MMSAttachment*
+mms_attachment_new(
+    const MMSConfig* config,
+    const MMSAttachmentInfo* info,
+    GError** error)
+{
+    char* path = mms_attachment_get_path(info->file_name, error);
+    if (path) {
+        GMappedFile* map = g_mapped_file_new(path, FALSE, error);
+        if (map) {
+            MMSAttachment* at = g_object_new(MMS_TYPE_ATTACHMENT, NULL);
+            at->config = config;
+            at->file_name = path;
+            at->map = map;
+
+            if (info->content_type) {
+                char** ct = mms_parse_http_content_type(info->content_type);
+                if (ct) {
+                    at->content_type = mms_unparse_http_content_type(ct);
+                    if (!strcmp(ct[0], SMIL_CONTENT_TYPE)) {
+                        at->flags |= MMS_ATTACHMENT_SMIL;
+                    }
+                    g_strfreev(ct);
+                }
+            }
+
+            if (!at->content_type) {
+                /* Use magic to determine mime type */
+                const char* default_charset = "utf-8";
+                const char* content_type = NULL;
+                const char* charset = NULL;
+                const char* ct[4];
+                int n;
+
+                magic_t magic = magic_open(MAGIC_MIME_TYPE);
+                if (magic) {
+                    if (magic_load(magic, NULL) == 0) {
+                        content_type = magic_file(magic, path);
+                    }
+                }
+
+                /* Magic detects SMIL as text/html */
+                if ((!content_type ||
+                     g_str_has_prefix(content_type, "text/")) &&
+                     mms_file_is_smil(path)) {
+                    content_type = SMIL_CONTENT_TYPE;
+                }
+
+                if (!content_type) {
+                    MMS_WARN("No mime type for %s", path);
+                    content_type = MMS_ATTACHMENT_DEFAULT_TYPE;
+                }
+
+                if (!strcmp(content_type, SMIL_CONTENT_TYPE)) {
+                    at->flags |= MMS_ATTACHMENT_SMIL;
+                    charset = default_charset;
+                } else if (g_str_has_prefix(content_type, "text/")) {
+                    charset = default_charset;
+                }
+
+                n = 0;
+                ct[n++] = content_type;
+                if (charset) {
+                    ct[n++] = "charset";
+                    ct[n++] = charset;
+                }
+                ct[n++] = NULL;
+                at->content_type = mms_unparse_http_content_type((char**)ct);
+
+                if (magic) magic_close(magic);
+            }
+
+            at->content_location = g_path_get_basename(path);
+            at->content_id = (info->content_id && info->content_id[0]) ?
+                g_strdup(info->content_id) :
+                g_strdup(at->content_location);
+
+            MMS_DEBUG("%s: %s", path, at->content_type);
+            return at;
+        }
+        g_free(path);
+    }
+    return NULL;
+}
+
+MMSAttachment*
+mms_attachment_ref(
+    MMSAttachment* at)
+{
+    if (at) g_object_ref(MMS_ATTACHMENT(at));
+    return at;
+}
+
+void
+mms_attachment_unref(
+    MMSAttachment* at)
+{
+    if (at) g_object_unref(MMS_ATTACHMENT(at));
+}
+
+/*
+ * Local Variables:
+ * mode: C
+ * c-basic-offset: 4
+ * indent-tabs-mode: nil
+ * End:
+ */

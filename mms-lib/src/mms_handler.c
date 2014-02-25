@@ -125,6 +125,38 @@ mms_handler_message_received(
     return FALSE;
 }
 
+gboolean
+mms_handler_message_send_state_changed(
+    MMSHandler* h,
+    const char* id,
+    MMS_SEND_STATE state)
+{
+    if (h) {
+        MMSHandlerClass* klass = MMS_HANDLER_GET_CLASS(h);
+        if (klass->fn_message_send_state_changed) {
+            return klass->fn_message_send_state_changed(h, id, state);
+        }
+        MMS_ERR("mms_handler_message_send_state_changed not implemented");
+    }
+    return FALSE;
+}
+
+gboolean
+mms_handler_message_sent(
+    MMSHandler* h,
+    const char* id,
+    const char* msgid)
+{
+    if (h) {
+        MMSHandlerClass* klass = MMS_HANDLER_GET_CLASS(h);
+        if (klass->fn_message_sent) {
+            return klass->fn_message_sent(h, id, msgid);
+        }
+        MMS_ERR("mms_handler_message_sent not implemented");
+    }
+    return FALSE;
+}
+
 /*
  * Local Variables:
  * mode: C

@@ -42,7 +42,7 @@ typedef enum _mms_http_state {
     MMS_HTTP_DONE           /* HTTP transaction has been finished */
 } MMS_HTTP_STATE;
 
-#define MMS_HTTP_MAX_CHUNK (2048)
+#define MMS_HTTP_MAX_CHUNK (4046)
 
 /* Transfer context */
 typedef struct mms_http_transfer {
@@ -340,10 +340,10 @@ mms_task_http_got_chunk(
 {
     MMSTaskHttpPrivate* priv = http->priv;
     MMSHttpTransfer* tx = priv->tx;
-    MMS_VERBOSE("%u bytes received", priv->bytes_received);
     MMS_ASSERT(tx && tx->message == msg);
     if (tx && tx->message == msg) {
         priv->bytes_received += buf->length;
+        MMS_VERBOSE("%u bytes received", priv->bytes_received);
         if (write(tx->receive_fd, buf->data, buf->length) != (int)buf->length) {
             MMS_ERR("Write error: %s", strerror(errno));
             mms_task_http_finish_transfer(http);

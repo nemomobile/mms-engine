@@ -35,6 +35,8 @@ CONFIG(debug, debug|release) {
     LIBS += $$MMS_LIB_DIR/build/release/libmms-lib.a
 }
 
+LIBS += -lmagic
+
 MMS_ENGINE_DBUS_XML = $$DBUS_INTERFACE_DIR/org.nemomobile.MmsEngine.xml
 MMS_ENGINE_DBUS_H = org.nemomobile.MmsEngine.h
 org_nemomobile_mmsengine_h.input = MMS_ENGINE_DBUS_XML

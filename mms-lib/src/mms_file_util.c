@@ -17,6 +17,66 @@
 #include "mms_error.h"
 
 /**
+ * Callbacks for mms_file_is_smil
+ */
+static
+void
+mms_smil_parse_start(
+    GMarkupParseContext* parser,
+    const char* element_name,
+    const char **attribute_names,
+    const char **attribute_values,
+    gpointer userdata,
+    GError** error)
+{
+    static const GMarkupParser skip = { NULL, NULL, NULL, NULL, NULL };
+    if (!strcmp(element_name, "smil")) {
+        gboolean* smil_found = userdata;
+        *smil_found = TRUE;
+    }
+    g_markup_parse_context_push(parser, &skip, NULL);
+}
+
+static
+void
+mms_smil_parse_end(
+    GMarkupParseContext* parser,
+    const gchar* element_name,
+    gpointer userdata,
+    GError** error)
+{
+    g_markup_parse_context_pop(parser);
+}
+
+/**
+ * Checks if this ia a SMIL file, i.e. a parsable XML with <smil> as a
+ * root tag.
+ */
+gboolean
+mms_file_is_smil(
+    const char* file)
+{
+    static const GMarkupParser toplevel = { mms_smil_parse_start,
+        mms_smil_parse_end, NULL, NULL, NULL };
+    gboolean smil = FALSE;
+    GMappedFile* map = g_mapped_file_new(file, FALSE, NULL);
+    if (map) {
+        gboolean smil_found = FALSE;
+        GMarkupParseContext* parser = g_markup_parse_context_new(&toplevel,
+            G_MARKUP_TREAT_CDATA_AS_TEXT, &smil_found, NULL);
+        if (g_markup_parse_context_parse(parser,
+            g_mapped_file_get_contents(map),
+            g_mapped_file_get_length(map), NULL)) {
+            g_markup_parse_context_end_parse(parser, NULL);
+            smil = smil_found;
+        }
+        g_mapped_file_unref(map);
+        g_markup_parse_context_free(parser);
+    }
+    return smil;
+}
+
+/**
  * Removes both the file and the directory containing it, if it's empty.
  */
 void

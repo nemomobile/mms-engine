@@ -49,6 +49,13 @@ typedef struct mms_config {
     gboolean send_dr;           /* Allow sending delivery reports */
 } MMSConfig;
 
+/* Attachment information */
+typedef struct mms_attachment_info {
+    const char* file_name;      /* Full path name */
+    const char* content_type;   /* Content type */
+    const char* content_id;     /* Content id */
+} MMSAttachmentInfo;
+
 /* Types */
 typedef GObject MMSHandler;
 typedef GObject MMSConnMan;
@@ -57,9 +64,11 @@ typedef struct mms_dispatcher MMSDispatcher;
 typedef struct mms_connection MMSConnection;
 typedef struct mms_message MMSPdu;
 typedef struct _mms_message MMSMessage;
+typedef struct _mms_attachment MMSAttachment;
 
 /* MMS content type */
 #define MMS_CONTENT_TYPE        "application/vnd.wap.mms-message"
+#define SMIL_CONTENT_TYPE       "application/smil"
 
 /* MMS read status */
 typedef enum mms_read_status {

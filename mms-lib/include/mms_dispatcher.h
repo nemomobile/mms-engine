@@ -79,6 +79,23 @@ mms_dispatcher_send_read_report(
     MMSReadStatus status,
     GError** error);
 
+char*
+mms_dispatcher_send_message(
+    MMSDispatcher* dispatcher,
+    const char* id,
+    const char* imsi,
+    const char* to,
+    const char* cc,
+    const char* bcc,
+    const char* subject,
+    unsigned int flags,
+    const MMSAttachmentInfo* parts,
+    unsigned int nparts,
+    GError** error);
+
+#define MMS_SEND_FLAG_REQUEST_DELIVERY_REPORT   (0x01)
+#define MMS_SEND_FLAG_REQUEST_READ_REPORT       (0x02)
+
 void
 mms_dispatcher_cancel(
     MMSDispatcher* dispatcher,

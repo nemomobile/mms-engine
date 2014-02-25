@@ -14,6 +14,7 @@ CONFIG(debug, debug|release) {
 }
 
 SOURCES += \
+  src/mms_attachment.c \
   src/mms_codec.c \
   src/mms_connection.c \
   src/mms_connman.c \
@@ -27,15 +28,18 @@ SOURCES += \
   src/mms_task.c \
   src/mms_task_ack.c \
   src/mms_task_decode.c \
+  src/mms_task_encode.c \
   src/mms_task_http.c \
   src/mms_task_notification.c \
   src/mms_task_notifyresp.c \
   src/mms_task_publish.c \
   src/mms_task_read.c \
   src/mms_task_retrieve.c \
+  src/mms_task_send.c \
   src/mms_util.c
 
 HEADERS += \
+  src/mms_attachment.h \
   src/mms_codec.h \
   src/mms_error.h \
   src/mms_file_util.h \

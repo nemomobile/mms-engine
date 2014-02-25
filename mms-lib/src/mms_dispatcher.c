@@ -487,6 +487,41 @@ mms_dispatcher_send_read_report(
 }
 
 /**
+ * Sends MMS message
+ */
+char*
+mms_dispatcher_send_message(
+    MMSDispatcher* disp,
+    const char* id,
+    const char* imsi,
+    const char* to,
+    const char* cc,
+    const char* bcc,
+    const char* subject,
+    unsigned int flags,
+    const MMSAttachmentInfo* parts,
+    unsigned int nparts,
+    GError** error)
+{
+    char* default_imsi = NULL;
+    if (!imsi || !imsi[0]) {
+        /* No IMSI specified - try the default one */
+        imsi = default_imsi = mms_connman_default_imsi(disp->cm);
+    }
+    if (imsi) {
+        if (mms_dispatcher_queue_and_unref_task(disp,
+            mms_task_encode_new(disp->config, disp->handler, id, imsi,
+            to, cc, bcc, subject, flags, parts, nparts, error))) {
+            return default_imsi ? default_imsi : g_strdup(imsi);
+        }
+    } else {
+        MMS_ERROR(error, MMS_LIB_ERROR_NOSIM,
+            "No IMSI is provided and none is available");
+    }
+    return NULL;
+}
+
+/**
  * Cancels al the activity associated with the specified message
  */
 void

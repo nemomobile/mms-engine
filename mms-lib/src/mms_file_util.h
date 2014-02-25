@@ -25,6 +25,7 @@
 #define MMS_ATTIC_DIR                   "attic"
 #define MMS_MESSAGE_DIR                 "msg"
 #define MMS_PARTS_DIR                   "parts"
+#define MMS_ENCODE_DIR                  "encode"
 
 #define MMS_NOTIFICATION_IND_FILE       "m-notification.ind"
 #define MMS_NOTIFYRESP_IND_FILE         "m-notifyresp.ind"
@@ -33,7 +34,13 @@
 #define MMS_DELIVERY_IND_FILE           "m-delivery.ind"
 #define MMS_READ_REC_IND_FILE           "m-read-rec.ind"
 #define MMS_READ_ORIG_IND_FILE          "m-read-orig.ind"
+#define MMS_SEND_REQ_FILE               "m-send.req"
+#define MMS_SEND_CONF_FILE              "m-send.conf"
 #define MMS_UNRECOGNIZED_PUSH_FILE      "push.pdu"
+
+gboolean
+mms_file_is_smil(
+    const char* file);
 
 void
 mms_remove_file_and_dir(

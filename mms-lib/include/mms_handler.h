@@ -28,6 +28,18 @@ typedef enum _mmm_receive_state {
     MMS_RECEIVE_STATE_DECODING_ERROR
 } MMS_RECEIVE_STATE;
 
+/* Send state */
+typedef enum _mmm_send_state {
+    MMS_SEND_STATE_INVALID = -1,
+    MMS_SEND_STATE_ENCODING,
+    MMS_SEND_STATE_TOO_BIG,
+    MMS_SEND_STATE_SENDING,
+    MMS_SEND_STATE_DEFERRED,
+    MMS_SEND_STATE_NO_SPACE,
+    MMS_SEND_STATE_SEND_ERROR,
+    MMS_SEND_STATE_REFUSED
+} MMS_SEND_STATE;
+
 /* Class */
 typedef struct mms_handler_class {
     GObjectClass parent;
@@ -52,6 +64,18 @@ typedef struct mms_handler_class {
     gboolean (*fn_message_received)(
         MMSHandler* handler,        /* Handler instance */
         MMSMessage* msg);           /* Decoded message  */
+
+    /* Sets the send state */
+    gboolean (*fn_message_send_state_changed)(
+        MMSHandler* handler,        /* Handler instance */
+        const char* id,             /* Handler record id */
+        MMS_SEND_STATE state);      /* Receive state */
+
+    /* Message has been sent */
+    gboolean (*fn_message_sent)(
+        MMSHandler* handler,        /* Handler instance */
+        const char* id,             /* Handler record id */
+        const char* msgid);         /* Message id assigned by operator */
 
 } MMSHandlerClass;
 
@@ -85,6 +109,18 @@ gboolean
 mms_handler_message_received(
     MMSHandler* handler,            /* Handler instance */
     MMSMessage* msg);               /* Decoded message  */
+
+gboolean
+mms_handler_message_send_state_changed(
+    MMSHandler* handler,            /* Handler instance */
+    const char* id,                 /* Handler record id */
+    MMS_SEND_STATE state);          /* Receive state */
+
+gboolean
+mms_handler_message_sent(
+    MMSHandler* handler,            /* Handler instance */
+    const char* id,                 /* Handler record id */
+    const char* msgid);             /* Message id assigned by operator */
 
 #endif /* JOLLA_MMS_HANDLER_H */
 

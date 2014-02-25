@@ -129,6 +129,7 @@ struct mms_send_req {
 	time_t date;
 	char *content_type;
 	gboolean dr;
+	gboolean rr;
 };
 
 struct mms_send_conf {

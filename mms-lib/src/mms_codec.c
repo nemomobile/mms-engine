@@ -1375,6 +1375,12 @@ static gboolean decode_send_req(struct wsp_header_iter *iter,
 				&out->version,
 				MMS_HEADER_TO,
 				HEADER_FLAG_ALLOW_MULTI, &out->sr.to,
+				MMS_HEADER_CC,
+				HEADER_FLAG_ALLOW_MULTI, &out->sr.cc,
+				MMS_HEADER_BCC,
+				HEADER_FLAG_ALLOW_MULTI, &out->sr.bcc,
+				MMS_HEADER_DELIVERY_REPORT, 0, &out->sr.dr,
+				MMS_HEADER_READ_REPORT, 0, &out->sr.rr,
 				MMS_HEADER_INVALID) == FALSE)
 		return FALSE;
 
@@ -1724,6 +1730,9 @@ static gboolean encode_text(struct file_buffer *fb,
 	char **text = user;
 	unsigned int len;
 
+	if (!*text)
+		return TRUE;
+
 	len = strlen(*text) + 1;
 	if ((*text)[0] & 0x80) len++;
 
@@ -1776,6 +1785,9 @@ static gboolean encode_quoted_string(struct file_buffer *fb,
 	char **text = user;
 	unsigned int len;
 
+	if (!*text)
+		return TRUE;
+
 	len = strlen(*text) + 1;
 
 	ptr = fb_request_field(fb, header, len + 3);
@@ -1797,6 +1809,9 @@ static gboolean encode_text_array_element(struct file_buffer *fb,
 	char **text = user;
 	char **tos;
 	int i;
+
+	if (!*text)
+		return TRUE;
 
 	tos = g_strsplit(*text, ",", 0);
 
@@ -2229,6 +2244,7 @@ static gboolean mms_encode_send_req(struct mms_message *msg,
 				MMS_HEADER_BCC, &msg->sr.bcc,
 				MMS_HEADER_SUBJECT, &msg->sr.subject,
 				MMS_HEADER_DELIVERY_REPORT, &msg->sr.dr,
+				MMS_HEADER_READ_REPORT, &msg->sr.rr,
 				MMS_HEADER_CONTENT_TYPE, &msg->sr.content_type,
 				MMS_HEADER_INVALID) == FALSE)
 		return FALSE;
