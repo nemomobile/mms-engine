@@ -116,3 +116,16 @@ void MmsHandler::messageReceived(QString recId, QString mmsId, QString from,
         qWarning() << "Invalid record id" << recId;
     }
 }
+
+void MmsHandler::deliveryReport(QString imsi, QString mmsId,
+    QString recipient, int status)
+{
+    qDebug() << "deliveryReport" << imsi << mmsId << recipient << status;
+
+}
+
+void MmsHandler::readReport(QString imsi, QString mmsId,
+    QString recipient, int status)
+{
+    qDebug() << "readReport" << imsi << mmsId << recipient << status;
+}

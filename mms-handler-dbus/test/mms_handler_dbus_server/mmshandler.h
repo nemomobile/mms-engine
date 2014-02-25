@@ -35,6 +35,8 @@ public Q_SLOTS:
         QString cls, bool readReport, MmsPartList parts);
     void messageSendStateChanged(QString recId, int state);
     void messageSent(QString recId, QString mmsId);
+    void deliveryReport(QString imsi, QString mmsId, QString recipient, int status);
+    void readReport(QString imsi, QString mmsId, QString recipient, int status);
 
 private:
     bool m_isRegistered;
