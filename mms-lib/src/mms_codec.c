@@ -1771,7 +1771,7 @@ static gboolean encode_utf8_string(struct file_buffer *fb,
 	if (ptr == NULL)
 		return FALSE;
 
-	*ptr++ = 106 /* UTF-8 */ | 0x80;
+	*ptr++ = (guint8) (106 /* UTF-8 */ | 0x80);
 	if ((*text)[0] & 0x80) *ptr++ = QUOTE;
 	strcpy(ptr, *text);
 
@@ -2132,8 +2132,8 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 
 		memcpy(ptr, &cd_val, cd_len);
 		ptr += cd_len;
-		*ptr++ = 0x82; /* Inline = <Octet 130> */
-		*ptr++ = WSP_PARAMETER_TYPE_FILENAME_DEFUNCT | 0x80;
+		*ptr++ = (guint8) 0x82; /* Inline = <Octet 130> */
+		*ptr++ = (guint8) (WSP_PARAMETER_TYPE_FILENAME_DEFUNCT | 0x80);
 		strcpy(ptr, part->content_location);
 		ptr[cloc_len] = 0;
 	}

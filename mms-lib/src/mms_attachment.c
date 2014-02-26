@@ -16,7 +16,9 @@
 #include "mms_file_util.h"
 #include "mms_codec.h"
 
-#include <magic.h>
+#ifdef HAVE_MAGIC
+#  include <magic.h>
+#endif
 
 /* Logging */
 #define MMS_LOG_MODULE_NAME mms_attachment_log
@@ -85,6 +87,7 @@ mms_attachment_get_path(
     const char* file,
     GError** error)
 {
+#ifdef HAVE_REALPATH
     char* path = g_malloc(PATH_MAX);
     if (realpath(file, path)) {
         if (g_file_test(path, G_FILE_TEST_IS_REGULAR)) {
@@ -98,6 +101,9 @@ mms_attachment_get_path(
         MMS_ERROR(error, MMS_LIB_ERROR_IO, "%s: %s\n", file, strerror(errno));
     }
     return NULL;
+#else
+    return g_strdup(file);
+#endif
 }
 
 gboolean
@@ -226,6 +232,7 @@ mms_attachment_new(
                 const char* ct[4];
                 int n;
 
+#ifdef HAVE_MAGIC
                 magic_t magic = magic_open(MAGIC_MIME_TYPE);
                 if (magic) {
                     if (magic_load(magic, NULL) == 0) {
@@ -239,6 +246,7 @@ mms_attachment_new(
                      mms_file_is_smil(path)) {
                     content_type = SMIL_CONTENT_TYPE;
                 }
+#endif
 
                 if (!content_type) {
                     MMS_WARN("No mime type for %s", path);
@@ -261,7 +269,9 @@ mms_attachment_new(
                 ct[n++] = NULL;
                 at->content_type = mms_unparse_http_content_type((char**)ct);
 
+#ifdef HAVE_MAGIC
                 if (magic) magic_close(magic);
+#endif
             }
 
             at->content_location = g_path_get_basename(path);

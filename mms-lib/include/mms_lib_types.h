@@ -38,6 +38,11 @@
 #  define O_BINARY (0)
 #endif
 
+#ifdef __linux__
+#  define HAVE_MAGIC
+#  define HAVE_REALPATH
+#endif
+
 /* Static configuration, chosen at startup and never changing since then */
 typedef struct mms_config {
     const char* root_dir;       /* Root directory for storing MMS files */
