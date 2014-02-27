@@ -6,6 +6,9 @@ PKGCONFIG += glib-2.0 libsoup-2.4 libwspcodec
 INCLUDEPATH += include
 QMAKE_CFLAGS += -Wno-unused
 
+DEFINES += HAVE_IMAGEMAGICK
+PKGCONFIG += ImageMagick
+
 CONFIG(debug, debug|release) {
   DEFINES += DEBUG
   DESTDIR = $$_PRO_FILE_PWD_/build/debug
@@ -15,6 +18,7 @@ CONFIG(debug, debug|release) {
 
 SOURCES += \
   src/mms_attachment.c \
+  src/mms_attachment_image.c \
   src/mms_codec.c \
   src/mms_connection.c \
   src/mms_connman.c \

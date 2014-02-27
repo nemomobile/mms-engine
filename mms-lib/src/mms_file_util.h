@@ -26,6 +26,7 @@
 #define MMS_MESSAGE_DIR                 "msg"
 #define MMS_PARTS_DIR                   "parts"
 #define MMS_ENCODE_DIR                  "encode"
+#define MMS_RESIZE_DIR                  "resize"
 
 #define MMS_NOTIFICATION_IND_FILE       "m-notification.ind"
 #define MMS_NOTIFYRESP_IND_FILE         "m-notifyresp.ind"

@@ -32,7 +32,12 @@ typedef enum {
 
 /* One-time initialization */
 void
-mms_lib_init(void);
+mms_lib_init(
+    const char* path);
+
+/* Final deinitialization */
+void
+mms_lib_deinit(void);
 
 /* Reset configuration to default */
 void

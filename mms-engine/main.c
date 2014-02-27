@@ -149,6 +149,7 @@ mms_app_parse_options(
     gboolean ok;
     GError* error = NULL;
     gboolean session_bus = FALSE;
+    gint size_limit_kb = opt->config.size_limit/1024;
     char* root_dir_help = g_strdup_printf(
         "Root directory for MMS files [%s]",
         opt->config.root_dir);
@@ -158,6 +159,9 @@ mms_app_parse_options(
     char* idle_secs_help = g_strdup_printf(
         "Inactivity timeout in seconds [%d]",
         opt->config.idle_secs);
+    char* size_limit_help = g_strdup_printf(
+        "Maximum size for outgoing messages [%d]",
+        size_limit_kb);
     char* description = mms_log_description(mms_app_log_modules,
         G_N_ELEMENTS(mms_app_log_modules));
 
@@ -171,6 +175,8 @@ mms_app_parse_options(
           &opt->config.retry_secs, retry_secs_help, "SEC" },
         { "idle-secs", 'i', 0, G_OPTION_ARG_INT,
           &opt->config.idle_secs, idle_secs_help, "SEC" },
+        { "size-limit", 's', 0, G_OPTION_ARG_INT,
+          &size_limit_kb, size_limit_help, "KB" },
         { "keep-running", 'k', 0, G_OPTION_ARG_NONE, &opt->keep_running,
           "Keep running after everything is done", NULL },
         { "keep-temp-files", 't', 0, G_OPTION_ARG_NONE,
@@ -197,10 +203,12 @@ mms_app_parse_options(
     g_free(root_dir_help);
     g_free(retry_secs_help);
     g_free(idle_secs_help);
+    g_free(size_limit_help);
     g_free(description);
 
-    if (ok) {
+    if (ok && size_limit_kb >= 0) {
         MMS_INFO("Starting");
+        opt->config.size_limit = size_limit_kb * 1024;
         if (opt->dir) opt->config.root_dir = opt->dir;
         if (session_bus) {
             MMS_DEBUG("Attaching to session bus");
@@ -221,7 +229,7 @@ int main(int argc, char* argv[])
 {
     int result = 1;
     MMSAppOptions opt = {0};
-    mms_lib_init();
+    mms_lib_init(argv[0]);
     mms_log_default.name = MMS_APP_LOG_PREFIX;
     mms_lib_default_config(&opt.config);
     if (mms_app_parse_options(&opt, argc, argv)) {
@@ -260,5 +268,6 @@ int main(int argc, char* argv[])
         closelog();
     }
     g_free(opt.dir);
+    mms_lib_deinit();
     return result;
 }

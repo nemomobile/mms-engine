@@ -49,6 +49,7 @@ typedef struct mms_config {
     const char* user_agent;     /* User agent string */
     int retry_secs;             /* Retry timeout in seconds */
     int idle_secs;              /* Idle timeout */
+    gsize size_limit;           /* Maximum size of m-Send.req PDU */
     gboolean keep_temp_files;   /* Keep temporary files around */
     gboolean attic_enabled;     /* Keep unrecognized push message in attic */
     gboolean send_dr;           /* Allow sending delivery reports */

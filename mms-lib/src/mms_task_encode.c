@@ -53,6 +53,7 @@ G_DEFINE_TYPE(MMSTaskEncode, mms_task_encode, MMS_TYPE_TASK);
 typedef enum mms_encode_state {
     MMS_ENCODE_STATE_NONE,
     MMS_ENCODE_STATE_RUNNING,
+    MMS_ENCODE_STATE_TOO_BIG,
     MMS_ENCODE_STATE_ERROR,
     MMS_ENCODE_STATE_DONE
 } MMS_ENCODE_STATE;
@@ -73,18 +74,59 @@ mms_task_encode_job_done(
     MMSEncodeJob* job);
 
 static
-void
-mms_encode_job_run(
+gboolean
+mms_encode_job_resize(
+    MMSEncodeJob* job)
+{
+    /* Resize the largest resizable attachment */
+    MMSTaskEncode* enc = job->enc;
+    MMSAttachment* resize_me = NULL;
+    unsigned int largest_size = 0;
+    int i;
+    MMS_DEBUG("Message is too big, need to resize");
+    for (i=0; i<enc->nparts; i++) {
+        MMSAttachment* part = enc->parts[i];
+        if (part->flags & MMS_ATTACHMENT_RESIZABLE) {
+            const char* fname = part->file_name;
+            int fd = open(fname, O_RDONLY);
+            if (fd >= 0) {
+                struct stat st;
+                int err = fstat(fd, &st);
+                if (!err) {
+                    if (largest_size < st.st_size) {
+                        largest_size = st.st_size;
+                        resize_me = part;
+                    }
+                } else {
+                    MMS_ERR("Can't stat %s: %s", fname, strerror(errno));
+                }
+                close(fd);
+            } else {
+                MMS_ERR("Can't open %s: %s", fname, strerror(errno));
+            }
+        }
+    }
+    if (resize_me) {
+        MMS_DEBUG("Resizing %s", resize_me->original_file);
+        return mms_attachment_resize(resize_me);
+    } else {
+        MMS_DEBUG("There is nothing to resize");
+        return FALSE;
+    }
+}
+
+static
+gsize
+mms_encode_job_encode(
     MMSEncodeJob* job)
 {
     MMSTaskEncode* enc = job->enc;
-    MMS_ENCODE_STATE final_state = MMS_ENCODE_STATE_ERROR;
+    gsize pdu_size = 0;
     char* dir;
     int fd;
 
-    job->state = MMS_ENCODE_STATE_RUNNING;
-
-    MMS_ASSERT(!job->path);
+    g_free(job->path);
+    job->path = NULL;
     dir = mms_task_dir(&enc->task);
     fd = mms_create_file(dir, MMS_SEND_REQ_FILE, &job->path, NULL);
     if (fd >= 0) {
@@ -128,21 +170,68 @@ mms_encode_job_run(
         ok = mms_message_encode(mms, fd);
         mms_message_free(mms);
         g_free(start);
-        close(fd);
 
         if (ok) {
-            MMS_DEBUG("Created %s", job->path);
-            final_state = MMS_ENCODE_STATE_DONE;
+            struct stat st;
+            int err = fstat(fd, &st);
+            if (!err) {
+                pdu_size = st.st_size;
+                MMS_DEBUG("Created %s (%d bytes)", job->path, (int)pdu_size);
+            } else {
+                MMS_ERR("Can't stat %s: %s", job->path, strerror(errno));
+                ok = FALSE;
+            }
         } else {
             MMS_ERR("Failed to encode message");
+        }
+
+        close(fd);
+        if (!ok) {
             unlink(job->path);
             g_free(job->path);
             job->path = NULL;
         }
     }
     g_free(dir);
+    return pdu_size;
+}
 
-    job->state = final_state;
+static
+void
+mms_encode_job_run(
+    MMSEncodeJob* job)
+{
+    int i;
+    gsize size;
+    const MMSConfig* config = job->enc->task.config;
+    MMSTaskEncode* enc = job->enc;
+
+    job->state = MMS_ENCODE_STATE_RUNNING;
+
+    /* Reset the resizing state */
+    for (i=0; i<enc->nparts; i++) {
+        mms_attachment_reset(enc->parts[i]);
+    }
+
+    /* Keep resizing attachments until we squeeze them into the limit */
+    size = mms_encode_job_encode(job);
+    while (config->size_limit && size > config->size_limit &&
+           !g_cancellable_is_cancelled(job->cancellable) &&
+           mms_encode_job_resize(job)) {
+        gsize last_size = size;
+        size = mms_encode_job_encode(job);
+        if (!size || size >= last_size) break;
+    }
+
+    if (size > 0 && (!config->size_limit || size <= config->size_limit)) {
+        job->state = MMS_ENCODE_STATE_DONE;
+    } else {
+        unlink(job->path);
+        g_free(job->path);
+        job->path = NULL;
+        job->state = (size > 0) ? MMS_ENCODE_STATE_TOO_BIG :
+            MMS_ENCODE_STATE_ERROR;
+    }
 }
 
 static
@@ -228,7 +317,8 @@ mms_task_encode_job_done(
                 task->config, task->handler, task->id, task->imsi));
         } else {
             mms_handler_message_send_state_changed(task->handler, task->id,
-                MMS_SEND_STATE_SEND_ERROR);
+                (job->state == MMS_ENCODE_STATE_TOO_BIG) ?
+                MMS_SEND_STATE_TOO_BIG : MMS_SEND_STATE_SEND_ERROR);
         }
         mms_task_set_state(&enc->task, MMS_TASK_STATE_DONE);
         mms_encode_job_unref(job);
@@ -265,6 +355,16 @@ mms_task_encode_run(
             mms_task_retry(task) ? MMS_SEND_STATE_DEFERRED :
             MMS_SEND_STATE_SEND_ERROR);
     }
+}
+
+static
+void
+mms_task_encode_cancel(
+    MMSTask* task)
+{
+    MMSTaskEncode* enc = MMS_TASK_ENCODE(task);
+    if (enc->active_job) g_cancellable_cancel(enc->active_job->cancellable);
+    MMS_TASK_CLASS(mms_task_encode_parent_class)->fn_cancel(task);
 }
 
 static
@@ -433,6 +533,7 @@ mms_task_encode_class_init(
     MMSTaskEncodeClass* klass)
 {
     klass->fn_run = mms_task_encode_run;
+    klass->fn_cancel = mms_task_encode_cancel;
     G_OBJECT_CLASS(klass)->finalize = mms_task_encode_finalize;
 }
 

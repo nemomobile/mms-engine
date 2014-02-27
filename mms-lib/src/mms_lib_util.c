@@ -18,10 +18,15 @@
 #include "mms_task.h"
 #include "mms_log.h"
 
+#ifdef HAVE_IMAGEMAGICK
+#  include <magick/api.h>
+#endif
+
 #define MMS_DEFAULT_ROOT_DIR        "/tmp/mms"
 #define MMS_DEFAULT_USER_AGENT      "Jolla MMS"
 #define MMS_DEFAULT_RETRY_SECS      (15)
 #define MMS_DEFAULT_IDLE_SECS       (20)
+#define MMS_DEFAULT_SIZE_LIMIT      (300*1024)
 
 /**
  * MMS error domain
@@ -36,13 +41,29 @@ mms_lib_error_quark()
  * One-time initialization
  */
 void
-mms_lib_init(void)
+mms_lib_init(
+    const char* path)
 {
     /* g_type_init has been deprecated since version 2.36
      * the type system is initialised automagically since then */
     G_GNUC_BEGIN_IGNORE_DEPRECATIONS;
     g_type_init();
     G_GNUC_END_IGNORE_DEPRECATIONS;
+
+#ifdef HAVE_IMAGEMAGICK
+    MagickCoreGenesis(path, MagickFalse);
+#endif
+}
+
+/**
+ * Deinitialization
+ */
+void
+mms_lib_deinit()
+{
+#ifdef HAVE_IMAGEMAGICK
+    MagickCoreTerminus();
+#endif
 }
 
 /**
@@ -56,6 +77,7 @@ mms_lib_default_config(
     config->user_agent = MMS_DEFAULT_USER_AGENT;
     config->retry_secs = MMS_DEFAULT_RETRY_SECS;
     config->idle_secs = MMS_DEFAULT_IDLE_SECS;
+    config->size_limit = MMS_DEFAULT_SIZE_LIMIT;
     config->keep_temp_files = FALSE;
     config->attic_enabled = FALSE;
     config->send_dr = TRUE;

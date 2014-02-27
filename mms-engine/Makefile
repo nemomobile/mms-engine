@@ -7,7 +7,7 @@
 
 # Required packages
 PKGS = gio-unix-2.0 gio-2.0 glib-2.0
-LIB_PKGS = libwspcodec libsoup-2.4 $(PKGS)
+LIB_PKGS = libwspcodec libsoup-2.4 ImageMagick $(PKGS)
 
 #
 # Default target

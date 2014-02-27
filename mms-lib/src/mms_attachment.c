@@ -53,12 +53,12 @@ mms_attachment_finalize(
     g_mapped_file_unref(at->map);
     if (!at->config->keep_temp_files &&
         !(at->flags & MMS_ATTACHMENT_DONT_DELETE_FILES)) {
-        char* dir = g_path_get_dirname(at->file_name);
-        remove(at->file_name);
+        char* dir = g_path_get_dirname(at->original_file);
+        remove(at->original_file);
         rmdir(dir);
         g_free(dir);
     }
-    g_free(at->file_name);
+    g_free(at->original_file);
     g_free(at->content_type);
     g_free(at->content_location);
     g_free(at->content_id);
@@ -208,26 +208,25 @@ mms_attachment_new(
     if (path) {
         GMappedFile* map = g_mapped_file_new(path, FALSE, error);
         if (map) {
-            MMSAttachment* at = g_object_new(MMS_TYPE_ATTACHMENT, NULL);
-            at->config = config;
-            at->file_name = path;
-            at->map = map;
+            unsigned int flags = 0;
+            char* content_type = NULL;
+            MMSAttachment* at;
 
             if (info->content_type) {
                 char** ct = mms_parse_http_content_type(info->content_type);
                 if (ct) {
-                    at->content_type = mms_unparse_http_content_type(ct);
+                    content_type = mms_unparse_http_content_type(ct);
                     if (!strcmp(ct[0], SMIL_CONTENT_TYPE)) {
-                        at->flags |= MMS_ATTACHMENT_SMIL;
+                        flags |= MMS_ATTACHMENT_SMIL;
                     }
                     g_strfreev(ct);
                 }
             }
 
-            if (!at->content_type) {
+            if (!content_type) {
                 /* Use magic to determine mime type */
                 const char* default_charset = "utf-8";
-                const char* content_type = NULL;
+                const char* detected_type = NULL;
                 const char* charset = NULL;
                 const char* ct[4];
                 int n;
@@ -236,50 +235,57 @@ mms_attachment_new(
                 magic_t magic = magic_open(MAGIC_MIME_TYPE);
                 if (magic) {
                     if (magic_load(magic, NULL) == 0) {
-                        content_type = magic_file(magic, path);
+                        detected_type = magic_file(magic, path);
                     }
                 }
 
                 /* Magic detects SMIL as text/html */
-                if ((!content_type ||
-                     g_str_has_prefix(content_type, "text/")) &&
+                if ((!detected_type ||
+                     g_str_has_prefix(detected_type, "text/")) &&
                      mms_file_is_smil(path)) {
-                    content_type = SMIL_CONTENT_TYPE;
+                    detected_type = SMIL_CONTENT_TYPE;
                 }
 #endif
 
-                if (!content_type) {
+                if (!detected_type) {
                     MMS_WARN("No mime type for %s", path);
-                    content_type = MMS_ATTACHMENT_DEFAULT_TYPE;
+                    detected_type = MMS_ATTACHMENT_DEFAULT_TYPE;
                 }
 
-                if (!strcmp(content_type, SMIL_CONTENT_TYPE)) {
-                    at->flags |= MMS_ATTACHMENT_SMIL;
+                if (!strcmp(detected_type, SMIL_CONTENT_TYPE)) {
+                    flags |= MMS_ATTACHMENT_SMIL;
                     charset = default_charset;
-                } else if (g_str_has_prefix(content_type, "text/")) {
+                } else if (g_str_has_prefix(detected_type, "text/")) {
                     charset = default_charset;
                 }
 
                 n = 0;
-                ct[n++] = content_type;
+                ct[n++] = detected_type;
                 if (charset) {
                     ct[n++] = "charset";
                     ct[n++] = charset;
                 }
                 ct[n++] = NULL;
-                at->content_type = mms_unparse_http_content_type((char**)ct);
+                content_type = mms_unparse_http_content_type((char**)ct);
 
 #ifdef HAVE_MAGIC
                 if (magic) magic_close(magic);
 #endif
             }
 
+            MMS_DEBUG("%s: %s", path, content_type);
+            at = g_object_new(g_str_has_prefix(content_type, "image/") ?
+                MMS_TYPE_ATTACHMENT_IMAGE : MMS_TYPE_ATTACHMENT, NULL);
+
+            at->config = config;
+            at->map = map;
+            at->flags |= flags;
+            at->file_name = at->original_file = path;
+            at->content_type = content_type;
             at->content_location = g_path_get_basename(path);
             at->content_id = (info->content_id && info->content_id[0]) ?
                 g_strdup(info->content_id) :
                 g_strdup(at->content_location);
-
-            MMS_DEBUG("%s: %s", path, at->content_type);
             return at;
         }
         g_free(path);
@@ -300,6 +306,31 @@ mms_attachment_unref(
     MMSAttachment* at)
 {
     if (at) g_object_unref(MMS_ATTACHMENT(at));
+}
+
+void
+mms_attachment_reset(
+    MMSAttachment* at)
+{
+    if (at) {
+        MMSAttachmentClass* klass = MMS_ATTACHMENT_GET_CLASS(at);
+        if (klass->fn_reset) {
+            klass->fn_reset(at);
+        }
+    }
+}
+
+gboolean
+mms_attachment_resize(
+    MMSAttachment* at)
+{
+    if (at) {
+        MMSAttachmentClass* klass = MMS_ATTACHMENT_GET_CLASS(at);
+        if (klass->fn_resize) {
+            return klass->fn_resize(at);
+        }
+    }
+    return FALSE;
 }
 
 /*

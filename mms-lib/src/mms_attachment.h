@@ -21,7 +21,8 @@
 struct _mms_attachment {
     GObject parent;                     /* Parent object */
     const MMSConfig* config;            /* Immutable configuration */
-    char* file_name;                    /* Full path name */
+    char* original_file;                /* Full path to the original file */
+    const char* file_name;              /* Actual file name */
     char* content_type;                 /* Content type */
     char* content_id;                   /* Content id */
     char* content_location;             /* Content location */
@@ -30,15 +31,20 @@ struct _mms_attachment {
 
 #define MMS_ATTACHMENT_SMIL                 (0x01)
 #define MMS_ATTACHMENT_DONT_DELETE_FILES    (0x02)
+#define MMS_ATTACHMENT_RESIZABLE            (0x04)
 
 };
 
 typedef struct mms_attachment_class {
     GObjectClass parent;
+    void (*fn_reset)(MMSAttachment* attachment);
+    gboolean (*fn_resize)(MMSAttachment* attachment);
 } MMSAttachmentClass;
 
 GType mms_attachment_get_type(void);
+GType mms_attachment_image_get_type(void);
 #define MMS_TYPE_ATTACHMENT (mms_attachment_get_type())
+#define MMS_TYPE_ATTACHMENT_IMAGE (mms_attachment_image_get_type())
 #define MMS_ATTACHMENT_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST((klass), \
         MMS_TYPE_ATTACHMENT, MMSAttachmentClass))
 
@@ -62,6 +68,14 @@ mms_attachment_ref(
 
 void
 mms_attachment_unref(
+    MMSAttachment* attachment);
+
+void
+mms_attachment_reset(
+    MMSAttachment* attachment);
+
+gboolean
+mms_attachment_resize(
     MMSAttachment* attachment);
 
 #endif /* JOLLA_MMS_ATTACHMENT_H */
