@@ -221,9 +221,10 @@ test_retrieve_no_proxy(
 
 int main(int argc, char* argv[])
 {
+    int ret;
     MMSConfig config;
 
-    mms_lib_init();
+    mms_lib_init(argv[0]);
     mms_lib_default_config(&config);
     mms_log_default.name = "test_retrieve_no_proxy";
 
@@ -239,7 +240,6 @@ int main(int argc, char* argv[])
     }
 
     if (argc == 1) {
-        int ret;
         char* tmpd = g_mkdtemp(g_strdup("/tmp/test_retrieve_XXXXXX"));
         MMS_VERBOSE("Temporary directory %s", tmpd);
         config.root_dir = tmpd;
@@ -248,11 +248,13 @@ int main(int argc, char* argv[])
         ret = test_retrieve_no_proxy(&config);
         remove(tmpd);
         g_free(tmpd);
-        return ret;
     } else {
         printf("Usage: test_retrieve [-v] [TEST]\n");
-        return RET_ERR;
+        ret = RET_ERR;
     }
+
+    mms_lib_deinit();
+    return ret;
 }
 
 /*

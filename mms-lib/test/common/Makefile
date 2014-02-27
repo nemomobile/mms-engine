@@ -18,7 +18,7 @@ endif
 #
 # Required packages
 #
-LIB_PKGS = libwspcodec libsoup-2.4 glib-2.0
+LIB_PKGS = libwspcodec libsoup-2.4 glib-2.0 ImageMagick
 PKGS = $(LIB_PKGS)
 
 #
@@ -71,7 +71,7 @@ RELEASE_FLAGS = $(BASE_FLAGS) -O2
 DEBUG_DEFS = -DDEBUG
 RELEASE_DEFS =
 WARNINGS = -Wall
-LIBS = $(shell pkg-config --libs $(LIB_PKGS)) -lmagic
+LIBS = $(shell pkg-config --libs $(LIB_PKGS)) -lmagic -ljpeg
 CFLAGS = $(shell pkg-config --cflags $(PKGS)) -I$(MMS_LIB_DIR)/include \
   -I$(MMS_LIB_DIR)/src -I$(COMMON_DIR) -MMD
 

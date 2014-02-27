@@ -261,8 +261,9 @@ test(
 
 int main(int argc, char* argv[])
 {
+    int ret;
     MMSConfig config;
-    mms_lib_init();
+    mms_lib_init(argv[0]);
     mms_lib_default_config(&config);
     config.retry_secs = 0;
     config.root_dir = "."; /* Dispatcher will attempt to create it */
@@ -274,7 +275,9 @@ int main(int argc, char* argv[])
         mms_log_stdout_timestamp = FALSE;
         mms_log_default.level = MMS_LOGLEVEL_INFO;
     }
-    return test(&config);
+    ret = test(&config);
+    mms_lib_deinit();
+    return ret;
 }
 
 /*

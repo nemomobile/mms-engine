@@ -150,7 +150,7 @@ int main(int argc, char* argv[])
     int ret;
     MMSConfig config;
     char* tmpd = g_mkdtemp(g_strdup("/tmp/test_retrieve_XXXXXX"));
-    mms_lib_init();
+    mms_lib_init(argv[0]);
     mms_lib_default_config(&config);
     config.idle_secs = 0;
     config.root_dir = tmpd;
@@ -168,6 +168,7 @@ int main(int argc, char* argv[])
     ret = test_read_report(&config);
     remove(tmpd);
     g_free(tmpd);
+    mms_lib_deinit();
     return ret;
 }
 
