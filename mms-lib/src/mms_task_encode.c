@@ -304,6 +304,7 @@ mms_task_encode_generate_unique_path(
             file = tmpfile = newfile;
             if (!g_file_test(path, G_FILE_TEST_IS_REGULAR)) break;
         }
+        g_free(tmpfile);
     }
     return path;
 }
