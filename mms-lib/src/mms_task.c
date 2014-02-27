@@ -305,12 +305,23 @@ const char*
 mms_task_make_id(
     MMSTask* task)
 {
-    if (!task->id) {
-        char* tmpl = g_strconcat(task->config->root_dir,
-            "/" MMS_MESSAGE_DIR "/XXXXXX" , NULL);
-        char* dir = g_mkdtemp_full(tmpl, MMS_DIR_PERM);
-        if (dir) task->id = g_path_get_basename(dir);
-        g_free(tmpl);
+    if (!task->id || !task->id[0]) {
+        char* msgdir = g_strconcat(task->config->root_dir, "/",
+            MMS_MESSAGE_DIR, NULL);
+        int err = g_mkdir_with_parents(msgdir, MMS_DIR_PERM);
+        if (!err || errno == EEXIST) {
+            char* tmpl = g_strconcat(msgdir, "/XXXXXX" , NULL);
+            char* taskdir = g_mkdtemp_full(tmpl, MMS_DIR_PERM);
+            if (taskdir) {
+                g_free(task->id);
+                task->id = g_path_get_basename(taskdir);
+            }
+            g_free(tmpl);
+        } else {
+            MMS_ERR("Failed to create %s: %s", task->config->root_dir,
+                strerror(errno));
+        }
+        g_free(msgdir);
     }
     return task->id;
 }
