@@ -109,11 +109,11 @@ int main(int argc, char* argv[])
     GOptionEntry entries[] = {
         { "verbose", 'v', 0, G_OPTION_ARG_NONE, &verbose,
           "Enable verbose output", NULL },
+        { "subject", 's', 0, G_OPTION_ARG_STRING, &subject,
+          "Set message subject", "TEXT" },
         { "delivery-report", 'd', 0, G_OPTION_ARG_NONE, &dr,
           "Request delivery report", NULL },
         { "read-report", 'r', 0, G_OPTION_ARG_NONE, &rr,
-          "Request read report", NULL },
-        { "subject", 's', 0, G_OPTION_ARG_STRING, &subject,
           "Request read report", NULL },
         { NULL }
     };
