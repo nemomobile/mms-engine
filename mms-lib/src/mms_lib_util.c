@@ -18,7 +18,7 @@
 #include "mms_task.h"
 #include "mms_log.h"
 
-#define MMS_DEFAULT_ROOT_DIR        "/var/mms"
+#define MMS_DEFAULT_ROOT_DIR        "/tmp/mms"
 #define MMS_DEFAULT_USER_AGENT      "Jolla MMS"
 #define MMS_DEFAULT_RETRY_SECS      (15)
 #define MMS_DEFAULT_IDLE_SECS       (20)
