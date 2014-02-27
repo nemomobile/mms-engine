@@ -93,7 +93,7 @@ mms_encode_job_resize(
                 struct stat st;
                 int err = fstat(fd, &st);
                 if (!err) {
-                    if (largest_size < st.st_size) {
+                    if (largest_size < (unsigned int)st.st_size) {
                         largest_size = st.st_size;
                         resize_me = part;
                     }
