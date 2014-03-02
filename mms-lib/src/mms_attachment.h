@@ -29,9 +29,9 @@ struct _mms_attachment {
     GMappedFile* map;                   /* Mapped attachment file */
     unsigned int flags;                 /* Flags: */
 
-#define MMS_ATTACHMENT_SMIL                 (0x01)
-#define MMS_ATTACHMENT_DONT_DELETE_FILES    (0x02)
-#define MMS_ATTACHMENT_RESIZABLE            (0x04)
+#define MMS_ATTACHMENT_SMIL         (0x01)
+#define MMS_ATTACHMENT_KEEP_FILES   (0x02)
+#define MMS_ATTACHMENT_RESIZABLE    (0x04)
 
 };
 
@@ -43,10 +43,10 @@ typedef struct mms_attachment_class {
 
 GType mms_attachment_get_type(void);
 GType mms_attachment_image_get_type(void);
-#define MMS_TYPE_ATTACHMENT (mms_attachment_get_type())
-#define MMS_TYPE_ATTACHMENT_IMAGE (mms_attachment_image_get_type())
-#define MMS_ATTACHMENT_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST((klass), \
-        MMS_TYPE_ATTACHMENT, MMSAttachmentClass))
+GType mms_attachment_jpeg_get_type(void);
+#define MMS_TYPE_ATTACHMENT         (mms_attachment_get_type())
+#define MMS_TYPE_ATTACHMENT_IMAGE   (mms_attachment_image_get_type())
+#define MMS_TYPE_ATTACHMENT_JPEG    (mms_attachment_jpeg_get_type())
 
 MMSAttachment*
 mms_attachment_new(

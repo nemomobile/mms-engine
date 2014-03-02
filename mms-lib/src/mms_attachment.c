@@ -50,9 +50,10 @@ mms_attachment_finalize(
     GObject* object)
 {
     MMSAttachment* at = MMS_ATTACHMENT(object);
+    MMS_VERBOSE_("%p", at);
     g_mapped_file_unref(at->map);
     if (!at->config->keep_temp_files &&
-        !(at->flags & MMS_ATTACHMENT_DONT_DELETE_FILES)) {
+        !(at->flags & MMS_ATTACHMENT_KEEP_FILES)) {
         char* dir = g_path_get_dirname(at->original_file);
         remove(at->original_file);
         rmdir(dir);
@@ -76,9 +77,9 @@ mms_attachment_class_init(
 static
 void
 mms_attachment_init(
-    MMSAttachment* attachment)
+    MMSAttachment* at)
 {
-    MMS_VERBOSE_("%p", attachment);
+    MMS_VERBOSE_("%p", at);
 }
 
 static
@@ -210,6 +211,7 @@ mms_attachment_new(
         if (map) {
             unsigned int flags = 0;
             char* content_type = NULL;
+            GType type;
             MMSAttachment* at;
 
             if (info->content_type) {
@@ -274,9 +276,16 @@ mms_attachment_new(
             }
 
             MMS_DEBUG("%s: %s", path, content_type);
-            at = g_object_new(g_str_has_prefix(content_type, "image/") ?
-                MMS_TYPE_ATTACHMENT_IMAGE : MMS_TYPE_ATTACHMENT, NULL);
 
+            if (!strcmp(content_type, "image/jpeg")) {
+                type = MMS_TYPE_ATTACHMENT_JPEG;
+            } else if (g_str_has_prefix(content_type, "image/")) {
+                type = MMS_TYPE_ATTACHMENT_IMAGE;
+            } else {
+                type = MMS_TYPE_ATTACHMENT;
+            }
+
+            at = g_object_new(type, NULL);
             at->config = config;
             at->map = map;
             at->flags |= flags;

@@ -19,6 +19,7 @@ CONFIG(debug, debug|release) {
 SOURCES += \
   src/mms_attachment.c \
   src/mms_attachment_image.c \
+  src/mms_attachment_jpeg.c \
   src/mms_codec.c \
   src/mms_connection.c \
   src/mms_connman.c \
@@ -44,6 +45,7 @@ SOURCES += \
 
 HEADERS += \
   src/mms_attachment.h \
+  src/mms_attachment_image.h \
   src/mms_codec.h \
   src/mms_error.h \
   src/mms_file_util.h \

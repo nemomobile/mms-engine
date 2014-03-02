@@ -50,6 +50,7 @@ typedef struct mms_config {
     int retry_secs;             /* Retry timeout in seconds */
     int idle_secs;              /* Idle timeout */
     gsize size_limit;           /* Maximum size of m-Send.req PDU */
+    guint max_pixels;           /* Pixel limit for outbound images */
     gboolean keep_temp_files;   /* Keep temporary files around */
     gboolean attic_enabled;     /* Keep unrecognized push message in attic */
     gboolean send_dr;           /* Allow sending delivery reports */

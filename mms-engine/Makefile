@@ -90,7 +90,7 @@ endif
 DEBUG_CFLAGS = $(DEBUG_FLAGS) $(DEBUG_DEFS) $(CFLAGS)
 RELEASE_CFLAGS = $(RELEASE_FLAGS) $(RELEASE_DEFS) $(CFLAGS)
 
-LIBS = $(shell pkg-config --libs $(LIB_PKGS)) -lmagic
+LIBS = $(shell pkg-config --libs $(LIB_PKGS)) -lmagic -ljpeg
 DEBUG_LIBS = \
   $(MMS_OFONO_DEBUG_LIB) \
   $(MMS_HANDLER_DEBUG_LIB) \

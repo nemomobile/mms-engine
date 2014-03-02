@@ -150,6 +150,7 @@ mms_app_parse_options(
     GError* error = NULL;
     gboolean session_bus = FALSE;
     gint size_limit_kb = opt->config.size_limit/1024;
+    gdouble megapixels = opt->config.max_pixels / 1000000.0;
     char* root_dir_help = g_strdup_printf(
         "Root directory for MMS files [%s]",
         opt->config.root_dir);
@@ -162,6 +163,9 @@ mms_app_parse_options(
     char* size_limit_help = g_strdup_printf(
         "Maximum size for outgoing messages [%d]",
         size_limit_kb);
+    char* megapixels_help = g_strdup_printf(
+        "Maximum pixel count for outgoing images [%.1f]",
+        megapixels);
     char* description = mms_log_description(mms_app_log_modules,
         G_N_ELEMENTS(mms_app_log_modules));
 
@@ -177,6 +181,8 @@ mms_app_parse_options(
           &opt->config.idle_secs, idle_secs_help, "SEC" },
         { "size-limit", 's', 0, G_OPTION_ARG_INT,
           &size_limit_kb, size_limit_help, "KB" },
+        { "pix-limit", 'p', 0, G_OPTION_ARG_DOUBLE,
+          &megapixels, megapixels_help, "MPIX" },
         { "keep-running", 'k', 0, G_OPTION_ARG_NONE, &opt->keep_running,
           "Keep running after everything is done", NULL },
         { "keep-temp-files", 't', 0, G_OPTION_ARG_NONE,
@@ -189,7 +195,7 @@ mms_app_parse_options(
           mms_app_option_verbose, "Be verbose (equivalent to -l=verbose)",
           NULL },
         { "log-output", 'o', 0, G_OPTION_ARG_CALLBACK, mms_app_option_logtype,
-          "Log output [stdout]", "<stdout|syslog|glib>" },
+          "Log output (stdout|syslog|glib) [stdout]", "TYPE" },
         { "log-level", 'l', 0, G_OPTION_ARG_CALLBACK, mms_app_option_loglevel,
           "Set log level (repeatable)", "[MODULE:]LEVEL" },
         { NULL }
@@ -204,11 +210,21 @@ mms_app_parse_options(
     g_free(retry_secs_help);
     g_free(idle_secs_help);
     g_free(size_limit_help);
+    g_free(megapixels_help);
     g_free(description);
 
-    if (ok && size_limit_kb >= 0) {
+    if (ok) {
         MMS_INFO("Starting");
-        opt->config.size_limit = size_limit_kb * 1024;
+        if (size_limit_kb >= 0) {
+            opt->config.size_limit = size_limit_kb * 1024;
+        } else {
+            opt->config.size_limit = 0;
+        }
+        if (megapixels >= 0) {
+            opt->config.max_pixels = (int)(megapixels*1000)*1000;
+        } else {
+            opt->config.max_pixels = 0;
+        }
         if (opt->dir) opt->config.root_dir = opt->dir;
         if (session_bus) {
             MMS_DEBUG("Attaching to session bus");

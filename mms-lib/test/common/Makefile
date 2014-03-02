@@ -18,8 +18,8 @@ endif
 #
 # Required packages
 #
-LIB_PKGS = libwspcodec libsoup-2.4 glib-2.0 ImageMagick
-PKGS = $(LIB_PKGS)
+LIB_PKGS += libwspcodec libsoup-2.4 glib-2.0 ImageMagick
+PKGS += $(LIB_PKGS)
 
 #
 # Default target
