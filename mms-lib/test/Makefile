@@ -2,8 +2,10 @@
 
 all:
 %:
+	@$(MAKE) -C media_type $*
 	@$(MAKE) -C mms_codec $*
 	@$(MAKE) -C read_report $*
+	@$(MAKE) -C resize $*
 	@$(MAKE) -C retrieve $*
 	@$(MAKE) -C retrieve_cancel $*
 	@$(MAKE) -C retrieve_no_proxy $*
