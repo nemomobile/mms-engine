@@ -9,3 +9,4 @@ all:
 	@$(MAKE) -C retrieve $*
 	@$(MAKE) -C retrieve_cancel $*
 	@$(MAKE) -C retrieve_no_proxy $*
+	@$(MAKE) -C send $*

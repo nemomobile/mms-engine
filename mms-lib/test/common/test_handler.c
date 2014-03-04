@@ -29,36 +29,133 @@ typedef struct mms_handler_test {
     MMSDispatcher* dispatcher;
 } MMSHandlerTest;
 
+typedef enum mms_handler_record_type {
+    MMS_HANDLER_RECORD_SEND = 1,
+    MMS_HANDLER_RECORD_RECEIVE
+} MMSHandlerRecordType;
+
 typedef struct mms_handler_record {
+    MMSHandlerRecordType type;
     char* id;
     char* imsi;
+} MMSHandlerRecord;
+
+typedef struct mms_handler_record_send {
+    MMSHandlerRecord rec;
+    MMS_SEND_STATE state;
+    char* msgid;
+} MMSHandlerRecordSend;
+
+typedef struct mms_handler_record_receive {
+    MMSHandlerRecord rec;
+    MMS_RECEIVE_STATE state;
+    MMSDispatcher* dispatcher;
     MMSMessage* msg;
     GBytes* data;
-    MMS_RECEIVE_STATE receive_state;
     guint receive_message_id;
-    MMSDispatcher* dispatcher;
-} MMSHandlerRecord;
+} MMSHandlerRecordReceive;
 
 G_DEFINE_TYPE(MMSHandlerTest, mms_handler_test, MMS_TYPE_HANDLER);
 #define MMS_TYPE_HANDLER_TEST (mms_handler_test_get_type())
 #define MMS_HANDLER_TEST(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), \
     MMS_TYPE_HANDLER_TEST, MMSHandlerTest))
 
+static inline
+MMSHandlerRecordSend*
+mms_handler_test_record_send(MMSHandlerRecord* rec)
+{
+    MMS_ASSERT(rec->type == MMS_HANDLER_RECORD_SEND);
+    return MMS_CAST(rec, MMSHandlerRecordSend, rec);
+}
+
+static inline
+MMSHandlerRecordReceive*
+mms_handler_test_record_receive(MMSHandlerRecord* rec)
+{
+    MMS_ASSERT(rec->type == MMS_HANDLER_RECORD_RECEIVE);
+    return MMS_CAST(rec, MMSHandlerRecordReceive, rec);
+}
+
+static
+MMSHandlerRecord*
+mms_handler_test_get_record(
+    MMSHandlerTest* test,
+    const char* id,
+    MMSHandlerRecordType type)
+{
+    if (id) {
+        MMSHandlerRecord* rec = g_hash_table_lookup(test->recs, id);
+        if (rec && rec->type == type) {
+            return rec;
+        }
+    } else if (g_hash_table_size(test->recs) == 1) {
+        GList* values = g_hash_table_get_values(test->recs);
+        GList* value = g_list_first(values);
+        MMSHandlerRecord* found = NULL;
+        while (value) {
+            MMSHandlerRecord* rec = value->data;
+            if (rec && rec->type == type) {
+                found = rec;
+                break;
+            }
+            value = value->next;
+        }
+        g_list_free(values);
+        return found;
+    }
+    return NULL;
+}
+
+static
+MMSHandlerRecordSend*
+mms_handler_test_get_send_record(
+    MMSHandlerTest* test,
+    const char* id)
+{
+    MMSHandlerRecord* rec =
+    mms_handler_test_get_record(test, id, MMS_HANDLER_RECORD_SEND);
+    return rec ? mms_handler_test_record_send(rec) : NULL;
+}
+
+static
+MMSHandlerRecordReceive*
+mms_handler_test_get_receive_record(
+    MMSHandlerTest* test,
+    const char* id)
+{
+    MMSHandlerRecord* rec =
+    mms_handler_test_get_record(test, id, MMS_HANDLER_RECORD_RECEIVE);
+    return rec ? mms_handler_test_record_receive(rec) : NULL;
+}
+
+MMS_SEND_STATE
+mms_handler_test_send_state(
+    MMSHandler* handler,
+    const char* id)
+{
+    MMSHandlerRecordSend* send =
+    mms_handler_test_get_send_record(MMS_HANDLER_TEST(handler), id);
+    return send ? send->state : MMS_SEND_STATE_INVALID;
+}
+
 MMS_RECEIVE_STATE
 mms_handler_test_receive_state(
     MMSHandler* handler,
     const char* id)
 {
-    MMSHandlerTest* test = MMS_HANDLER_TEST(handler);
-    MMSHandlerRecord* rec = NULL;
-    if (id) {
-        rec = g_hash_table_lookup(test->recs, id);
-    } else if (g_hash_table_size(test->recs) == 1) {
-        GList* values = g_hash_table_get_values(test->recs);
-        rec = g_list_first(values)->data;
-        g_list_free(values);
-    }
-    return rec ? rec->receive_state : MMS_RECEIVE_STATE_INVALID;
+    MMSHandlerRecordReceive* recv =
+    mms_handler_test_get_receive_record(MMS_HANDLER_TEST(handler), id);
+    return recv ? recv->state : MMS_RECEIVE_STATE_INVALID;
+}
+
+const char*
+mms_handler_test_send_msgid(
+    MMSHandler* handler,
+    const char* id)
+{
+    MMSHandlerRecordSend* send =
+    mms_handler_test_get_send_record(MMS_HANDLER_TEST(handler), id);
+    return send ? send->msgid : NULL;
 }
 
 static
@@ -69,8 +166,13 @@ mms_handler_test_receive_pending_check(
     gpointer user_data)
 {
     MMSHandlerRecord* rec = value;
-    gboolean* pending = user_data;
-    if (rec->receive_message_id) *pending = TRUE;
+    if (rec->type == MMS_HANDLER_RECORD_RECEIVE) {
+        MMSHandlerRecordReceive* recv = mms_handler_test_record_receive(rec);
+        if (recv->receive_message_id) {
+            gboolean* pending = user_data;
+            *pending = TRUE;
+        }
+    }
 }
 
 gboolean
@@ -79,10 +181,10 @@ mms_handler_test_receive_pending(
     const char* id)
 {
     MMSHandlerTest* test = MMS_HANDLER_TEST(handler);
-    MMSHandlerRecord* rec = NULL;
     if (id) {
-        rec = g_hash_table_lookup(test->recs, id);
-        return rec && rec->receive_message_id;
+        MMSHandlerRecordReceive* recv;
+        recv = mms_handler_test_get_receive_record(test, id);
+        return recv && recv->receive_message_id;
     } else {
         gboolean pending = FALSE;
         g_hash_table_foreach(test->recs,
@@ -97,16 +199,23 @@ mms_handler_test_hash_remove_record(
     gpointer data)
 {
     MMSHandlerRecord* rec = data;
-    if (rec->receive_message_id) {
-        g_source_remove(rec->receive_message_id);
-        rec->receive_message_id = 0;
-    }
-    mms_dispatcher_unref(rec->dispatcher);
-    mms_message_unref(rec->msg);
-    g_bytes_unref(rec->data);
     g_free(rec->imsi);
     g_free(rec->id);
-    g_free(rec);
+    if (rec->type == MMS_HANDLER_RECORD_RECEIVE) {
+        MMSHandlerRecordReceive* recv = mms_handler_test_record_receive(rec);
+        if (recv->receive_message_id) {
+            g_source_remove(recv->receive_message_id);
+            recv->receive_message_id = 0;
+        }
+        mms_dispatcher_unref(recv->dispatcher);
+        mms_message_unref(recv->msg);
+        g_bytes_unref(recv->data);
+        g_free(recv);
+    } else {
+        MMSHandlerRecordSend* send = mms_handler_test_record_send(rec);
+        g_free(send->msgid);
+        g_free(send);
+    }
 }
 
 static
@@ -114,15 +223,15 @@ gboolean
 mms_handler_test_receive(
     gpointer data)
 {
-    MMSHandlerRecord* rec = data;
-    MMSDispatcher* disp = rec->dispatcher;
-    MMS_ASSERT(rec->receive_message_id);
-    MMS_ASSERT(rec->dispatcher);
-    MMS_DEBUG("Initiating receive of message %s", rec->id);
-    rec->receive_message_id = 0;
-    rec->dispatcher = NULL;
-    mms_dispatcher_receive_message(disp, rec->id, rec->imsi,
-        TRUE, rec->data, NULL);
+    MMSHandlerRecordReceive* recv = data;
+    MMSDispatcher* disp = recv->dispatcher;
+    MMS_ASSERT(recv->receive_message_id);
+    MMS_ASSERT(recv->dispatcher);
+    MMS_DEBUG("Initiating receive of message %s", recv->rec.id);
+    recv->receive_message_id = 0;
+    recv->dispatcher = NULL;
+    mms_dispatcher_receive_message(disp, recv->rec.id, recv->rec.imsi,
+        TRUE, recv->data, NULL);
     mms_dispatcher_start(disp);
     mms_dispatcher_unref(disp);
     return FALSE;
@@ -139,36 +248,38 @@ mms_handler_test_message_notify(
     GBytes* data)
 {
     MMSHandlerTest* test = MMS_HANDLER_TEST(handler);
-    MMSHandlerRecord* rec = g_new0(MMSHandlerRecord, 1);
-    unsigned int rec_id = (++test->last_id);
-    rec->id = g_strdup_printf("%u", rec_id);
-    rec->imsi = g_strdup(imsi);
-    rec->receive_state = MMS_RECEIVE_STATE_INVALID;
-    rec->data = g_bytes_ref(data);
-    MMS_DEBUG("Push %s imsi=%s from=%s subj=%s", rec->id, imsi, from, subj);
-    g_hash_table_replace(test->recs, rec->id, rec);
+    MMSHandlerRecordReceive* recv = g_new0(MMSHandlerRecordReceive, 1);
+    char* id = g_strdup_printf("%u", (++test->last_id));
+    recv->rec.id = id;
+    recv->rec.imsi = g_strdup(imsi);
+    recv->rec.type = MMS_HANDLER_RECORD_RECEIVE;
+    recv->state = MMS_RECEIVE_STATE_INVALID;
+    recv->data = g_bytes_ref(data);
+    MMS_DEBUG("Push %s imsi=%s from=%s subj=%s", id, imsi, from, subj);
+    g_hash_table_replace(test->recs, id, &recv->rec);
     if (test->dispatcher) {
-        rec->receive_message_id = g_idle_add(mms_handler_test_receive, rec);
-        rec->dispatcher = mms_dispatcher_ref(test->dispatcher);
+        recv->receive_message_id = g_idle_add(mms_handler_test_receive, recv);
+        recv->dispatcher = mms_dispatcher_ref(test->dispatcher);
         return g_strdup("");
     } else {
-        return g_strdup(rec->id);
+        return g_strdup(id);
     }
 }
 
 static
 gboolean
 mms_handler_test_message_received(
-    MMSHandler* handler,
+    MMSHandler* h,
     MMSMessage* msg)
 {
-    MMSHandlerTest* test = MMS_HANDLER_TEST(handler);
-    MMSHandlerRecord* rec = g_hash_table_lookup(test->recs, msg->id);
+    MMSHandlerRecordReceive* recv =
+    mms_handler_test_get_receive_record(MMS_HANDLER_TEST(h), msg->id);
     MMS_DEBUG("Message %s from=%s subj=%s", msg->id, msg->from, msg->subject);
-    MMS_ASSERT(rec);
-    if (rec) {
-        mms_message_unref(rec->msg);
-        rec->msg = mms_message_ref(msg);
+    MMS_ASSERT(recv);
+    if (recv) {
+        MMS_ASSERT(!recv->msg);
+        mms_message_unref(recv->msg);
+        recv->msg = mms_message_ref(msg);
         return TRUE;
     } else {
         return FALSE;
@@ -182,14 +293,71 @@ mms_handler_test_message_receive_state_changed(
     const char* id,
     MMS_RECEIVE_STATE state)
 {
-    MMSHandlerTest* test = MMS_HANDLER_TEST(handler);
-    MMSHandlerRecord* rec = g_hash_table_lookup(test->recs, id);
-    if (rec) {
-        rec->receive_state = state;
-        MMS_DEBUG("Message %s state %d", id, state);
+    MMSHandlerRecordReceive* recv =
+    mms_handler_test_get_receive_record(MMS_HANDLER_TEST(handler), id);
+    if (recv) {
+        recv->state = state;
+        MMS_DEBUG("Message %s receive state %d", id, state);
         return TRUE;
     } else {
-        MMS_ERR("Invalid message id %s", id);
+        MMS_ERR("No such incoming message: %s", id);
+        return FALSE;
+    }
+}
+
+const char*
+mms_handler_test_send_new(
+    MMSHandler* handler,
+    const char* imsi)
+{
+    MMSHandlerTest* test = MMS_HANDLER_TEST(handler);
+    MMSHandlerRecordSend* send = g_new0(MMSHandlerRecordSend, 1);
+    char* id = g_strdup_printf("%u", (++test->last_id));
+    send->rec.id = id;
+    send->rec.imsi = g_strdup(imsi);
+    send->rec.type = MMS_HANDLER_RECORD_SEND;
+    send->state = MMS_SEND_STATE_INVALID;
+    MMS_DEBUG("New send %s imsi=%s", id, imsi);
+    g_hash_table_replace(test->recs, id, &send->rec);
+    return id;
+}
+
+static
+gboolean
+mms_handler_test_message_send_state_changed(
+    MMSHandler* handler,
+    const char* id,
+    MMS_SEND_STATE state)
+{
+    MMSHandlerRecordSend* send =
+    mms_handler_test_get_send_record(MMS_HANDLER_TEST(handler), id);
+    if (send) {
+        send->state = state;
+        MMS_DEBUG("Message %s send state %d", id, state);
+        return TRUE;
+    } else {
+        MMS_ERR("No such outbound message: %s", id);
+        return FALSE;
+    }
+}
+
+static
+gboolean
+mms_handler_test_message_sent(
+    MMSHandler* handler,
+    const char* id,
+    const char* msgid)
+{
+    MMSHandlerTest* test = MMS_HANDLER_TEST(handler);
+    MMSHandlerRecordSend* send = mms_handler_test_get_send_record(test, id);
+    MMS_DEBUG("Message %s sent, msgid=%s", id, msgid);
+    MMS_ASSERT(send);
+    if (send) {
+        MMS_ASSERT(!send->msgid);
+        g_free(send->msgid);
+        send->msgid = g_strdup(msgid);
+        return TRUE;
+    } else {
         return FALSE;
     }
 }
@@ -212,6 +380,9 @@ mms_handler_test_class_init(
 {
     G_OBJECT_CLASS(klass)->finalize = mms_handler_test_finalize;
     klass->fn_message_notify = mms_handler_test_message_notify;
+    klass->fn_message_sent = mms_handler_test_message_sent;
+    klass->fn_message_send_state_changed =
+        mms_handler_test_message_send_state_changed;
     klass->fn_message_received = mms_handler_test_message_received;
     klass->fn_message_receive_state_changed =
         mms_handler_test_message_receive_state_changed;

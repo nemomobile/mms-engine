@@ -20,6 +20,21 @@
 MMSHandler*
 mms_handler_test_new(void);
 
+const char*
+mms_handler_test_send_new(
+    MMSHandler* handler,
+    const char* imsi);
+
+const char*
+mms_handler_test_send_msgid(
+    MMSHandler* handler,
+    const char* id);
+
+MMS_SEND_STATE
+mms_handler_test_send_state(
+    MMSHandler* handler,
+    const char* id);
+
 MMS_RECEIVE_STATE
 mms_handler_test_receive_state(
     MMSHandler* handler,
