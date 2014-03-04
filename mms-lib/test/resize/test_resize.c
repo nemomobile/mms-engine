@@ -46,6 +46,7 @@ typedef struct test_desc {
     const char* file;
     const TestImageType* type;
     int steps;
+    int max_pixels;
     TestSize size;
 } TestDesc;
 
@@ -65,6 +66,93 @@ typedef struct test_jpeg_decompress {
     struct jpeg_decompress_struct pub;
     EXIF_ORIENTATION orientation;
 } TestJpegDecompress;
+
+static
+gboolean
+test_jpeg_size(
+    const char* file,
+    TestSize* size);
+
+static
+gboolean
+test_png_size(
+    const char* file,
+    TestSize* size);
+
+static const TestImageType test_jpeg =
+    { "image/jpeg", test_jpeg_size };
+
+static const TestImageType test_auto =
+    { NULL, test_jpeg_size };
+
+static const TestImageType test_png =
+    { "image/png", test_png_size };
+
+static const TestDesc resize_tests[] = {
+    {
+        "Jpeg_Portrait1",
+        "data/0001.jpg",
+        &test_jpeg,
+        1,
+        1000000,
+        {613, 1088}
+    },{
+        "Jpeg_Portrait2",
+        "data/0001.jpg",
+        &test_jpeg,
+        2,
+        2000000,
+        {613, 1088}
+    },{
+        "Jpeg_Portrait3",
+        "data/0001.jpg",
+        &test_jpeg,
+        3,
+        3000000,
+        {460, 816}
+    },{
+        "Jpeg_Landscape1",
+        "data/0002.jpg",
+        &test_auto,
+        1,
+        1000000,
+        {1088, 613}
+    },{
+        "Jpeg_Landscape2",
+        "data/0002.jpg",
+        &test_auto, 2,
+        2000000,
+        {1088, 613}
+    },{
+        "Jpeg_Landscape3",
+        "data/0002.jpg",
+        &test_auto,
+        3,
+        3000000,
+        {816, 460}
+    },{
+        "Png_1",
+        "data/0003.png",
+        &test_png,
+        1,
+        1000000,
+        {1000, 750}
+    },{
+        "Png_2",
+        "data/0003.png",
+        &test_png,
+        2,
+        2000000,
+        {666, 500}
+    },{
+        "Png_3",
+        "data/0003.png",
+        &test_png,
+        3,
+        3000000,
+        {500, 375}
+    }
+};
 
 static
 void
@@ -247,10 +335,12 @@ test_run_one(
         if (g_file_copy(src, dest, 0, NULL, NULL, NULL, &error)) {
             MMSAttachment* at;
             MMSAttachmentInfo info;
+            MMSConfig test_config = *config;
+            test_config.max_pixels = test->max_pixels;
             info.file_name = testfile;
             info.content_type = test->type->content_type;
             info.content_id = name;
-            at = mms_attachment_new(config, &info, &error);
+            at = mms_attachment_new(&test_config, &info, &error);
             if (at) {
                 int i;
                 gboolean ok = TRUE;
@@ -302,33 +392,12 @@ test_run(
     const MMSConfig* config,
     const char* name)
 {
-    static const TestImageType test_jpeg =
-        { "image/jpeg", test_jpeg_size };
-
-    static const TestImageType test_auto =
-        { NULL, test_jpeg_size };
-
-    static const TestImageType test_png =
-        { "image/png", test_png_size };
-
-    static const TestDesc resize_tests[] = {
-        { "Jpeg_Portrait1",  "data/0001.jpg", &test_jpeg, 1, {  920, 1632 } },
-        { "Jpeg_Portrait2",  "data/0001.jpg", &test_jpeg, 2, {  613, 1088 } },
-        { "Jpeg_Portrait3",  "data/0001.jpg", &test_jpeg, 3, {  460,  816 } },
-        { "Jpeg_Landscape1", "data/0002.jpg", &test_auto, 1, { 1632,  920 } },
-        { "Jpeg_Landscape2", "data/0002.jpg", &test_auto, 2, { 1088,  613 } },
-        { "Jpeg_Landscape3", "data/0002.jpg", &test_auto, 3, {  816,  460 } },
-        { "Png_1",           "data/0003.png", &test_png,  1, { 1000,  750 } },
-        { "Png_2",           "data/0003.png", &test_png,  2, {  666,  500 } },
-        { "Png_3",           "data/0003.png", &test_png,  3, {  500,  375 } },
-    };
-
     int i, ret;
     if (name) {
         const TestDesc* found = NULL;
         for (i=0, ret = RET_ERR; i<G_N_ELEMENTS(resize_tests); i++) {
             const TestDesc* test = resize_tests + i;
-            if (!strcmp(test->file, name)) {
+            if (!strcmp(test->name, name)) {
                 ret = test_run_one(config, test);
                 found = test;
                 break;
