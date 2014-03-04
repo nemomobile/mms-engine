@@ -166,7 +166,7 @@ mms_attachment_image_resize_type_specific(
                 resize->in.height == resize->out.height) {
                 /* Nothing to resize, image decompressor is doing all
                  * the job for us */
-                MMS_DEBUG("Decoding (%ux%u -> %ux%u)",
+                MMS_DEBUG("Decoder-assisted resize (%ux%u -> %ux%u)",
                     image_size.width, image_size.height,
                     out_size.width, out_size.height);
                 for (y=0;
