@@ -262,6 +262,7 @@ mms_attachment_image_resize(
         GError* error = NULL;
         GMappedFile* map = g_mapped_file_new(image->resized, FALSE, &error);
         if (map) {
+            if (at->map) g_mapped_file_unref(at->map);
             at->file_name = image->resized;
             at->map = map;
         } else {
