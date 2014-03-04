@@ -29,6 +29,7 @@
     log(mms_task_notification_log)\
     log(mms_task_retrieve_log)\
     log(mms_task_publish_log)\
+    log(mms_task_send_log)\
     log(mms_connman_log)\
     log(mms_connection_log)
 
