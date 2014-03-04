@@ -51,7 +51,7 @@ mms_attachment_finalize(
 {
     MMSAttachment* at = MMS_ATTACHMENT(object);
     MMS_VERBOSE_("%p", at);
-    g_mapped_file_unref(at->map);
+    if (at->map) g_mapped_file_unref(at->map);
     if (!at->config->keep_temp_files &&
         !(at->flags & MMS_ATTACHMENT_KEEP_FILES)) {
         char* dir = g_path_get_dirname(at->original_file);

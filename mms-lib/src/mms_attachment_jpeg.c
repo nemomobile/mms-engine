@@ -225,8 +225,8 @@ mms_attachment_jpeg_resize_free(
     MMSAttachmentJpegResize* jpeg = mms_attachment_jpeg_resize_cast(resize);
     jpeg_destroy_compress(&jpeg->comp);
     jpeg_destroy_decompress(&jpeg->decomp);
-    fclose(jpeg->in);
-    fclose(jpeg->out);
+    if (jpeg->in) fclose(jpeg->in);
+    if (jpeg->out) fclose(jpeg->out);
     g_free(jpeg);
 }
 

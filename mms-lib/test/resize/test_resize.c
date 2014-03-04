@@ -82,8 +82,12 @@ test_png_size(
 static const TestImageType test_jpeg =
     { "image/jpeg", test_jpeg_size };
 
-static const TestImageType test_auto =
+#ifdef HAVE_MAGIC
+static const TestImageType test_auto_jpeg =
     { NULL, test_jpeg_size };
+#else
+#  define test_auto_jpeg test_jpeg
+#endif
 
 static const TestImageType test_png =
     { "image/png", test_png_size };
@@ -113,20 +117,20 @@ static const TestDesc resize_tests[] = {
     },{
         "Jpeg_Landscape1",
         "data/0002.jpg",
-        &test_auto,
+        &test_auto_jpeg,
         1,
         1000000,
         {1088, 613}
     },{
         "Jpeg_Landscape2",
         "data/0002.jpg",
-        &test_auto, 2,
+        &test_auto_jpeg, 2,
         2000000,
         {1088, 613}
     },{
         "Jpeg_Landscape3",
         "data/0002.jpg",
-        &test_auto,
+        &test_auto_jpeg,
         3,
         3000000,
         {816, 460}

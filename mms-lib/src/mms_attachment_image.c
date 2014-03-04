@@ -249,7 +249,12 @@ mms_attachment_image_resize(
     MMSAttachment* at)
 {
     MMSAttachmentImage* image = MMS_ATTACHMENT_IMAGE(at);
-    gboolean ok = mms_attachment_image_resize_type_specific(image);
+    gboolean ok;
+    if (at->map && image->resized) {
+        g_mapped_file_unref(at->map);
+        at->map = NULL;
+    }
+    ok = mms_attachment_image_resize_type_specific(image);
 #ifdef HAVE_IMAGEMAGICK
     if (!ok) ok = mms_attachment_image_resize_imagemagick(image);
 #endif /* HAVE_IMAGEMAGICK */
@@ -258,7 +263,6 @@ mms_attachment_image_resize(
         GMappedFile* map = g_mapped_file_new(image->resized, FALSE, &error);
         if (map) {
             at->file_name = image->resized;
-            if (at->map) g_mapped_file_unref(at->map);
             at->map = map;
         } else {
             MMS_ERR("%s", MMS_ERRMSG(error));
