@@ -71,6 +71,22 @@ typedef struct mms_attachment_image_class {
 
 } MMSAttachmentImageClass;
 
+int
+mms_attachment_image_next_resize_step(
+    MMSAttachmentImage* image,
+    unsigned int columns,
+    unsigned int rows);
+
+const char*
+mms_attachment_image_prepare_filename(
+    MMSAttachmentImage* image);
+
+#ifdef MMS_RESIZE_QT
+gboolean
+mms_attachment_image_resize_qt(
+    MMSAttachmentImage* image);
+#endif
+
 #endif /* JOLLA_MMS_ATTACHMENT_IMAGE_H */
 
 /*

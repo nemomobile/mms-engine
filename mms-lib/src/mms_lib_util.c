@@ -18,7 +18,7 @@
 #include "mms_task.h"
 #include "mms_log.h"
 
-#ifdef HAVE_IMAGEMAGICK
+#ifdef MMS_RESIZE_IMAGEMAGICK
 #  include <magick/api.h>
 #endif
 
@@ -51,7 +51,7 @@ mms_lib_init(
     g_type_init();
     G_GNUC_END_IGNORE_DEPRECATIONS;
 
-#ifdef HAVE_IMAGEMAGICK
+#ifdef MMS_RESIZE_IMAGEMAGICK
     MagickCoreGenesis(path, MagickFalse);
 #endif
 }
@@ -62,7 +62,7 @@ mms_lib_init(
 void
 mms_lib_deinit()
 {
-#ifdef HAVE_IMAGEMAGICK
+#ifdef MMS_RESIZE_IMAGEMAGICK
     MagickCoreTerminus();
 #endif
 }

@@ -15,7 +15,7 @@
 #include "mms_attachment_image.h"
 #include "mms_file_util.h"
 
-#ifdef HAVE_IMAGEMAGICK
+#ifdef MMS_RESIZE_IMAGEMAGICK
 #  include <magick/api.h>
 #endif
 
@@ -29,7 +29,6 @@ G_DEFINE_TYPE(MMSAttachmentImage, mms_attachment_image, MMS_TYPE_ATTACHMENT);
 #define MMS_ATTACHMENT_IMAGE_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS((obj), \
         MMS_TYPE_ATTACHMENT_IMAGE, MMSAttachmentImageClass))
 
-static
 int
 mms_attachment_image_next_resize_step(
     MMSAttachmentImage* image,
@@ -47,7 +46,6 @@ mms_attachment_image_next_resize_step(
     return next_step;
 }
 
-static
 const char*
 mms_attachment_image_prepare_filename(
     MMSAttachmentImage* image)
@@ -69,13 +67,13 @@ mms_attachment_image_prepare_filename(
     return image->resized;
 }
 
-#ifdef HAVE_IMAGEMAGICK
 static
 gboolean
-mms_attachment_image_resize_imagemagick(
+mms_attachment_image_resize_default(
     MMSAttachmentImage* image)
 {
     gboolean ok = FALSE;
+#ifdef MMS_RESIZE_IMAGEMAGICK
     ExceptionInfo ex;
     Image* src;
     ImageInfo* info = CloneImageInfo(NULL);
@@ -87,10 +85,10 @@ mms_attachment_image_resize_imagemagick(
     src = ReadImage(info, &ex);
     if (src) {
         if (src->magick_columns > 1 && src->magick_rows > 1) {;
-            const int next_step = mms_attachment_image_next_resize_step(image,
-                src->magick_columns, src->magick_rows);
             const unsigned int src_cols = src->magick_columns;
             const unsigned int src_rows = src->magick_rows;
+            const int next_step = mms_attachment_image_next_resize_step(image,
+                src_cols, src_rows);
             const unsigned int cols = src_cols/(next_step+1);
             const unsigned int rows = src_rows/(next_step+1);
             Image* dest;
@@ -119,9 +117,13 @@ mms_attachment_image_resize_imagemagick(
     ClearMagickException(&ex);
     DestroyExceptionInfo(&ex);
     DestroyImageInfo(info);
+#else
+#  ifdef MMS_RESIZE_QT
+    ok = mms_attachment_image_resize_qt(image);
+#  endif /* MMS_RESIZE_QT */
+#endif /* MMS_RESIZE_IMAGEMAGICK */
     return ok;
 }
-#endif /* HAVE_IMAGEMAGICK */
 
 static
 gboolean
@@ -255,9 +257,7 @@ mms_attachment_image_resize(
         at->map = NULL;
     }
     ok = mms_attachment_image_resize_type_specific(image);
-#ifdef HAVE_IMAGEMAGICK
-    if (!ok) ok = mms_attachment_image_resize_imagemagick(image);
-#endif /* HAVE_IMAGEMAGICK */
+    if (!ok) ok = mms_attachment_image_resize_default(image);
     if (ok) {
         GError* error = NULL;
         GMappedFile* map = g_mapped_file_new(image->resized, FALSE, &error);
@@ -317,7 +317,7 @@ void
 mms_attachment_image_init(
     MMSAttachmentImage* image)
 {
-#ifdef HAVE_IMAGEMAGICK
+#ifdef MMS_RESIZE_IMAGEMAGICK
     image->attachment.flags |= MMS_ATTACHMENT_RESIZABLE;
 #endif
 }

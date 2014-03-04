@@ -2,8 +2,14 @@
 
 .PHONY: clean all debug release
 
+#
+# Pull in mms-lib configuration
+#
+
+include Config.mak
+
 # Required packages
-PKGS = glib-2.0 libsoup-2.4 libwspcodec
+PKGS = glib-2.0 libsoup-2.4 libwspcodec $(RESIZE_PKG)
 
 #
 # Default target
@@ -22,6 +28,10 @@ SRC = mms_attachment.c mms_attachment_image.c mms_attachment_jpeg.c \
   mms_task_http.c mms_task_notification.c mms_task_notifyresp.c \
   mms_task_publish.c mms_task_read.c mms_task_retrieve.c mms_task_send.c \
   mms_util.c
+
+ifeq ($(MMS_RESIZE),Qt)
+SRC_CPP += mms_attachment_qt.cpp
+endif
 
 #
 # Directories
@@ -46,13 +56,6 @@ CFLAGS += --coverage
 endif
 
 #
-# ImageMagick support
-#
-
-DEFINES += -DHAVE_IMAGEMAGICK
-PKGS += ImageMagick
-
-#
 # Tools and flags
 #
 
@@ -64,8 +67,9 @@ RELEASE_FLAGS = -O2
 DEBUG_DEFS = -DDEBUG
 RELEASE_DEFS =
 WARNINGS = -Wall
+DEFINES = $(RESIZE_DEFINES)
 INCLUDES = -I$(SRC_DIR) -I$(INCLUDE_DIR)
-CFLAGS += $(WARNINGS) $(DEFINES) $(INCLUDES) \
+CFLAGS += -fPIC $(WARNINGS) $(DEFINES) $(INCLUDES) \
   $(shell pkg-config --cflags $(PKGS)) -MMD
 
 ifndef KEEP_SYMBOLS
@@ -78,13 +82,21 @@ endif
 
 DEBUG_CFLAGS = $(DEBUG_FLAGS) $(DEBUG_DEFS) $(CFLAGS)
 RELEASE_CFLAGS = $(RELEASE_FLAGS) $(RELEASE_DEFS) $(CFLAGS)
+DEBUG_CPPFLAGS = -Wno-psabi $(DEBUG_CFLAGS)
+RELEASE_CPPFLAGS = -Wno-psabi $(RELEASE_CFLAGS)
 
 #
 # Files
 #
 
-DEBUG_OBJS = $(SRC:%.c=$(DEBUG_BUILD_DIR)/%.o)
-RELEASE_OBJS = $(SRC:%.c=$(RELEASE_BUILD_DIR)/%.o)
+DEBUG_OBJS = \
+  $(SRC:%.c=$(DEBUG_BUILD_DIR)/%.o) \
+  $(SRC_CPP:%.cpp=$(DEBUG_BUILD_DIR)/%.o)
+RELEASE_OBJS = \
+  $(SRC:%.c=$(RELEASE_BUILD_DIR)/%.o) \
+  $(SRC_CPP:%.cpp=$(RELEASE_BUILD_DIR)/%.o)
+
+$(info $(DEBUG_OBJS))
 
 #
 # Dependencies
@@ -128,3 +140,9 @@ $(DEBUG_BUILD_DIR)/%.o : $(SRC_DIR)/%.c
 
 $(RELEASE_BUILD_DIR)/%.o : $(SRC_DIR)/%.c
 	$(CC) -c $(RELEASE_CFLAGS) -MT"$@" -MF"$(@:%.o=%.d)" $< -o $@
+
+$(DEBUG_BUILD_DIR)/%.o : $(SRC_DIR)/%.cpp
+	$(CC) -c $(DEBUG_CPPFLAGS) -MT"$@" -MF"$(@:%.o=%.d)" $< -o $@
+
+$(RELEASE_BUILD_DIR)/%.o : $(SRC_DIR)/%.cpp
+	$(CC) -c $(RELEASE_CPPFLAGS) -MT"$@" -MF"$(@:%.o=%.d)" $< -o $@

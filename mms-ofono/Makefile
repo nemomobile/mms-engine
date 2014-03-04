@@ -54,7 +54,8 @@ DEBUG_DEFS = -DDEBUG
 RELEASE_DEFS =
 WARNINGS = -Wall
 INCLUDES = -I$(SRC_DIR) -I$(INCLUDE_DIR) -I$(MMS_LIB_INCLUDE) -I$(GEN_DIR) -I.
-CFLAGS += $(WARNINGS) $(INCLUDES) $(shell pkg-config --cflags $(PKGS)) -MMD
+CFLAGS += $(WARNINGS) $(INCLUDES) $(shell pkg-config --cflags $(PKGS)) \
+  -fPIC -MMD
 
 ifndef KEEP_SYMBOLS
 KEEP_SYMBOLS = 0

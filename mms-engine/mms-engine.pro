@@ -1,5 +1,4 @@
 TEMPLATE = app
-CONFIG -= qt
 CONFIG += link_pkgconfig
 PKGCONFIG += gio-unix-2.0 gio-2.0 glib-2.0 libsoup-2.4 libwspcodec ImageMagick
 DBUS_INTERFACE_DIR = $$_PRO_FILE_PWD_
@@ -10,6 +9,17 @@ INCLUDEPATH += $$MMS_OFONO_DIR/include
 INCLUDEPATH += $$MMS_LIB_DIR/include
 INCLUDEPATH += $$MMS_HANDLER_DIR/include
 QMAKE_CFLAGS += -Wno-unused
+
+include(../mms-lib/mms-lib-config.pri)
+
+ResizeImageMagick {
+  CONFIG -= qt
+  PKGCONFIG += ImageMagick
+} else {
+  ResizeQt {
+  } else {
+  }
+}
 
 SOURCES += \
   main.c \

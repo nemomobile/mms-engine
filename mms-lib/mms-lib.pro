@@ -1,13 +1,21 @@
 TEMPLATE = lib
 CONFIG += staticlib
-CONFIG -= qt
 CONFIG += link_pkgconfig
 PKGCONFIG += glib-2.0 libsoup-2.4 libwspcodec
 INCLUDEPATH += include
 QMAKE_CFLAGS += -Wno-unused
 
-DEFINES += HAVE_IMAGEMAGICK
-PKGCONFIG += ImageMagick
+include(mms-lib-config.pri)
+
+ResizeImageMagick {
+  CONFIG -= qt
+  PKGCONFIG += ImageMagick
+  DEFINES += MMS_RESIZE_IMAGEMAGICK
+} else {
+  ResizeQt {
+    DEFINES += MMS_RESIZE_QT
+  }
+}
 
 CONFIG(debug, debug|release) {
   DEFINES += DEBUG
@@ -20,6 +28,7 @@ SOURCES += \
   src/mms_attachment.c \
   src/mms_attachment_image.c \
   src/mms_attachment_jpeg.c \
+  src/mms_attachment_qt.cpp \
   src/mms_codec.c \
   src/mms_connection.c \
   src/mms_connman.c \
@@ -56,7 +65,6 @@ HEADERS += \
 HEADERS += \
   include/mms_connection.h \
   include/mms_connman.h \
-  include/mms_database.h \
   include/mms_dispatcher.h \
   include/mms_handler.h \
   include/mms_lib_log.h \

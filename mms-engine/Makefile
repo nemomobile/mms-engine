@@ -5,9 +5,18 @@
 .PHONY: mms_ofono_debug_lib mms_ofono_release_lib
 .PHONY: mms_handler_debug_lib mms_handler_release_lib
 
+#
+# Pull in mms-lib configuration
+#
+
+include ../mms-lib/Config.mak
+
+#
 # Required packages
+#
+
 PKGS = gio-unix-2.0 gio-2.0 glib-2.0
-LIB_PKGS = libwspcodec libsoup-2.4 ImageMagick $(PKGS)
+LIB_PKGS = libwspcodec libsoup-2.4 $(RESIZE_PKG) $(PKGS)
 
 #
 # Default target
@@ -74,7 +83,7 @@ RELEASE_FLAGS = -O2
 DEBUG_DEFS = -DDEBUG
 RELEASE_DEFS =
 WARN = -Wall
-CFLAGS = $(shell pkg-config --cflags $(PKGS)) -I. -I$(GEN_DIR) \
+CFLAGS = -fPIC $(shell pkg-config --cflags $(PKGS)) -I. -I$(GEN_DIR) \
  -I$(MMS_LIB_DIR)/include -I$(MMS_OFONO_DIR)/include \
  -I$(MMS_HANDLER_DIR)/include -MMD
 
@@ -90,7 +99,7 @@ endif
 DEBUG_CFLAGS = $(DEBUG_FLAGS) $(DEBUG_DEFS) $(CFLAGS)
 RELEASE_CFLAGS = $(RELEASE_FLAGS) $(RELEASE_DEFS) $(CFLAGS)
 
-LIBS = $(shell pkg-config --libs $(LIB_PKGS)) -lmagic -ljpeg
+LIBS = $(shell pkg-config --libs $(LIB_PKGS)) -lmagic -ljpeg $(RESIZE_LIBS)
 DEBUG_LIBS = \
   $(MMS_OFONO_DEBUG_LIB) \
   $(MMS_HANDLER_DEBUG_LIB) \
