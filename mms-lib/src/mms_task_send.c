@@ -59,6 +59,7 @@ mms_task_send_done(
     SoupStatus status)
 {
     MMSPdu* pdu = NULL;
+    MMS_SEND_STATE state = MMS_SEND_STATE_SEND_ERROR;
     const char* msgid = NULL;
     if (SOUP_STATUS_IS_SUCCESSFUL(status)) {
         /* Decode the result */
@@ -80,6 +81,7 @@ mms_task_send_done(
                         }
                     } else {
                         MMS_ERR("MMSC responded with %u", pdu->sc.rsp_status);
+                        state = MMS_SEND_STATE_REFUSED;
                     }
                 } else {
                     MMS_ERR("Unexpected response from MMSC");
@@ -95,7 +97,7 @@ mms_task_send_done(
         mms_handler_message_sent(http->task.handler, http->task.id, msgid);
     } else {
         mms_handler_message_send_state_changed(http->task.handler,
-            http->task.id, MMS_SEND_STATE_SEND_ERROR);
+            http->task.id, state);
     }
     if (pdu) mms_message_free(pdu);
 }
