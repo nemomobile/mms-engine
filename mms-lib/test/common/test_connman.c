@@ -26,6 +26,7 @@ typedef struct mms_connman_test {
     MMSConnection* conn;
     unsigned short port;
     gboolean proxy;
+    char* default_imsi;
 } MMSConnManTest;
 
 G_DEFINE_TYPE(MMSConnManTest, mms_connman_test, MMS_TYPE_CONNMAN);
@@ -45,6 +46,16 @@ mms_connman_test_set_port(
 }
 
 void
+mms_connman_test_set_default_imsi(
+    MMSConnMan* cm,
+    const char* imsi)
+{
+    MMSConnManTest* test = MMS_CONNMAN_TEST(cm);
+    g_free(test->default_imsi);
+    test->default_imsi = g_strdup(imsi);
+}
+
+void
 mms_connman_test_close_connection(
     MMSConnMan* cm)
 {
@@ -55,6 +66,14 @@ mms_connman_test_close_connection(
         mms_connection_unref(test->conn);
         test->conn = NULL;
     }
+}
+
+static
+char*
+mms_connman_test_default_imsi(
+    MMSConnMan* cm)
+{
+    return g_strdup(MMS_CONNMAN_TEST(cm)->default_imsi);
 }
 
 static
@@ -79,8 +98,17 @@ void
 mms_connman_test_dispose(
     GObject* object)
 {
-    MMSConnManTest* test = MMS_CONNMAN_TEST(object);
-    mms_connman_test_close_connection(&test->cm);
+    mms_connman_test_close_connection(&MMS_CONNMAN_TEST(object)->cm);
+    G_OBJECT_CLASS(mms_connman_test_parent_class)->dispose(object);
+}
+
+static
+void
+mms_connman_test_finalize(
+    GObject* object)
+{
+    g_free(MMS_CONNMAN_TEST(object)->default_imsi);
+    G_OBJECT_CLASS(mms_connman_test_parent_class)->finalize(object);
 }
 
 static
@@ -88,15 +116,18 @@ void
 mms_connman_test_class_init(
     MMSConnManTestClass* klass)
 {
+    klass->fn_default_imsi = mms_connman_test_default_imsi;
     klass->fn_open_connection = mms_connman_test_open_connection;
     G_OBJECT_CLASS(klass)->dispose = mms_connman_test_dispose;
+    G_OBJECT_CLASS(klass)->finalize = mms_connman_test_finalize;
 }
 
 static
 void
 mms_connman_test_init(
-    MMSConnManTest* cm)
+    MMSConnManTest* test)
 {
+    test->default_imsi = g_strdup("Default");
 }
 
 MMSConnMan*

@@ -40,6 +40,7 @@ typedef struct test_desc {
     const char* to;
     const char* cc;
     const char* bcc;
+    const char* imsi;
     unsigned int flags;
     const char* resp_file;
     const char* resp_type;
@@ -91,6 +92,7 @@ static const TestDesc send_tests[] = {
         "+1234567890",
         "+2345678901,+3456789012",
         "+4567890123",
+        "IMSI",
         0,
         "m-send.conf",
         MMS_CONTENT_TYPE,
@@ -103,6 +105,7 @@ static const TestDesc send_tests[] = {
         G_N_ELEMENTS(test_files_reject),
         "Rejection test",
         "+1234567890",
+        NULL,
         NULL,
         NULL,
         0,
@@ -253,15 +256,17 @@ test_run_once(
     Test test;
     if (test_init(&test, config, desc)) {
         GError* error = NULL;
-        const char* imsi = "IMSI";
+        char* imsi = desc->imsi ? g_strdup(desc->imsi) :
+            mms_connman_default_imsi(test.cm);
         const char* id = mms_handler_test_send_new(test.handler, imsi);
         char* imsi2 = mms_dispatcher_send_message(test.disp, id, imsi,
             desc->to, desc->cc, desc->bcc, desc->subject,
             desc->flags & TEST_DISPATCHER_FLAGS, test.parts,
             desc->nparts, &error);
-        MMS_ASSERT(imsi2 && !strcmp(imsi2, imsi));
+        MMS_ASSERT(imsi2 && (!desc->imsi || !strcmp(desc->imsi, imsi2)));
         test.id = g_strdup(id);
-        if (imsi2 && !strcmp(imsi2, imsi) && mms_dispatcher_start(test.disp)) {
+        if (imsi2 && (!desc->imsi || !strcmp(desc->imsi, imsi2)) &&
+            mms_dispatcher_start(test.disp)) {
             if (!debug) {
                 test.timeout_id = g_timeout_add_seconds(10,
                     test_timeout, &test);
@@ -271,6 +276,7 @@ test_run_once(
         } else {
             MMS_INFO("%s FAILED", desc->name);
         }
+        g_free(imsi);
         g_free(imsi2);
         test_finalize(&test);
         return test.ret;
