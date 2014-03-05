@@ -473,7 +473,7 @@ mms_task_encode_prepare_attachments(
     if (smil_index >= 0) {
         return array;
     } else {
-        for (i=0; i<nparts; i++) {
+        for (i=0; i<array->len; i++) {
             mms_attachment_unref(array->pdata[i]);
         }
         g_ptr_array_free(array, TRUE);
