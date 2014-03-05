@@ -1,7 +1,7 @@
 # -*- Mode: makefile-gmake -*-
 
-MMS_RESIZE = ImageMagick
-#MMS_RESIZE = Qt
+#MMS_RESIZE = ImageMagick
+MMS_RESIZE = Qt
 
 #
 # ImageMagick support
