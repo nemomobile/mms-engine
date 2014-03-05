@@ -20,7 +20,7 @@ extern "C" {
 
 #ifdef MMS_RESIZE_QT
 
-#include <QtGui/QtGui>
+#include <QtGui/QImage>
 
 gboolean
 mms_attachment_image_resize_qt(
