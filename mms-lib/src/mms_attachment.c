@@ -240,6 +240,7 @@ mms_attachment_new(
                         detected_type = magic_file(magic, path);
                     }
                 }
+#endif
 
                 /* Magic detects SMIL as text/html */
                 if ((!detected_type ||
@@ -247,7 +248,6 @@ mms_attachment_new(
                      mms_file_is_smil(path)) {
                     detected_type = SMIL_CONTENT_TYPE;
                 }
-#endif
 
                 if (!detected_type) {
                     MMS_WARN("No mime type for %s", path);
