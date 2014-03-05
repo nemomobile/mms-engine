@@ -8,8 +8,11 @@
 
 include Config.mak
 
+#
 # Required packages
-PKGS = glib-2.0 libsoup-2.4 libwspcodec $(RESIZE_PKG)
+#
+
+PKGS = glib-2.0 libsoup-2.4 libwspcodec
 
 #
 # Default target
@@ -69,7 +72,7 @@ RELEASE_DEFS =
 WARNINGS = -Wall
 DEFINES = $(RESIZE_DEFINES)
 INCLUDES = -I$(SRC_DIR) -I$(INCLUDE_DIR)
-CFLAGS += -fPIC $(WARNINGS) $(DEFINES) $(INCLUDES) \
+CFLAGS += -fPIC $(WARNINGS) $(DEFINES) $(INCLUDES) $(RESIZE_CFLAGS) \
   $(shell pkg-config --cflags $(PKGS)) -MMD
 
 ifndef KEEP_SYMBOLS
@@ -82,8 +85,8 @@ endif
 
 DEBUG_CFLAGS = $(DEBUG_FLAGS) $(DEBUG_DEFS) $(CFLAGS)
 RELEASE_CFLAGS = $(RELEASE_FLAGS) $(RELEASE_DEFS) $(CFLAGS)
-DEBUG_CPPFLAGS = -Wno-psabi $(DEBUG_CFLAGS)
-RELEASE_CPPFLAGS = -Wno-psabi $(RELEASE_CFLAGS)
+DEBUG_CPPFLAGS = -Wno-psabi $(RESIZE_CPPFLAGS) $(DEBUG_CFLAGS)
+RELEASE_CPPFLAGS = -Wno-psabi $(RESIZE_CPPFLAGS) $(RELEASE_CFLAGS)
 
 #
 # Files

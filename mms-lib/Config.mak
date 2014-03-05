@@ -8,17 +8,19 @@ MMS_RESIZE = Qt
 #
 
 ifeq ($(MMS_RESIZE),ImageMagick)
-RESIZE_DEFINES = -DMMS_RESIZE_IMAGEMAGICK
 RESIZE_PKG = ImageMagick
+RESIZE_DEFINES = -DMMS_RESIZE_IMAGEMAGICK
+RESIZE_CFLAGS = $(shell pkg-config --cflags $(RESIZE_PKG))
 else
   ifeq ($(MMS_RESIZE),Qt)
-    RESIZE_LIBS = -lstdc++
-    RESIZE_DEFINES = -DMMS_RESIZE_QT
     ifeq ($(shell qmake --version | grep "Using Qt version 5"),)
         RESIZE_PKG = QtGui
     else
         RESIZE_PKG = Qt5Gui
     endif
+    RESIZE_LIBS = -lstdc++
+    RESIZE_DEFINES = -DMMS_RESIZE_QT
+    RESIZE_CPPFLAGS = $(shell pkg-config --cflags $(RESIZE_PKG))
   endif
 endif
 
