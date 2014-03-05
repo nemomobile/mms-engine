@@ -71,17 +71,37 @@ typedef struct test {
     int ret;
 } Test;
 
-static const MMSAttachmentInfo test_files_success [] = {
+static const MMSAttachmentInfo test_files_accept [] = {
+    { "smil", NULL, NULL },
     { "0001.jpg", "image/jpeg", "image" },
     { "test.txt", "text/plain;charset=utf-8", "text" }
 };
 
+static const MMSAttachmentInfo test_files_reject [] = {
+    { "0001.png", "image/png", "image" },
+    { "test.txt", "text/plain", "text" }
+};
+
 static const TestDesc send_tests[] = {
     {
-        "Success",
-        test_files_success,
-        G_N_ELEMENTS(test_files_success),
+        "Accept",
+        test_files_accept,
+        G_N_ELEMENTS(test_files_accept),
         "Test of successful delivery",
+        "+1234567890",
+        "+2345678901,+3456789012",
+        "+4567890123",
+        0,
+        "m-send.conf",
+        MMS_CONTENT_TYPE,
+        SOUP_STATUS_OK,
+        MMS_SEND_STATE_SENDING,
+        "TestMessageId"
+    },{
+        "Reject",
+        test_files_reject,
+        G_N_ELEMENTS(test_files_reject),
+        "Rejection test",
         "+1234567890",
         NULL,
         NULL,
@@ -89,8 +109,8 @@ static const TestDesc send_tests[] = {
         "m-send.conf",
         MMS_CONTENT_TYPE,
         SOUP_STATUS_OK,
-        MMS_SEND_STATE_SENDING,
-        "TestMessageId"
+        MMS_SEND_STATE_REFUSED,
+        NULL
     }
 };
 
@@ -114,6 +134,9 @@ test_finish(
             if (!msgid || strcmp(msgid, desc->msgid)) {
                 test->ret = RET_ERR;
                 MMS_ERR("%s msgid %s, expected %s", name, msgid, desc->msgid);
+            } else if (msgid && !desc->msgid) {
+                test->ret = RET_ERR;
+                MMS_ERR("%s msgidis not expected", name);
             }
         }
     }
@@ -236,9 +259,9 @@ test_run_once(
             desc->to, desc->cc, desc->bcc, desc->subject,
             desc->flags & TEST_DISPATCHER_FLAGS, test.parts,
             desc->nparts, &error);
-        MMS_ASSERT(!strcmp(imsi2, imsi));
+        MMS_ASSERT(imsi2 && !strcmp(imsi2, imsi));
         test.id = g_strdup(id);
-        if (!strcmp(imsi2, imsi) && mms_dispatcher_start(test.disp)) {
+        if (imsi2 && !strcmp(imsi2, imsi) && mms_dispatcher_start(test.disp)) {
             if (!debug) {
                 test.timeout_id = g_timeout_add_seconds(10,
                     test_timeout, &test);
@@ -320,7 +343,7 @@ int main(int argc, char* argv[])
         if (verbose) {
             mms_log_default.level = MMS_LOGLEVEL_VERBOSE;
         } else {
-            mms_task_send_log.level = MMS_LOGLEVEL_ERR;
+            mms_task_send_log.level = MMS_LOGLEVEL_NONE;
             mms_log_default.level = MMS_LOGLEVEL_INFO;
             mms_log_stdout_timestamp = FALSE;
         }
