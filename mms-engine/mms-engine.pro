@@ -15,10 +15,6 @@ include(../mms-lib/mms-lib-config.pri)
 ResizeImageMagick {
   CONFIG -= qt
   PKGCONFIG += ImageMagick
-} else {
-  ResizeQt {
-  } else {
-  }
 }
 
 SOURCES += \

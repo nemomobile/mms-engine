@@ -415,10 +415,10 @@ mms_task_encode_prepare_attachments(
     const MMSConfig* config,
     const char* dir,
     const MMSAttachmentInfo* parts,
-    int nparts,
+    unsigned int nparts,
     GError** error)
 {
-    int i;
+    unsigned int i;
     int smil_index = -1;
     GPtrArray* array = g_ptr_array_sized_new(nparts);
     for (i=0; i<nparts; i++) {
