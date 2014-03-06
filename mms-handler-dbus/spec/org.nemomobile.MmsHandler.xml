@@ -18,9 +18,10 @@
         No information is available about the message other than
         its sender, expiry date and possibly the subject.
 
-        Returns either zero (for manual retrieval) or positive
-        record id which is passed back to messageReceived after
-        message has been received and decoded.
+        Returns either empty string (for manual retrieval) or non-empty
+        record id which is passed back to messageReceiveStateChanged()
+        to track the progress and to messageReceived() after message
+        has been successfully received and decoded.
 
         In the manual receive scenario, MMS engine does nothing about
         this message and may even shut down until its "receiveMessage"
@@ -70,7 +71,7 @@
         number of bytes received so far.
 
         If retrieval was started automatically (messageNotification
-        returned positive database record id) then retries will be
+        returned non-empty database record id) then retries will be
         automatic too, i.e. Deferred/NoSpace state will become Receiving
         after a while and so on until message is either received, exires
         or gets deleted by the user.
