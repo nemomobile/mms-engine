@@ -99,8 +99,6 @@ RELEASE_OBJS = \
   $(SRC:%.c=$(RELEASE_BUILD_DIR)/%.o) \
   $(SRC_CPP:%.cpp=$(RELEASE_BUILD_DIR)/%.o)
 
-$(info $(DEBUG_OBJS))
-
 #
 # Dependencies
 #
