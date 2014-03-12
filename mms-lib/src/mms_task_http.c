@@ -22,8 +22,6 @@
 #  include <net/if.h>
 #endif
 
-#include <libsoup/soup.h>
-
 /* Appeared in libsoup somewhere between 2.41.5 and 2.41.90 */
 #ifndef SOUP_SESSION_LOCAL_ADDRESS
 #  define SOUP_SESSION_LOCAL_ADDRESS "local-address"
