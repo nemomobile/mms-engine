@@ -16,10 +16,17 @@
 #define JOLLA_MMS_TASK_HTTP_H
 
 #include "mms_task.h"
-#include <libsoup/soup-status.h>
+#include <libsoup/soup.h>
 
-#if !SOUP_CHECK_VERSION(2,43,5)
+#ifdef SOUP_CHECK_VERSION
 /* SoupStatus was called SoupKnownStatusCode prior to 2.43.5 */
+#  define SOUP_STATUS_MISSING !SOUP_CHECK_VERSION(2,43,5)
+#else
+/* No SOUP_CHECK_VERSION macro prior to libsoup 2.41.1 */
+#  define SOUP_STATUS_MISSING 1
+#endif
+
+#if SOUP_STATUS_MISSING
 #  define SoupStatus SoupKnownStatusCode
 #endif
 
