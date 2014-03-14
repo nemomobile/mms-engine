@@ -182,11 +182,8 @@ mms_task_decode_process_retrieve_conf(
             attach->length, &path)) {
             MMSMessagePart* part = g_new0(MMSMessagePart, 1);
             char* tmp = NULL;
-            char* id;
-            G_GNUC_BEGIN_IGNORE_DEPRECATIONS;
-            id = attach->content_id ? g_strdup(attach->content_id) :
+            char* id = attach->content_id ? g_strdup(attach->content_id) :
                 (tmp = g_strconcat("<", file, ">", NULL));
-            G_GNUC_END_IGNORE_DEPRECATIONS;
             part->content_type = g_strdup(attach->content_type);
             part->content_id = mms_task_decode_make_content_id(part_ids, id);
             part->file = path;
