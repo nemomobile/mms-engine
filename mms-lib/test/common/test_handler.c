@@ -148,6 +148,16 @@ mms_handler_test_receive_state(
     return recv ? recv->state : MMS_RECEIVE_STATE_INVALID;
 }
 
+MMSMessage*
+mms_handler_test_get_received_message(
+    MMSHandler* handler,
+    const char* id)
+{
+    MMSHandlerRecordReceive* recv =
+    mms_handler_test_get_receive_record(MMS_HANDLER_TEST(handler), id);
+    return recv ? recv->msg : NULL;
+}
+
 const char*
 mms_handler_test_send_msgid(
     MMSHandler* handler,

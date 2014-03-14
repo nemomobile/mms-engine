@@ -40,6 +40,11 @@ mms_handler_test_receive_state(
     MMSHandler* handler,
     const char* id);
 
+MMSMessage*
+mms_handler_test_get_received_message(
+    MMSHandler* handler,
+    const char* id);
+
 gboolean
 mms_handler_test_receive_pending(
     MMSHandler* handler,
