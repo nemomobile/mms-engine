@@ -800,7 +800,8 @@ mms_decode_headers(
         }
         printf("%s%s: ", prefix, hdr_name);
         dec = value_decoder_for_header(hdr_name);
-        if (!dec(wsp_header_iter_get_val_type(iter), val, val_len, flags)) {
+        if (val_len > 0 &&
+            !dec(wsp_header_iter_get_val_type(iter), val, val_len, flags)) {
             printf("ERROR!\n");
             return FALSE;
         }
