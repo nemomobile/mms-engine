@@ -24,8 +24,6 @@
 #define RET_ERR     (1)
 #define RET_TIMEOUT (2)
 
-#define MMS_MESSAGE_TYPE_NONE (0)
-
 #define DATA_DIR "data/"
 
 typedef struct test_desc {
@@ -33,10 +31,6 @@ typedef struct test_desc {
     const char* ind_file;
     const char* mmsid;
     MMS_DELIVERY_STATUS status;
-    int flags;
-
-#define TEST_FAILURE_OK (0x01)
-
 } TestDesc;
 
 typedef struct test {
@@ -58,20 +52,17 @@ static const TestDesc delivery_tests[] = {
         "DeliveryOK",
         "m-delivery.ind",
         "BH24CBJJA40W1",
-        MMS_DELIVERY_STATUS_RETRIEVED,
-        0
+        MMS_DELIVERY_STATUS_RETRIEVED
     },{
         "DeliveryUnexpected",
         "m-delivery.ind",
         "UNKNOWN",
-        MMS_DELIVERY_STATUS_INVALID,
-        0
+        MMS_DELIVERY_STATUS_INVALID
     },{
         "DeliveryRejected",
         "m-delivery.ind",
         "BH24CBJJA40W1",
-        MMS_DELIVERY_STATUS_REJECTED,
-        0
+        MMS_DELIVERY_STATUS_REJECTED
     }
 };
 
@@ -195,13 +186,10 @@ test_run1(
                 MMS_INFO("%s FAILED", desc->name);
             }
         } else {
+            MMS_ERR("%s", MMS_ERRMSG(error));
+            MMS_INFO("%s FAILED", desc->name);
             g_error_free(error);
-            if (desc->flags & TEST_FAILURE_OK) {
-                test.ret = RET_OK;
-                test_finish(&test);
-            } else {
-                MMS_INFO("%s FAILED", desc->name);
-            }
+            test_finish(&test);
         }
         g_bytes_unref(push);
         test_finalize(&test);
