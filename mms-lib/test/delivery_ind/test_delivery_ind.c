@@ -14,17 +14,11 @@
 
 #include "test_connman.h"
 #include "test_handler.h"
-#include "test_http.h"
 
-#include "mms_log.h"
-#include "mms_codec.h"
 #include "mms_file_util.h"
 #include "mms_lib_log.h"
 #include "mms_lib_util.h"
 #include "mms_dispatcher.h"
-
-#include <gio/gio.h>
-#include <libsoup/soup-status.h>
 
 #define RET_OK      (0)
 #define RET_ERR     (1)
