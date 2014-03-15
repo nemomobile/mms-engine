@@ -157,6 +157,24 @@ mms_handler_message_sent(
     return FALSE;
 }
 
+gboolean
+mms_handler_delivery_report(
+    MMSHandler* h,
+    const char* imsi,
+    const char* msgid,
+    const char* recipient,
+    MMS_DELIVERY_STATUS ds)
+{
+    if (h) {
+        MMSHandlerClass* klass = MMS_HANDLER_GET_CLASS(h);
+        if (klass->fn_delivery_report) {
+            return klass->fn_delivery_report(h, imsi, msgid, recipient, ds);
+        }
+        MMS_ERR("mms_handler_delivery_report not implemented");
+    }
+    return FALSE;
+}
+
 /*
  * Local Variables:
  * mode: C

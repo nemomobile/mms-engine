@@ -129,9 +129,42 @@ void
 mms_task_delivery_ind(
     MMSTaskNotification* ind)
 {
+    MMS_DELIVERY_STATUS ds;
+    MMSTask* t = &ind->task;
+    const struct mms_delivery_ind* di = &ind->pdu->di;
+    const char* to = mms_strip_address_type(di->to);
     MMS_DEBUG("Processing M-Delivery.ind PDU");
-    MMS_DEBUG("  MMS message id: %s", ind->pdu->di.msgid);
-    if (ind->task.config->keep_temp_files) {
+    MMS_DEBUG("  MMS message id: %s", di->msgid);
+    MMS_DEBUG("  Recipient: %s", to);
+    switch (di->dr_status) {
+    case MMS_MESSAGE_DELIVERY_STATUS_EXPIRED:
+        ds = MMS_DELIVERY_STATUS_EXPIRED;
+        break;
+    case MMS_MESSAGE_DELIVERY_STATUS_RETRIEVED:
+        ds = MMS_DELIVERY_STATUS_RETRIEVED;
+        break;
+    case MMS_MESSAGE_DELIVERY_STATUS_REJECTED:
+        ds = MMS_DELIVERY_STATUS_REJECTED;
+        break;
+    case MMS_MESSAGE_DELIVERY_STATUS_DEFERRED:
+        ds = MMS_DELIVERY_STATUS_DEFERRED;
+        break;
+    case MMS_MESSAGE_DELIVERY_STATUS_UNRECOGNISED:
+        ds = MMS_DELIVERY_STATUS_UNRECOGNISED;
+        break;
+    case MMS_MESSAGE_DELIVERY_STATUS_FORWARDED:
+        ds = MMS_DELIVERY_STATUS_FORWARDED;
+        break;
+    case MMS_MESSAGE_DELIVERY_STATUS_UNREACHABLE:
+        ds = MMS_DELIVERY_STATUS_UNREACHABLE;
+        break;
+    case MMS_MESSAGE_DELIVERY_STATUS_INDETERMINATE:
+    default:
+        ds = MMS_DELIVERY_STATUS_UNKNOWN;
+        break;
+    }
+    mms_handler_delivery_report(t->handler, t->imsi, di->msgid, to, ds);
+    if (t->config->keep_temp_files) {
         mms_task_notification_write_file(ind, MMS_DELIVERY_IND_FILE);
     }
 }

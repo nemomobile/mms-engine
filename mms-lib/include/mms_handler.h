@@ -40,6 +40,19 @@ typedef enum _mmm_send_state {
     MMS_SEND_STATE_REFUSED
 } MMS_SEND_STATE;
 
+/* Delivery status */
+typedef enum _mmm_delivery_status {
+    MMS_DELIVERY_STATUS_INVALID = -1,
+    MMS_DELIVERY_STATUS_UNKNOWN,
+    MMS_DELIVERY_STATUS_EXPIRED,
+    MMS_DELIVERY_STATUS_RETRIEVED,
+    MMS_DELIVERY_STATUS_REJECTED,
+    MMS_DELIVERY_STATUS_DEFERRED,
+    MMS_DELIVERY_STATUS_UNRECOGNISED,
+    MMS_DELIVERY_STATUS_FORWARDED,
+    MMS_DELIVERY_STATUS_UNREACHABLE
+} MMS_DELIVERY_STATUS;
+
 /* Class */
 typedef struct mms_handler_class {
     GObjectClass parent;
@@ -76,6 +89,14 @@ typedef struct mms_handler_class {
         MMSHandler* handler,        /* Handler instance */
         const char* id,             /* Handler record id */
         const char* msgid);         /* Message id assigned by operator */
+
+    /* Delivery report has been received */
+    gboolean (*fn_delivery_report)(
+        MMSHandler* handler,        /* Handler instance */
+        const char* imsi,           /* Subscriber identity */
+        const char* msgid,          /* Message id assigned by operator */
+        const char* recipient,      /* Recipient's phone number */
+        MMS_DELIVERY_STATUS ds);    /* Delivery status */
 
 } MMSHandlerClass;
 
@@ -121,6 +142,14 @@ mms_handler_message_sent(
     MMSHandler* handler,            /* Handler instance */
     const char* id,                 /* Handler record id */
     const char* msgid);             /* Message id assigned by operator */
+
+gboolean
+mms_handler_delivery_report(
+    MMSHandler* handler,            /* Handler instance */
+    const char* imsi,               /* Subscriber identity */
+    const char* msgid,              /* Message id assigned by operator */
+    const char* recipient,          /* Recipient's phone number */
+    MMS_DELIVERY_STATUS ds);        /* Delivery status */
 
 #endif /* JOLLA_MMS_HANDLER_H */
 

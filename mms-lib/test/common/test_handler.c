@@ -43,6 +43,7 @@ typedef struct mms_handler_record {
 typedef struct mms_handler_record_send {
     MMSHandlerRecord rec;
     MMS_SEND_STATE state;
+    MMS_DELIVERY_STATUS delivery_status;
     char* msgid;
 } MMSHandlerRecordSend;
 
@@ -104,6 +105,45 @@ mms_handler_test_get_record(
         return found;
     }
     return NULL;
+}
+
+typedef struct mms_handler_send_msgid_search {
+    const char* msgid;
+    MMSHandlerRecordSend* send;
+} MMSHandlerSendMsgIdSearch;
+
+static
+void 
+mms_handler_get_send_record_for_msgid_cb(
+    gpointer key,
+    gpointer value,
+    gpointer user_data)
+{
+    MMSHandlerRecord* rec = value;
+    if (rec->type == MMS_HANDLER_RECORD_SEND) {
+        MMSHandlerRecordSend* send = mms_handler_test_record_send(rec);
+        MMSHandlerSendMsgIdSearch* search = user_data;
+        if (!strcmp(send->msgid, search->msgid)) {
+            MMS_ASSERT(!search->send);
+            search->send = send;
+        }
+    }
+}
+
+static
+MMSHandlerRecordSend*
+mms_handler_get_send_record_for_msgid(
+    MMSHandlerTest* test,
+    const char* msgid)
+{
+    MMSHandlerSendMsgIdSearch search;
+    search.send = NULL;
+    if (msgid) {
+        search.msgid = msgid;
+        g_hash_table_foreach(test->recs,
+            mms_handler_get_send_record_for_msgid_cb, &search);
+    }
+    return search.send;
 }
 
 static
@@ -201,6 +241,16 @@ mms_handler_test_receive_pending(
             mms_handler_test_receive_pending_check, &pending);
         return pending;
     }
+}
+
+MMS_DELIVERY_STATUS
+mms_handler_test_delivery_status(
+    MMSHandler* handler,
+    const char* id)
+{
+    MMSHandlerRecordSend* send =
+    mms_handler_test_get_send_record(MMS_HANDLER_TEST(handler), id);
+    return send ? send->delivery_status : MMS_DELIVERY_STATUS_INVALID;
 }
 
 static
@@ -327,6 +377,7 @@ mms_handler_test_send_new(
     send->rec.imsi = g_strdup(imsi);
     send->rec.type = MMS_HANDLER_RECORD_SEND;
     send->state = MMS_SEND_STATE_INVALID;
+    send->delivery_status = MMS_DELIVERY_STATUS_INVALID;
     MMS_DEBUG("New send %s imsi=%s", id, imsi);
     g_hash_table_replace(test->recs, id, &send->rec);
     return id;
@@ -364,12 +415,37 @@ mms_handler_test_message_sent(
     MMS_ASSERT(send);
     if (send) {
         MMS_ASSERT(!send->msgid);
-        g_free(send->msgid);
-        send->msgid = g_strdup(msgid);
-        return TRUE;
-    } else {
-        return FALSE;
+        if (!send->msgid) {
+            send->msgid = g_strdup(msgid);
+            return TRUE;
+        }
     }
+    return FALSE;
+}
+
+static
+gboolean
+mms_handler_test_delivery_report(
+    MMSHandler* handler,
+    const char* imsi,
+    const char* msgid,
+    const char* recipient,
+    MMS_DELIVERY_STATUS status)
+{
+    MMSHandlerTest* test = MMS_HANDLER_TEST(handler);
+    MMSHandlerRecordSend* send =
+    mms_handler_get_send_record_for_msgid(test, msgid);
+    MMS_DEBUG("Message %s delivered to %s", msgid, recipient); 
+    if (send) {
+        MMS_ASSERT(send->delivery_status == MMS_DELIVERY_STATUS_INVALID);
+        if (send->delivery_status == MMS_DELIVERY_STATUS_INVALID) {
+            send->delivery_status = status;
+            return TRUE;
+        }
+    } else {
+        MMS_DEBUG("Unknown message id %s (this may be OK)", msgid); 
+    }
+    return FALSE;
 }
 
 void
@@ -396,6 +472,7 @@ mms_handler_test_class_init(
     klass->fn_message_received = mms_handler_test_message_received;
     klass->fn_message_receive_state_changed =
         mms_handler_test_message_receive_state_changed;
+    klass->fn_delivery_report =  mms_handler_test_delivery_report;
 }
 
 static
