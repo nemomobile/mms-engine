@@ -53,6 +53,9 @@ typedef enum _mmm_delivery_status {
     MMS_DELIVERY_STATUS_UNREACHABLE
 } MMS_DELIVERY_STATUS;
 
+/* Read status */
+typedef MMSReadStatus MMS_READ_STATUS;
+
 /* Class */
 typedef struct mms_handler_class {
     GObjectClass parent;
@@ -97,6 +100,14 @@ typedef struct mms_handler_class {
         const char* msgid,          /* Message id assigned by operator */
         const char* recipient,      /* Recipient's phone number */
         MMS_DELIVERY_STATUS ds);    /* Delivery status */
+
+    /* Read report has been received */
+    gboolean (*fn_read_report)(
+        MMSHandler* handler,        /* Handler instance */
+        const char* imsi,           /* Subscriber identity */
+        const char* msgid,          /* Message id assigned by operator */
+        const char* recipient,      /* Recipient's phone number */
+        MMS_READ_STATUS ds);        /* Read status */
 
 } MMSHandlerClass;
 
@@ -150,6 +161,14 @@ mms_handler_delivery_report(
     const char* msgid,              /* Message id assigned by operator */
     const char* recipient,          /* Recipient's phone number */
     MMS_DELIVERY_STATUS ds);        /* Delivery status */
+
+gboolean
+mms_handler_read_report(
+    MMSHandler* handler,            /* Handler instance */
+    const char* imsi,               /* Subscriber identity */
+    const char* msgid,              /* Message id assigned by operator */
+    const char* recipient,          /* Recipient's phone number */
+    MMS_READ_STATUS rs);            /* Read status */
 
 #endif /* JOLLA_MMS_HANDLER_H */
 

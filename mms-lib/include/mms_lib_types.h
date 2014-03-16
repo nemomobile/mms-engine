@@ -79,8 +79,9 @@ typedef struct _mms_attachment MMSAttachment;
 
 /* MMS read status */
 typedef enum mms_read_status {
-    MMS_READ_STATUS_READ,       /* Message has been read */
-    MMS_READ_STATUS_DELETED     /* Message has been deleted without reading */
+    MMS_READ_STATUS_INVALID = -1,   /* Invalid or unknown status */
+    MMS_READ_STATUS_READ,           /* Message has been read */
+    MMS_READ_STATUS_DELETED         /* Message deleted without reading */
 } MMSReadStatus;
 
 /* Convenience macros */

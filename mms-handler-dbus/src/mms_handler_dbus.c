@@ -230,6 +230,31 @@ mms_handler_dbus_delivery_report(
     return ok;
 }
 
+/* Read report has been received */
+static
+gboolean
+mms_handler_dbus_read_report(
+    MMSHandler* handler,
+    const char* imsi,
+    const char* msgid,
+    const char* recipient,
+    MMS_READ_STATUS status)
+{
+    gboolean ok = FALSE;
+    OrgNemomobileMmsHandler* proxy = mms_handler_dbus_connect(handler);
+    if (msgid && msgid[0] && recipient && recipient[0] && proxy) {
+        GError* error = NULL;
+        if (org_nemomobile_mms_handler_call_read_report_sync(proxy,
+            imsi, msgid, recipient, status, NULL, &error)) {
+            ok = TRUE;
+        } else {
+            MMS_ERR("%s", MMS_ERRMSG(error));
+            g_error_free(error);
+        }
+    }
+    return ok;
+}
+
 static
 void
 mms_handler_dbus_dispose(
@@ -256,6 +281,7 @@ mms_handler_dbus_class_init(
         mms_handler_dbus_message_send_state_changed;
     klass->fn_message_sent = mms_handler_dbus_message_sent;
     klass->fn_delivery_report = mms_handler_dbus_delivery_report;
+    klass->fn_read_report = mms_handler_dbus_read_report;
     G_OBJECT_CLASS(klass)->dispose = mms_handler_dbus_dispose;
 }
 
