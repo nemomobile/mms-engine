@@ -85,6 +85,22 @@ mms_task_decode_add_file_name(
 }
 
 static
+char*
+mms_task_decode_make_content_id(
+    GPtrArray* ids,
+    char* proposed)
+{
+    char* id = proposed;
+    while (mms_task_decode_array_contains_string(ids, id)) {
+        char* tmp = g_strconcat("_", id, NULL);
+        if (id != proposed) g_free(id);
+        id = tmp;
+    }
+    g_ptr_array_add(ids, id);
+    return id;
+}
+
+static
 MMSMessage*
 mms_task_decode_process_retrieve_conf(
     MMSTask* task,
@@ -95,6 +111,7 @@ mms_task_decode_process_retrieve_conf(
     GSList* entry;
     int i, nparts = g_slist_length(pdu->attachments);
     GPtrArray* part_files = g_ptr_array_new_full(nparts, g_free);
+    GPtrArray* part_ids = g_ptr_array_new();
     char* dir = mms_task_dir(task);
     const struct mms_retrieve_conf* rc = &pdu->rc;
     MMSMessage* msg = mms_message_new();
@@ -148,29 +165,35 @@ mms_task_decode_process_retrieve_conf(
     msg->parts_dir = g_strconcat(dir, "/" , MMS_PARTS_DIR, NULL);
     for (i=0, entry = pdu->attachments; entry; entry = entry->next, i++) {
         struct mms_attachment* attach = entry->data;
-        const char* id = attach->content_id;
+        const char* name =  attach->content_location ?
+            attach->content_location : attach->content_id;
         char* path = NULL;
         char* file;
-        if (id && id[0]) {
-            file = mms_task_decode_add_file_name(part_files, id);
+        if (name && name[0]) {
+            file = mms_task_decode_add_file_name(part_files, name);
         } else {
             char* name = g_strdup_printf("part_%d",i);
             file = mms_task_decode_add_file_name(part_files, name);
             g_free(name);
         }
-        MMS_DEBUG("Part: %s %s", id, attach->content_type);
+        MMS_DEBUG("Part: %s %s", name, attach->content_type);
         MMS_ASSERT(attach->offset < pdu_size);
         if (mms_write_file(msg->parts_dir, file, pdu_data + attach->offset,
             attach->length, &path)) {
             MMSMessagePart* part = g_new0(MMSMessagePart, 1);
+            char* tmp = NULL;
+            char* id = attach->content_id ? g_strdup(attach->content_id) :
+                (tmp = g_strconcat("<", file, ">", NULL));
             part->content_type = g_strdup(attach->content_type);
-            part->content_id = g_strdup(id);
+            part->content_id = mms_task_decode_make_content_id(part_ids, id);
             part->file = path;
             msg->parts = g_slist_append(msg->parts, part);
+            if (tmp && tmp != part->content_id) g_free(tmp);
         }
     }
 
     g_ptr_array_free(part_files, TRUE);
+    g_ptr_array_free(part_ids, TRUE);
     g_free(dir);
     return msg;
 }
