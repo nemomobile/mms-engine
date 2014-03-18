@@ -224,18 +224,6 @@ static const TestDesc retrieve_tests[] = {
         MMS_MESSAGE_TYPE_NONE,
         TEST_PARTS_NONE,
         0
-    },{
-        "DeliveryInd",
-        NULL,
-        "m-delivery.ind",
-        NULL,
-        0,
-        NULL,
-        NULL,
-        MMS_RECEIVE_STATE_INVALID,
-        MMS_MESSAGE_TYPE_NONE,
-        TEST_PARTS_NONE,
-        0
     }
 };
 
