@@ -107,7 +107,7 @@ typedef struct mms_handler_class {
         const char* imsi,           /* Subscriber identity */
         const char* msgid,          /* Message id assigned by operator */
         const char* recipient,      /* Recipient's phone number */
-        MMS_READ_STATUS ds);        /* Read status */
+        MMS_READ_STATUS rs);        /* Read status */
 
 } MMSHandlerClass;
 
