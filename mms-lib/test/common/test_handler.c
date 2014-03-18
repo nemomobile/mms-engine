@@ -44,6 +44,7 @@ typedef struct mms_handler_record_send {
     MMSHandlerRecord rec;
     MMS_SEND_STATE state;
     MMS_DELIVERY_STATUS delivery_status;
+    MMS_READ_STATUS read_status;
     char* msgid;
 } MMSHandlerRecordSend;
 
@@ -253,6 +254,16 @@ mms_handler_test_delivery_status(
     return send ? send->delivery_status : MMS_DELIVERY_STATUS_INVALID;
 }
 
+MMS_READ_STATUS
+mms_handler_test_read_status(
+    MMSHandler* handler,
+    const char* id)
+{
+    MMSHandlerRecordSend* send =
+    mms_handler_test_get_send_record(MMS_HANDLER_TEST(handler), id);
+    return send ? send->read_status : MMS_READ_STATUS_INVALID;
+}
+
 static
 void
 mms_handler_test_hash_remove_record(
@@ -378,6 +389,7 @@ mms_handler_test_send_new(
     send->rec.type = MMS_HANDLER_RECORD_SEND;
     send->state = MMS_SEND_STATE_INVALID;
     send->delivery_status = MMS_DELIVERY_STATUS_INVALID;
+    send->read_status = MMS_READ_STATUS_INVALID;
     MMS_DEBUG("New send %s imsi=%s", id, imsi);
     g_hash_table_replace(test->recs, id, &send->rec);
     return id;
@@ -448,6 +460,31 @@ mms_handler_test_delivery_report(
     return FALSE;
 }
 
+static
+gboolean
+mms_handler_test_read_report(
+    MMSHandler* handler,
+    const char* imsi,
+    const char* msgid,
+    const char* recipient,
+    MMS_READ_STATUS status)
+{
+    MMSHandlerTest* test = MMS_HANDLER_TEST(handler);
+    MMSHandlerRecordSend* send =
+    mms_handler_get_send_record_for_msgid(test, msgid);
+    MMS_DEBUG("Message %s read by %s", msgid, recipient); 
+    if (send) {
+        MMS_ASSERT(send->read_status == MMS_READ_STATUS_INVALID);
+        if (send->read_status == MMS_READ_STATUS_INVALID) {
+            send->read_status = status;
+            return TRUE;
+        }
+    } else {
+        MMS_DEBUG("Unknown message id %s (this may be OK)", msgid); 
+    }
+    return FALSE;
+}
+
 void
 mms_handler_test_finalize(
     GObject* object)
@@ -473,6 +510,7 @@ mms_handler_test_class_init(
     klass->fn_message_receive_state_changed =
         mms_handler_test_message_receive_state_changed;
     klass->fn_delivery_report =  mms_handler_test_delivery_report;
+    klass->fn_read_report =  mms_handler_test_read_report;
 }
 
 static

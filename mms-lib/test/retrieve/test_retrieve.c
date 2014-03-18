@@ -16,14 +16,12 @@
 #include "test_handler.h"
 #include "test_http.h"
 
-#include "mms_log.h"
 #include "mms_codec.h"
 #include "mms_file_util.h"
 #include "mms_lib_log.h"
 #include "mms_lib_util.h"
 #include "mms_dispatcher.h"
 
-#include <gio/gio.h>
 #include <libsoup/soup-status.h>
 
 #define RET_OK      (0)
@@ -212,18 +210,6 @@ static const TestDesc retrieve_tests[] = {
         MMS_MESSAGE_TYPE_NONE,
         TEST_PARTS_NONE,
         TEST_PUSH_HANDLING_FAILURE_OK
-    },{
-        "ReadOrigInd",
-        NULL,
-        "m-read-orig.ind",
-        NULL,
-        0,
-        NULL,
-        NULL,
-        MMS_RECEIVE_STATE_INVALID,
-        MMS_MESSAGE_TYPE_NONE,
-        TEST_PARTS_NONE,
-        0
     }
 };
 

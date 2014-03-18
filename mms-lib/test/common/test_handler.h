@@ -55,6 +55,11 @@ mms_handler_test_delivery_status(
     MMSHandler* handler,
     const char* id);
 
+MMS_READ_STATUS
+mms_handler_test_read_status(
+    MMSHandler* handler,
+    const char* id);
+
 void
 mms_handler_test_defer_receive(
     MMSHandler* handler,

@@ -177,8 +177,25 @@ void
 mms_task_read_orig_ind(
     MMSTaskNotification* ind)
 {
+    MMS_READ_STATUS rs;
+    MMSTask* t = &ind->task;
+    const struct mms_read_ind* ri = &ind->pdu->ri;
+    const char* to = mms_strip_address_type(ri->to);
     MMS_DEBUG("Processing M-Read-Orig.ind");
-    MMS_DEBUG("  MMS message id: %s", ind->pdu->ri.msgid);
+    MMS_DEBUG("  MMS message id: %s", ri->msgid);
+    MMS_DEBUG("  Recipient: %s", to);
+    switch (ri->rr_status) {
+    case MMS_MESSAGE_READ_STATUS_READ:
+        rs = MMS_READ_STATUS_READ;
+        break;
+    case MMS_MESSAGE_READ_STATUS_DELETED:
+        rs = MMS_READ_STATUS_DELETED;
+        break;
+    default:
+        rs = MMS_READ_STATUS_INVALID;
+        break;
+    }
+    mms_handler_read_report(t->handler, t->imsi, ri->msgid, to, rs);
     if (ind->task.config->keep_temp_files) {
         mms_task_notification_write_file(ind,  MMS_READ_ORIG_IND_FILE);
     }

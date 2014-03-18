@@ -30,7 +30,7 @@ typedef struct test_desc {
     const char* name;
     const char* ind_file;
     const char* mmsid;
-    MMS_DELIVERY_STATUS status;
+    MMS_READ_STATUS status;
 } TestDesc;
 
 typedef struct test {
@@ -47,22 +47,22 @@ typedef struct test {
     int ret;
 } Test;
 
-static const TestDesc delivery_tests[] = {
+static const TestDesc read_tests[] = {
     {
-        "DeliveryOK",
-        "m-delivery.ind",
+        "ReadOK",
+        "m-read-orig.ind",
         "BH24CBJJA40W1",
-        MMS_DELIVERY_STATUS_RETRIEVED
+        MMS_READ_STATUS_READ
     },{
-        "DeliveryUnexpected",
-        "m-delivery.ind",
+        "ReadUnexpected",
+        "m-read-orig.ind",
         "UNKNOWN",
-        MMS_DELIVERY_STATUS_INVALID
+        MMS_READ_STATUS_INVALID
     },{
-        "DeliveryRejected",
-        "m-delivery.ind",
+        "ReadDeleted",
+        "m-read-orig.ind",
         "BH24CBJJA40W1",
-        MMS_DELIVERY_STATUS_REJECTED
+        MMS_READ_STATUS_DELETED
     }
 };
 
@@ -74,11 +74,11 @@ test_finish(
     const TestDesc* desc = test->desc;
     const char* name = desc->name;
     if (test->ret == RET_OK) {
-        MMS_DELIVERY_STATUS ds;
-        ds = mms_handler_test_delivery_status(test->handler, test->id);
-        if (ds != desc->status) {
+        MMS_READ_STATUS rs;
+        rs = mms_handler_test_read_status(test->handler, test->id);
+        if (rs != desc->status) {
             test->ret = RET_ERR;
-            MMS_ERR("%s status %d, expected %d", name, ds, desc->status);
+            MMS_ERR("%s status %d, expected %d", name, rs, desc->status);
         }
     }
     MMS_INFO("%s: %s", (test->ret == RET_OK) ? "OK" : "FAILED", name);
@@ -207,8 +207,8 @@ test_run(
     int i, ret;
     if (name) {
         const TestDesc* found = NULL;
-        for (i=0, ret = RET_ERR; i<G_N_ELEMENTS(delivery_tests); i++) {
-            const TestDesc* test = delivery_tests + i;
+        for (i=0, ret = RET_ERR; i<G_N_ELEMENTS(read_tests); i++) {
+            const TestDesc* test = read_tests + i;
             if (!strcmp(test->name, name)) {
                 ret = test_run_one(config, test);
                 found = test;
@@ -217,8 +217,8 @@ test_run(
         }
         if (!found) MMS_ERR("No such test: %s", name);
     } else {
-        for (i=0, ret = RET_OK; i<G_N_ELEMENTS(delivery_tests); i++) {
-            int test_status = test_run_one(config, delivery_tests + i);
+        for (i=0, ret = RET_OK; i<G_N_ELEMENTS(read_tests); i++) {
+            int test_status = test_run_one(config, read_tests + i);
             if (ret == RET_OK && test_status != RET_OK) ret = test_status;
         }
     }
@@ -233,7 +233,7 @@ int main(int argc, char* argv[])
 
     mms_lib_init(argv[0]);
     mms_lib_default_config(&config);
-    mms_log_default.name = "test_delivery_ind";
+    mms_log_default.name = "test_read_ind";
 
     if (argc > 1 && !strcmp(argv[1], "-v")) {
         mms_log_default.level = MMS_LOGLEVEL_VERBOSE;
@@ -250,7 +250,7 @@ int main(int argc, char* argv[])
     }
 
     if (argc == 1 || test_name) {
-        char* tmpd = g_mkdtemp(g_strdup("/tmp/test_delivery_ind_XXXXXX"));
+        char* tmpd = g_mkdtemp(g_strdup("/tmp/test_read_ind_XXXXXX"));
         MMS_VERBOSE("Temporary directory %s", tmpd);
         config.root_dir = tmpd;
         config.idle_secs = 0;
@@ -259,7 +259,7 @@ int main(int argc, char* argv[])
         remove(tmpd);
         g_free(tmpd);
     } else {
-        printf("Usage: test_delivery_ind [-v] [TEST]\n");
+        printf("Usage: test_read_ind [-v] [TEST]\n");
         ret = RET_ERR;
     }
 
