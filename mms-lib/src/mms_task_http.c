@@ -73,6 +73,7 @@ G_DEFINE_TYPE(MMSTaskHttp, mms_task_http, MMS_TYPE_TASK);
 #define MMS_TASK_HTTP_GET_CLASS(obj)  \
     (G_TYPE_INSTANCE_GET_CLASS((obj), MMS_TYPE_TASK_HTTP, MMSTaskHttpClass))
 
+static
 SoupURI*
 mms_http_uri_parse(
     const char* raw_uri)
@@ -168,6 +169,7 @@ mms_http_create_session(
     return session;
 }
 
+static
 MMSHttpTransfer*
 mms_http_transfer_new(
     const MMSConfig* config,
@@ -197,6 +199,7 @@ mms_http_transfer_new(
     return NULL;
 }
 
+static
 void
 mms_http_transfer_free(
     MMSHttpTransfer* tx)
