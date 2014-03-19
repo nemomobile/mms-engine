@@ -288,12 +288,15 @@ gboolean
 mms_engine_handle_cancel(
     OrgNemomobileMmsEngine* proxy,
     GDBusMethodInvocation* call,
-    const char* id,
+    int database_id,
     MMSEngine* engine)
 {
+    const char *id = NULL;
+    if (database_id > 0) id = g_strdup_printf("%u", database_id);
     MMS_DEBUG_("%s", id);
     mms_dispatcher_cancel(engine->dispatcher, id);
     org_nemomobile_mms_engine_complete_cancel(proxy, call);
+    g_free(id);
     return TRUE;
 }
 
