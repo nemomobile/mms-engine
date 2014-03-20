@@ -291,7 +291,7 @@ mms_engine_handle_cancel(
     int database_id,
     MMSEngine* engine)
 {
-    const char *id = NULL;
+    char* id = NULL;
     if (database_id > 0) id = g_strdup_printf("%u", database_id);
     MMS_DEBUG_("%s", id);
     mms_dispatcher_cancel(engine->dispatcher, id);
