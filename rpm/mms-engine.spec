@@ -33,11 +33,20 @@ BuildRequires:  pkgconfig(Qt5Gui)
 %description
 MMS engine
 
+%package tools
+Summary:    MMS tools
+Group:      Development/Tools
+
+%description tools
+MMS command line utilities
+
 %prep
 %setup -q -n %{name}-%{version}
 
 %build
 make -C %{src} KEEP_SYMBOLS=1 release
+make -C mms-dump KEEP_SYMBOLS=1 release
+make -C mms-send KEEP_SYMBOLS=1 release
 
 %install
 rm -rf %{buildroot}
@@ -45,10 +54,13 @@ mkdir -p %{buildroot}%{_sbindir}
 mkdir -p %{buildroot}%{dbusconfig}
 mkdir -p %{buildroot}%{dbuspolicy}
 mkdir -p %{buildroot}%{pushconfig}
+mkdir -p %{buildroot}%{_prefix}/local/bin/
 cp %{src}/build/release/%{exe} %{buildroot}%{_sbindir}/
 cp %{src}/%{dbusname}.service %{buildroot}%{dbusconfig}/
 cp %{src}/%{dbusname}.dbus.conf %{buildroot}%{dbuspolicy}/%{dbusname}.conf
 cp %{src}/%{dbusname}.push.conf %{buildroot}%{pushconfig}/%{dbusname}.conf
+cp mms-dump/build/release/mms-dump %{buildroot}%{_prefix}/local/bin/
+cp mms-send/build/release/mms-send %{buildroot}%{_prefix}/local/bin/
 
 %files
 %defattr(-,root,root,-)
@@ -56,3 +68,8 @@ cp %{src}/%{dbusname}.push.conf %{buildroot}%{pushconfig}/%{dbusname}.conf
 %config %{pushconfig}/%{dbusname}.conf
 %{dbusconfig}/%{dbusname}.service
 %{_sbindir}/%{exe}
+
+%files tools
+%defattr(-,root,root,-)
+%{_prefix}/local/bin/mms-dump
+%{_prefix}/local/bin/mms-send
