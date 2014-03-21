@@ -144,6 +144,11 @@ mms_task_queue_and_unref(
     MMSTaskDelegate* delegate,
     MMSTask* task);
 
+gboolean
+mms_task_match_id(
+    MMSTask* task,
+    const char* id);
+
 const char*
 mms_task_make_id(
     MMSTask* task);

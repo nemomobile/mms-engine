@@ -298,6 +298,25 @@ mms_task_queue_and_unref(
     return ok;
 }
 
+gboolean
+mms_task_match_id(
+    MMSTask* task,
+    const char* id)
+{
+    if (!task) {
+        /* No task - no match */
+        return FALSE;
+    } else if (!id || !id[0]) {
+        /* A wildcard matching any task */
+        return TRUE;
+    } else if (!task->id || !task->id[0]) {
+        /* Only wildcard will match that */
+        return FALSE;
+    } else {
+        return !strcmp(task->id, id);
+    }
+}
+
 /**
  * Generates dummy task id if necessary.
  */
