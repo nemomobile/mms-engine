@@ -532,11 +532,11 @@ mms_dispatcher_cancel(
     GList* entry;
     for (entry = disp->tasks->head; entry; entry = entry->next) {
         MMSTask* task = entry->data;
-        if (!id || !strcmp(task->id, id)) {
+        if (mms_task_match_id(task, id)) {
             mms_task_cancel(task);
         }
     }
-    if (disp->active_task && (!id || !strcmp(disp->active_task->id, id))) {
+    if (mms_task_match_id(disp->active_task, id)) {
         mms_task_cancel(disp->active_task);
     }
 }
