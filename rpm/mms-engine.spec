@@ -54,13 +54,13 @@ mkdir -p %{buildroot}%{_sbindir}
 mkdir -p %{buildroot}%{dbusconfig}
 mkdir -p %{buildroot}%{dbuspolicy}
 mkdir -p %{buildroot}%{pushconfig}
-mkdir -p %{buildroot}%{_prefix}/local/bin/
+mkdir -p %{buildroot}%{_prefix}/bin/
 cp %{src}/build/release/%{exe} %{buildroot}%{_sbindir}/
 cp %{src}/%{dbusname}.service %{buildroot}%{dbusconfig}/
 cp %{src}/%{dbusname}.dbus.conf %{buildroot}%{dbuspolicy}/%{dbusname}.conf
 cp %{src}/%{dbusname}.push.conf %{buildroot}%{pushconfig}/%{dbusname}.conf
-cp mms-dump/build/release/mms-dump %{buildroot}%{_prefix}/local/bin/
-cp mms-send/build/release/mms-send %{buildroot}%{_prefix}/local/bin/
+cp mms-dump/build/release/mms-dump %{buildroot}%{_prefix}/bin/
+cp mms-send/build/release/mms-send %{buildroot}%{_prefix}/bin/
 
 %files
 %defattr(-,root,root,-)
@@ -71,5 +71,5 @@ cp mms-send/build/release/mms-send %{buildroot}%{_prefix}/local/bin/
 
 %files tools
 %defattr(-,root,root,-)
-%{_prefix}/local/bin/mms-dump
-%{_prefix}/local/bin/mms-send
+%{_prefix}/bin/mms-dump
+%{_prefix}/bin/mms-send
