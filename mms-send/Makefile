@@ -54,14 +54,10 @@ endif
 
 DEBUG_CFLAGS = $(DEBUG_FLAGS) $(DEBUG_DEFS) $(CFLAGS)
 RELEASE_CFLAGS = $(RELEASE_FLAGS) $(RELEASE_DEFS) $(CFLAGS)
-DEBUG_LIBS = $(LIBS)
-RELEASE_LIBS = $(LIBS)
 
 #
 # Files
 #
-
-.PRECIOUS: $(GEN_SRC:%=$(GEN_DIR)/%)
 
 DEBUG_OBJS = \
   $(GEN_SRC:%.c=$(DEBUG_BUILD_DIR)/%.o) \
@@ -69,19 +65,23 @@ DEBUG_OBJS = \
 RELEASE_OBJS = \
   $(GEN_SRC:%.c=$(RELEASE_BUILD_DIR)/%.o) \
   $(SRC:%.c=$(RELEASE_BUILD_DIR)/%.o)
+GEN_FILES = $(GEN_SRC:%=$(GEN_DIR)/%)
+.PRECIOUS: $(GEN_FILES)
 
 #
 # Dependencies
 #
 
-DEBUG_EXE_DEPS = $(DEBUG_BUILD_DIR)
-RELEASE_EXE_DEPS = $(RELEASE_BUILD_DIR)
 DEPS = $(DEBUG_OBJS:%.o=%.d) $(RELEASE_OBJS:%.o=%.d)
 ifneq ($(MAKECMDGOALS),clean)
 ifneq ($(strip $(DEPS)),)
 -include $(DEPS)
 endif
 endif
+
+$(GEN_FILES): | $(GEN_DIR)
+$(DEBUG_OBJS): | $(DEBUG_BUILD_DIR)
+$(RELEASE_OBJS): | $(RELEASE_BUILD_DIR)
 
 #
 # Rules
@@ -97,6 +97,9 @@ release: $(RELEASE_EXE)
 
 clean:
 	rm -fr $(BUILD_DIR) $(SRC_DIR)/*~
+
+$(GEN_DIR):
+	mkdir -p $@
 
 $(DEBUG_BUILD_DIR):
 	mkdir -p $@
@@ -119,11 +122,11 @@ $(DEBUG_BUILD_DIR)/%.o : $(GEN_DIR)/%.c
 $(RELEASE_BUILD_DIR)/%.o : $(GEN_DIR)/%.c
 	$(CC) -c $(RELEASE_CFLAGS) -MT"$@" -MF"$(@:%.o=%.d)" $< -o $@
 
-$(DEBUG_EXE): $(DEBUG_EXE_DEPS) $(DEBUG_OBJS)
-	$(LD) $(DEBUG_FLAGS) $(DEBUG_OBJS) $(DEBUG_LIBS) -o $@
+$(DEBUG_EXE): $(DEBUG_OBJS)
+	$(LD) $(DEBUG_FLAGS) $^ $(LIBS) -o $@
 
-$(RELEASE_EXE): $(RELEASE_EXE_DEPS) $(RELEASE_OBJS)
-	$(LD) $(RELEASE_FLAGS) $(RELEASE_OBJS) $(RELEASE_LIBS) -o $@
+$(RELEASE_EXE): $(RELEASE_OBJS)
+	$(LD) $(RELEASE_FLAGS) $^ $(LIBS) -o $@
 ifeq ($(KEEP_SYMBOLS),0)
 	strip $@
 endif

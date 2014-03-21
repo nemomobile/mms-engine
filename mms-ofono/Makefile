@@ -72,14 +72,14 @@ RELEASE_CFLAGS = $(RELEASE_FLAGS) $(RELEASE_DEFS) $(CFLAGS)
 # Files
 #
 
-.PRECIOUS: $(GEN_SRC:%=$(GEN_DIR)/%)
-
 DEBUG_OBJS = \
   $(GEN_SRC:%.c=$(DEBUG_BUILD_DIR)/%.o) \
   $(SRC:%.c=$(DEBUG_BUILD_DIR)/%.o)
 RELEASE_OBJS = \
   $(GEN_SRC:%.c=$(RELEASE_BUILD_DIR)/%.o) \
   $(SRC:%.c=$(RELEASE_BUILD_DIR)/%.o)
+GEN_FILES = $(GEN_SRC:%=$(GEN_DIR)/%)
+.PRECIOUS: $(GEN_FILES)
 
 #
 # Dependencies
@@ -91,6 +91,10 @@ ifneq ($(strip $(DEPS)),)
 -include $(DEPS)
 endif
 endif
+
+$(GEN_FILES): | $(GEN_DIR)
+$(DEBUG_OBJS): | $(DEBUG_BUILD_DIR)
+$(RELEASE_OBJS): | $(RELEASE_BUILD_DIR)
 
 #
 # Rules
@@ -130,8 +134,8 @@ $(DEBUG_BUILD_DIR)/%.o : $(GEN_DIR)/%.c
 $(RELEASE_BUILD_DIR)/%.o : $(GEN_DIR)/%.c
 	$(CC) -c $(RELEASE_CFLAGS) -MT"$@" -MF"$(@:%.o=%.d)" $< -o $@
 
-$(DEBUG_LIB): $(DEBUG_BUILD_DIR) $(DEBUG_OBJS)
-	$(AR) $(ARFLAGS) $@ $(DEBUG_OBJS)
+$(DEBUG_LIB): $(DEBUG_OBJS)
+	$(AR) $(ARFLAGS) $@ $^
 
-$(RELEASE_LIB): $(RELEASE_BUILD_DIR) $(RELEASE_OBJS)
-	$(AR) $(ARFLAGS) $@ $(RELEASE_OBJS)
+$(RELEASE_LIB): $(RELEASE_OBJS)
+	$(AR) $(ARFLAGS) $@ $^

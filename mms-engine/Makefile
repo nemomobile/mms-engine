@@ -115,14 +115,14 @@ RELEASE_LIBS = \
 # Files
 #
 
-.PRECIOUS: $(GEN_SRC:%=$(GEN_DIR)/%)
-
 DEBUG_OBJS = \
   $(GEN_SRC:%.c=$(DEBUG_BUILD_DIR)/%.o) \
   $(SRC:%.c=$(DEBUG_BUILD_DIR)/%.o)
 RELEASE_OBJS = \
   $(GEN_SRC:%.c=$(RELEASE_BUILD_DIR)/%.o) \
   $(SRC:%.c=$(RELEASE_BUILD_DIR)/%.o)
+GEN_FILES = $(GEN_SRC:%=$(GEN_DIR)/%)
+.PRECIOUS: $(GEN_FILES)
 
 #
 # Dependencies
@@ -139,19 +139,21 @@ RELEASE_DEPS = \
 DEBUG_EXE_DEPS = \
   $(MMS_LIB_DEBUG_LIB) \
   $(MMS_OFONO_DEBUG_LIB) \
-  $(MMS_HANDLER_DEBUG_LIB) \
-  $(DEBUG_BUILD_DIR)
+  $(MMS_HANDLER_DEBUG_LIB)
 RELEASE_EXE_DEPS = \
   $(MMS_LIB_RELEASE_LIB) \
   $(MMS_OFONO_RELEASE_LIB) \
-  $(MMS_HANDLER_RELEASE_LIB) \
-  $(RELEASE_BUILD_DIR)
+  $(MMS_HANDLER_RELEASE_LIB)
 DEPS = $(DEBUG_OBJS:%.o=%.d) $(RELEASE_OBJS:%.o=%.d)
 ifneq ($(MAKECMDGOALS),clean)
 ifneq ($(strip $(DEPS)),)
 -include $(DEPS)
 endif
 endif
+
+$(GEN_FILES): | $(GEN_DIR)
+$(DEBUG_OBJS): | $(DEBUG_BUILD_DIR)
+$(RELEASE_OBJS): | $(RELEASE_BUILD_DIR)
 
 #
 # Rules
