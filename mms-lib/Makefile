@@ -110,6 +110,9 @@ ifneq ($(strip $(DEPS)),)
 endif
 endif
 
+$(DEBUG_OBJS): | $(DEBUG_BUILD_DIR)
+$(RELEASE_OBJS): | $(RELEASE_BUILD_DIR)
+
 #
 # Rules
 #
@@ -130,11 +133,11 @@ $(DEBUG_BUILD_DIR):
 $(RELEASE_BUILD_DIR):
 	mkdir -p $@
 
-$(DEBUG_LIB): $(DEBUG_BUILD_DIR) $(DEBUG_OBJS)
-	$(AR) $(ARFLAGS) $@ $(DEBUG_OBJS)
+$(DEBUG_LIB): $(DEBUG_OBJS)
+	$(AR) $(ARFLAGS) $@ $^
 
-$(RELEASE_LIB): $(RELEASE_BUILD_DIR) $(RELEASE_OBJS)
-	$(AR) $(ARFLAGS) $@ $(RELEASE_OBJS)
+$(RELEASE_LIB): $(RELEASE_OBJS)
+	$(AR) $(ARFLAGS) $@ $^
 
 $(DEBUG_BUILD_DIR)/%.o : $(SRC_DIR)/%.c
 	$(CC) -c $(DEBUG_CFLAGS) -MT"$@" -MF"$(@:%.o=%.d)" $< -o $@
