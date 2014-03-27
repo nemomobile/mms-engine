@@ -234,6 +234,7 @@ mms_ofono_connection_dispose(
     GObject* object)
 {
     MMSOfonoConnection* ofono = MMS_OFONO_CONNECTION(object);
+    MMS_VERBOSE_("%p", ofono);
     if (ofono->property_change_signal_id) {
         g_signal_handler_disconnect(ofono->proxy,
             ofono->property_change_signal_id);
@@ -265,9 +266,9 @@ mms_ofono_connection_class_init(
 static
 void
 mms_ofono_connection_init(
-    MMSOfonoConnection* conn)
+    MMSOfonoConnection* ofono)
 {
-    MMS_VERBOSE_("%p", conn);
+    MMS_VERBOSE_("%p", ofono);
 }
 
 /*

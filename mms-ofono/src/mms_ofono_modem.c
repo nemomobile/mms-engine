@@ -150,8 +150,10 @@ mms_ofono_modem_gprs_context_removed(
 {
     MMS_VERBOSE_("%p %s", modem, path);
     MMS_ASSERT(proxy == modem->gprs_proxy);
-    if (modem->mms_context && g_strcmp0(modem->mms_context->path, path)) {
+    if (modem->mms_context && !g_strcmp0(modem->mms_context->path, path)) {
         MMS_DEBUG("MMS context %s removed", path);
+        mms_ofono_context_free(modem->mms_context);
+        modem->mms_context = NULL;
     }
 }
 
@@ -282,7 +284,6 @@ mms_ofono_modem_scan_interfaces(
             context_info = mms_ofono_modem_find_mms_context(m->gprs_proxy);
         }
         if (context_info) {
-            MMS_VERBOSE("MMS context: %s", context_info->path);
             if (m->mms_context &&
                 !g_strcmp0(context_info->path, m->mms_context->path)) {
                 mms_ofono_context_free(m->mms_context);
@@ -292,9 +293,13 @@ mms_ofono_modem_scan_interfaces(
                 m->mms_context = mms_ofono_context_new(m, context_info->path,
                     context_info->properties);
             }
+            if (m->mms_context) {
+                MMS_DEBUG("MMS context: %s (%sactive)", m->mms_context->path,
+                    m->mms_context->active ? "" : "not ");
+            }
             mms_context_info_free(context_info);
         } else {
-            MMS_VERBOSE("No MMS context");
+            MMS_DEBUG("No MMS context");
             if (m->mms_context) {
                 mms_ofono_context_free(m->mms_context);
                 m->mms_context = NULL;
@@ -303,6 +308,7 @@ mms_ofono_modem_scan_interfaces(
     } else if (m->gprs_proxy) {
         mms_ofono_modem_disconnect_gprs_proxy(m);
         if (m->mms_context) {
+            MMS_DEBUG("No MMS context");
             mms_ofono_context_free(m->mms_context);
             m->mms_context = NULL;
         }
