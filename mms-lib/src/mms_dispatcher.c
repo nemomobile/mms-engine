@@ -552,7 +552,7 @@ mms_dispatcher_delegate_connection_state_changed(
 {
     MMSDispatcher* disp = mms_dispatcher_from_connection_delegate(delegate);
     MMS_CONNECTION_STATE state = mms_connection_state(conn);
-    MMS_VERBOSE_("%s %s", conn->imsi, mms_connection_state_name(conn));
+    MMS_DEBUG("%s %s", conn->imsi, mms_connection_state_name(conn));
     MMS_ASSERT(conn == disp->connection);
     if (state == MMS_CONNECTION_STATE_FAILED ||
         state == MMS_CONNECTION_STATE_CLOSED) {

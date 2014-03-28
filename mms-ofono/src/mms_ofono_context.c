@@ -37,7 +37,7 @@ mms_ofono_context_property_changed(
     if (!strcmp(key, OFONO_CONTEXT_PROPERTY_ACTIVE)) {
         GVariant* value = g_variant_get_variant(variant);
         context->active = g_variant_get_boolean(value);
-        MMS_VERBOSE_("%p %s = %d", context, key, context->active);
+        MMS_DEBUG("%s %sactive", context->path, context->active ? "" : "not ");
         g_variant_unref(value);
         if (context->active) {
             if (context->connection && !mms_ofono_connection_set_state(
@@ -56,7 +56,7 @@ mms_ofono_context_property_changed(
             context->connection = NULL;
         }
     } else {
-        MMS_VERBOSE_("%p %s", context, key);
+        MMS_VERBOSE_("%s %s", context->path, key);
         MMS_ASSERT(strcmp(key, OFONO_CONTEXT_PROPERTY_TYPE));
     }
 }
