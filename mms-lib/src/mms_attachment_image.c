@@ -317,7 +317,7 @@ void
 mms_attachment_image_init(
     MMSAttachmentImage* image)
 {
-#ifdef MMS_RESIZE_IMAGEMAGICK
+#if defined(MMS_RESIZE_IMAGEMAGICK) || defined(MMS_RESIZE_QT)
     image->attachment.flags |= MMS_ATTACHMENT_RESIZABLE;
 #endif
 }
