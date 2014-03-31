@@ -422,7 +422,7 @@ mms_task_encode_generate_path(
             }
             if (known_ext) {
                 const char* ext = strrchr(file, '.');
-                if (!ext || strcasecmp(ext, known_ext)) {
+                if (!ext || g_ascii_strcasecmp(ext, known_ext)) {
                     file = tmpfile = g_strconcat(file, known_ext, NULL);
                 }
             }
