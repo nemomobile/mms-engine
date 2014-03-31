@@ -387,15 +387,52 @@ mms_task_encode_finalize(
 
 static
 char*
-mms_task_encode_generate_unique_path(
+mms_task_encode_generate_path(
     const char* dir,
-    const char* file)
+    const char* file,
+    const char* content_type)
 {
+    int i;
+    char* path;
+    char* tmpfile = NULL;
+
+    /* For interoperability reasons, it's better if the file extension
+     * matches the content type. */
+    if (content_type) {
+        char** parsed = mms_parse_http_content_type(content_type);
+        if (parsed) {
+            static const struct extension_map {
+                const char* type;
+                const char* ext;
+            } known_extensions [] = {
+                { "image/jpeg", ".jpg"  },
+                { "image/png",  ".png"  },
+                { "image/bmp",  ".bmp"  },
+                { "image/gif",  ".gif"  },
+                { "text/plain", ".txt"  },
+                { "text/html",  ".html" },
+            };
+            const char* type = parsed[0];
+            const char* known_ext = NULL;
+            for (i=0; i<(int)G_N_ELEMENTS(known_extensions); i++) {
+                if (!strcmp(type, known_extensions[i].type)) {
+                    known_ext = known_extensions[i].ext;
+                    break;
+                }
+            }
+            if (known_ext) {
+                const char* ext = strrchr(file, '.');
+                if (!ext || strcasecmp(ext, known_ext)) {
+                    file = tmpfile = g_strconcat(file, known_ext, NULL);
+                }
+            }
+            g_strfreev(parsed);
+        }
+    }
+
     /* Most likely the very first check would succeed */
-    char* path = g_strconcat(dir, "/", file, NULL);
+    path = g_strconcat(dir, "/", file, NULL);
     if (g_file_test(path, G_FILE_TEST_IS_REGULAR)) {
-        int i;
-        char* tmpfile = NULL;
         for (i=0; i<100; i++) {
             char* newfile = g_strconcat("_", file, NULL);
             g_free(tmpfile);
@@ -404,8 +441,8 @@ mms_task_encode_generate_unique_path(
             file = tmpfile = newfile;
             if (!g_file_test(path, G_FILE_TEST_IS_REGULAR)) break;
         }
-        g_free(tmpfile);
     }
+    g_free(tmpfile);
     return path;
 }
 
@@ -425,8 +462,8 @@ mms_task_encode_prepare_attachments(
         MMSAttachment* attachment = NULL;
         MMSAttachmentInfo info = parts[i];
         G_GNUC_BEGIN_IGNORE_DEPRECATIONS
-        char* path = mms_task_encode_generate_unique_path(dir,
-            g_basename(info.file_name));
+        char* path = mms_task_encode_generate_path(dir,
+            g_basename(info.file_name), info.content_type);
         G_GNUC_END_IGNORE_DEPRECATIONS
         GFile* src = g_file_new_for_path(info.file_name);
         GFile* dest = g_file_new_for_path(path);
@@ -452,7 +489,7 @@ mms_task_encode_prepare_attachments(
     if (i == nparts) {
         /* Generate SMIL if necessary */
         if (smil_index < 0) {
-            char* path = mms_task_encode_generate_unique_path(dir, "smil");
+            char* path = mms_task_encode_generate_path(dir, "smil", NULL);
             MMSAttachment* smil = mms_attachment_new_smil(config, path,
                 (MMSAttachment**)array->pdata, array->len, error);
             g_free(path);
