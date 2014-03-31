@@ -74,6 +74,10 @@ void
 mms_attachment_reset(
     MMSAttachment* attachment);
 
+char*
+mms_attachment_guess_content_type(
+    const char* path);
+
 gboolean
 mms_attachment_resize(
     MMSAttachment* attachment);
