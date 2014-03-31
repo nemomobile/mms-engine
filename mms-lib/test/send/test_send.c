@@ -78,16 +78,24 @@ static const MMSAttachmentInfo test_files_accept [] = {
     { "test.txt", "text/plain;charset=utf-8", "text" }
 };
 
+static const MMSAttachmentInfo test_files_accept_no_ext [] = {
+    { "smil", NULL, NULL },
+    { "0001", "image/jpeg", "image1" },
+    { "0001", "image/jpeg", "image2" },
+    { "test.text", "text/plain;charset=utf-8", "text" }
+};
+
 static const MMSAttachmentInfo test_files_reject [] = {
     { "0001.png", "image/png", "image" },
     { "test.txt", "text/plain", "text" }
 };
 
+#define ATTACHMENTS(a) a, G_N_ELEMENTS(a)
+
 static const TestDesc send_tests[] = {
     {
         "Accept",
-        test_files_accept,
-        G_N_ELEMENTS(test_files_accept),
+        ATTACHMENTS(test_files_accept),
         "Test of successful delivery",
         "+1234567890",
         "+2345678901,+3456789012",
@@ -100,9 +108,22 @@ static const TestDesc send_tests[] = {
         MMS_SEND_STATE_SENDING,
         "TestMessageId"
     },{
+        "AcceptNoExt",
+        ATTACHMENTS(test_files_accept_no_ext),
+        "Test of successful delivery (no extensions)",
+        "+1234567890",
+        "+2345678901,+3456789012",
+        "+4567890123",
+        "IMSI",
+        0,
+        "m-send.conf",
+        MMS_CONTENT_TYPE,
+        SOUP_STATUS_OK,
+        MMS_SEND_STATE_SENDING,
+        "TestMessageId"
+    },{
         "Reject",
-        test_files_reject,
-        G_N_ELEMENTS(test_files_reject),
+        ATTACHMENTS(test_files_reject),
         "Rejection test",
         "+1234567890",
         NULL,
