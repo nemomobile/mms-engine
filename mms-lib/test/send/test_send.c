@@ -80,8 +80,8 @@ static const MMSAttachmentInfo test_files_accept [] = {
 
 static const MMSAttachmentInfo test_files_accept_no_ext [] = {
     { "smil", NULL, NULL },
-    { "0001", "image/jpeg", "image1" },
-    { "0001", "image/jpeg", "image2" },
+    { "0001", NULL, "image1" },
+    { "0001", "", "image2" },
     { "test.text", "text/plain;charset=utf-8", "text" }
 };
 

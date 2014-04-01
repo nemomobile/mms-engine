@@ -107,6 +107,7 @@ mms_attachment_get_path(
 #endif
 }
 
+static
 gboolean
 mms_attachment_write_smil(
     FILE* f,
@@ -164,6 +165,44 @@ mms_attachment_write_smil(
     return FALSE;
 }
 
+char*
+mms_attachment_guess_content_type(
+    const char* path)
+{
+    char* content_type = NULL;
+    const char* detected_type = NULL;
+
+#ifdef HAVE_MAGIC
+    /* Use magic to determine mime type */
+    magic_t magic = magic_open(MAGIC_MIME_TYPE);
+    if (magic) {
+        if (magic_load(magic, NULL) == 0) {
+            detected_type = magic_file(magic, path);
+        }
+    }
+#endif
+
+    /* Magic detects SMIL as text/html */
+    if ((!detected_type ||
+         g_str_has_prefix(detected_type, "text/")) &&
+         mms_file_is_smil(path)) {
+        detected_type = SMIL_CONTENT_TYPE;
+    }
+
+    if (!detected_type) {
+        MMS_WARN("No mime type for %s", path);
+        detected_type = MMS_ATTACHMENT_DEFAULT_TYPE;
+    }
+
+    content_type = g_strdup(detected_type);
+
+#ifdef HAVE_MAGIC
+    if (magic) magic_close(magic);
+#endif
+
+    return content_type;
+}
+
 MMSAttachment*
 mms_attachment_new_smil(
     const MMSConfig* config,
@@ -214,7 +253,7 @@ mms_attachment_new(
             GType type;
             MMSAttachment* at;
 
-            if (info->content_type) {
+            if (info->content_type && info->content_type[0]) {
                 char** ct = mms_parse_http_content_type(info->content_type);
                 if (ct) {
                     content_type = mms_unparse_http_content_type(ct);
@@ -226,33 +265,11 @@ mms_attachment_new(
             }
 
             if (!content_type) {
-                /* Use magic to determine mime type */
+                char* detected_type = mms_attachment_guess_content_type(path);
                 const char* default_charset = "utf-8";
-                const char* detected_type = NULL;
                 const char* charset = NULL;
                 const char* ct[4];
-                int n;
-
-#ifdef HAVE_MAGIC
-                magic_t magic = magic_open(MAGIC_MIME_TYPE);
-                if (magic) {
-                    if (magic_load(magic, NULL) == 0) {
-                        detected_type = magic_file(magic, path);
-                    }
-                }
-#endif
-
-                /* Magic detects SMIL as text/html */
-                if ((!detected_type ||
-                     g_str_has_prefix(detected_type, "text/")) &&
-                     mms_file_is_smil(path)) {
-                    detected_type = SMIL_CONTENT_TYPE;
-                }
-
-                if (!detected_type) {
-                    MMS_WARN("No mime type for %s", path);
-                    detected_type = MMS_ATTACHMENT_DEFAULT_TYPE;
-                }
+                int n = 0;
 
                 if (!strcmp(detected_type, SMIL_CONTENT_TYPE)) {
                     flags |= MMS_ATTACHMENT_SMIL;
@@ -261,7 +278,6 @@ mms_attachment_new(
                     charset = default_charset;
                 }
 
-                n = 0;
                 ct[n++] = detected_type;
                 if (charset) {
                     ct[n++] = "charset";
@@ -269,10 +285,7 @@ mms_attachment_new(
                 }
                 ct[n++] = NULL;
                 content_type = mms_unparse_http_content_type((char**)ct);
-
-#ifdef HAVE_MAGIC
-                if (magic) magic_close(magic);
-#endif
+                g_free(detected_type);
             }
 
             MMS_DEBUG("%s: %s", path, content_type);
