@@ -105,7 +105,7 @@ int main(int argc, char* argv[])
     int ret = RET_ERR_CMDLINE;
     gboolean ok, verbose = FALSE, dr = FALSE, rr = FALSE;
     GError* error = NULL;
-    char* subject = NULL;
+    char* subject = "";
     GOptionEntry entries[] = {
         { "verbose", 'v', 0, G_OPTION_ARG_NONE, &verbose,
           "Enable verbose output", NULL },
