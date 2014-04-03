@@ -152,7 +152,9 @@ mms_encode_job_encode(
         mms->sr.to = g_strdup(enc->to);
         mms->sr.cc = g_strdup(enc->cc);
         mms->sr.bcc = g_strdup(enc->bcc);
-        mms->sr.subject = g_strdup(enc->subject);
+        if (enc->subject && enc->subject[0]) {
+            mms->sr.subject = g_strdup(enc->subject);
+        }
         mms->sr.dr = ((flags & MMS_SEND_FLAG_REQUEST_DELIVERY_REPORT) != 0);
         mms->sr.rr = ((flags & MMS_SEND_FLAG_REQUEST_READ_REPORT) != 0);
         mms->sr.content_type = mms_unparse_http_content_type((char**)ct);
