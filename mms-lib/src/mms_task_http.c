@@ -281,7 +281,17 @@ mms_task_http_finished(
         MMS_HTTP_STATE next_http_state;
         MMSTask* task = &http->task;
         SoupStatus http_status = msg->status_code;
-        MMS_DEBUG("HTTP status %u", msg->status_code);
+
+#if MMS_LOG_DEBUG
+        if (priv->bytes_received) {
+            MMS_DEBUG("HTTP status %u [%s] %u byte(s)", msg->status_code,
+                soup_message_headers_get_content_type(msg->response_headers,
+                NULL), priv->bytes_received);
+        } else {
+            MMS_DEBUG("HTTP status %u", msg->status_code);
+        }
+#endif /* MMS_LOG_DEBUG */
+
         if (SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
             next_http_state = MMS_HTTP_DONE;
             mms_task_set_state(task, MMS_TASK_STATE_DONE);
@@ -297,7 +307,7 @@ mms_task_http_finished(
                 }
             } else {
                 next_http_state = MMS_HTTP_DONE;
-                MMS_WARN("HTTP failure %u", msg->status_code);
+                MMS_WARN("HTTP error %u", msg->status_code);
                 mms_task_set_state(task, MMS_TASK_STATE_DONE);
             }
         }
