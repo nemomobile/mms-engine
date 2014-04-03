@@ -407,12 +407,14 @@ mms_task_encode_generate_path(
                 const char* type;
                 const char* ext;
             } known_extensions [] = {
-                { "image/jpeg", ".jpg"  },
-                { "image/png",  ".png"  },
-                { "image/bmp",  ".bmp"  },
-                { "image/gif",  ".gif"  },
-                { "text/plain", ".txt"  },
-                { "text/html",  ".html" },
+                { "image/jpeg",   ".jpg"  },
+                { "image/png",    ".png"  },
+                { "image/bmp",    ".bmp"  },
+                { "image/gif",    ".gif"  },
+                { "text/x-vcard", ".vcf"  },
+                { "text/vcard",   ".vcf"  },
+                { "text/plain",   ".txt"  },
+                { "text/html",    ".html" }
             };
             const char* type = parsed[0];
             const char* known_ext = NULL;
