@@ -559,7 +559,7 @@ static gboolean extract_encoded_text(struct wsp_header_iter *iter, void *user)
 	const unsigned char *p;
 	unsigned int l;
 	const char *text;
-	char *uninitialized_var(dec_text);
+	char *dec_text;
 
 	p = wsp_header_iter_get_val(iter);
 	l = wsp_header_iter_get_val_len(iter);
@@ -574,6 +574,7 @@ static gboolean extract_encoded_text(struct wsp_header_iter *iter, void *user)
 		/* (Value-len) Char-set Text-string */
 		dec_text = decode_encoded_string_with_mib_enum(p, l);
 		break;
+	default:
 	case WSP_VALUE_TYPE_SHORT:
 		dec_text = NULL;
 		break;
@@ -584,6 +585,13 @@ static gboolean extract_encoded_text(struct wsp_header_iter *iter, void *user)
 
 	*out = dec_text;
 
+	return TRUE;
+}
+
+static gboolean extract_subject(struct wsp_header_iter *iter, void *user)
+{
+	/* Ignore incorrectly encoded subjects */
+	extract_encoded_text(iter, user);
 	return TRUE;
 }
 
@@ -949,7 +957,7 @@ static header_handler handler_for_type(enum mms_header header)
 	case MMS_HEADER_STATUS:
 		return &extract_status;
 	case MMS_HEADER_SUBJECT:
-		return &extract_encoded_text;
+		return &extract_subject;
 	case MMS_HEADER_TO:
 		return &extract_text_array_element;
 	case MMS_HEADER_TRANSACTION_ID:

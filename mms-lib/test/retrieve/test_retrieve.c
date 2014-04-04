@@ -92,6 +92,11 @@ static const TestPartDesc retrieve_success3_parts [] = {
     { "text/plain;charset=utf-8", "<2>", "text_001.txt" }
 };
 
+static const TestPartDesc retrieve_invalid_subject [] = {
+    { "application/smil;charset=us-ascii", "<start>", "smil.smi" },
+    { "image/jpeg", "<1>", "1" }
+};
+
 #define TEST_PARTS(parts) parts, G_N_ELEMENTS(parts)
 #define TEST_PARTS_NONE NULL, 0
 
@@ -131,6 +136,18 @@ static const TestDesc retrieve_tests[] = {
         MMS_RECEIVE_STATE_DECODING,
         MMS_MESSAGE_TYPE_ACKNOWLEDGE_IND,
         TEST_PARTS(retrieve_success3_parts),
+        0
+    },{
+        "InvalidSubject",
+        NULL,
+        "m-notification.ind",
+        "m-retrieve.conf",
+        SOUP_STATUS_OK,
+        MMS_CONTENT_TYPE,
+        NULL,
+        MMS_RECEIVE_STATE_DECODING,
+        MMS_MESSAGE_TYPE_ACKNOWLEDGE_IND,
+        TEST_PARTS(retrieve_invalid_subject),
         0
    },{
         "DeferSuccess",
