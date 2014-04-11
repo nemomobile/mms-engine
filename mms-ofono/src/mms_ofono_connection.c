@@ -161,14 +161,16 @@ mms_ofono_connection_new(
         value = g_variant_lookup_value(properties,
             OFONO_CONTEXT_PROPERTY_MMS_PROXY, G_VARIANT_TYPE_STRING);
         if (value) {
-            conn->mmsproxy = g_strdup(g_variant_get_string(value, NULL));
+            conn->mmsproxy = g_strstrip(g_strdup(g_variant_get_string(
+                value, NULL)));
             MMS_DEBUG("MessageProxy: %s", conn->mmsproxy);
             g_variant_unref(value);
         }
         value = g_variant_lookup_value(properties,
             OFONO_CONTEXT_PROPERTY_MMS_CENTER, G_VARIANT_TYPE_STRING);
         if (value) {
-            conn->mmsc = g_strdup(g_variant_get_string(value, NULL));
+            conn->mmsc = g_strstrip(g_strdup(g_variant_get_string(
+                value, NULL)));
             MMS_DEBUG("MessageCenter: %s", conn->mmsc);
             g_variant_unref(value);
         }
