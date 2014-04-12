@@ -874,6 +874,7 @@ mms_decode_attachments(
                 }
                 printf("  Content-Type: %s", (char*)type);
                 mms_value_decode_wsp_params(ct + n, ct_len - n);
+                mms_value_verbose_dump(ct, ct_len, flags);
                 printf("\n");
                 wsp_header_iter_init(&hi, wsp_multipart_iter_get_hdr(&mi),
                     wsp_multipart_iter_get_hdr_len(&mi), 0);
