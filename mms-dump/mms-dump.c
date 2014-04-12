@@ -651,6 +651,73 @@ mms_value_decode_expiry(
 }
 
 static
+void
+mms_value_decode_wsp_params(
+    const unsigned char* pdu,
+    unsigned int len)
+{
+    static const struct mms_named_value nv_p [] = {
+        { "Q",                 WSP_PARAMETER_TYPE_Q                  },
+        { "Charset",           WSP_PARAMETER_TYPE_CHARSET            },
+        { "Level",             WSP_PARAMETER_TYPE_LEVEL              },
+        { "Type",              WSP_PARAMETER_TYPE_TYPE               },
+        { "Name",              WSP_PARAMETER_TYPE_NAME_DEFUNCT       },
+        { "Filename",          WSP_PARAMETER_TYPE_FILENAME_DEFUNCT   },
+        { "Differences",       WSP_PARAMETER_TYPE_DIFFERENCES        },
+        { "Padding",           WSP_PARAMETER_TYPE_PADDING            },
+        { "Type",              WSP_PARAMETER_TYPE_CONTENT_TYPE       },
+        { "Start",             WSP_PARAMETER_TYPE_START_DEFUNCT      },
+        { "Start-info",        WSP_PARAMETER_TYPE_START_INFO_DEFUNCT },
+        { "Comment",           WSP_PARAMETER_TYPE_COMMENT_DEFUNCT    },
+        { "Domain",            WSP_PARAMETER_TYPE_DOMAIN_DEFUNCT     },
+        { "Max-Age",           WSP_PARAMETER_TYPE_MAX_AGE            },
+        { "Path",              WSP_PARAMETER_TYPE_PATH_DEFUNCT       },
+        { "Secure",            WSP_PARAMETER_TYPE_SECURE             },
+        { "SEC",               WSP_PARAMETER_TYPE_SEC                },
+        { "MAC",               WSP_PARAMETER_TYPE_MAC                },
+        { "Creation-date",     WSP_PARAMETER_TYPE_CREATION_DATE      },
+        { "Modification-date", WSP_PARAMETER_TYPE_MODIFICATION_DATE  },
+        { "Read-date",         WSP_PARAMETER_TYPE_READ_DATE          },
+        { "Size",              WSP_PARAMETER_TYPE_SIZE               },
+        { "Name",              WSP_PARAMETER_TYPE_NAME               },
+        { "Filename",          WSP_PARAMETER_TYPE_FILENAME           },
+        { "Start",             WSP_PARAMETER_TYPE_START              },
+        { "Start-info",        WSP_PARAMETER_TYPE_START_INFO         },
+        { "Comment",           WSP_PARAMETER_TYPE_COMMENT            },
+        { "Domain",            WSP_PARAMETER_TYPE_DOMAIN             },
+        { "Path",              WSP_PARAMETER_TYPE_PATH               }
+    };
+
+    struct wsp_parameter_iter pi;
+    struct wsp_parameter p;
+
+    wsp_parameter_iter_init(&pi, pdu, len);
+    while (wsp_parameter_iter_next(&pi, &p)) {
+        const struct mms_named_value* nv;
+        nv = mms_find_named_value(nv_p, G_N_ELEMENTS(nv_p), p.type);
+        if (nv) {
+            printf("; %s=", nv->name);
+        } else {
+            printf(";0x%02x=", p.type);
+        }
+        switch (p.value) {
+        case WSP_PARAMETER_VALUE_TEXT:
+            printf("%s", p.text);
+            break;
+        case WSP_PARAMETER_VALUE_INT:
+            printf("%u", p.integer);
+            break;
+        case WSP_PARAMETER_VALUE_DATE:
+            mms_value_print_date(p.date);
+            break;
+        case WSP_PARAMETER_VALUE_Q:
+            printf("%g", p.q);
+            break;
+        }
+    }
+}
+
+static
 gboolean
 mms_value_decode_contdisp(
     enum wsp_value_type type,
@@ -677,69 +744,13 @@ mms_value_decode_contdisp(
         { "Inline",     130 }
     };
 
-    static const struct mms_named_value nv_p [] = {
-        { "Q",                 0x00 },
-        { "Charset",           0x01 },
-        { "Level",             0x02 },
-        { "Type",              0x03 },
-        { "Name",              0x05 },
-        { "Filename",          0x06 },
-        { "Differences",       0x07 },
-        { "Padding",           0x08 },
-        { "Type",              0x09 },
-        { "Start",             0x0A },
-        { "Start-info",        0x0B },
-        { "Comment",           0x0C },
-        { "Domain",            0x0D },
-        { "Max-Age",           0x0E },
-        { "Path",              0x0F },
-        { "Secure",            0x10 },
-        { "SEC",               0x11 },
-        { "MAC",               0x12 },
-        { "Creation-date",     0x13 },
-        { "Modification-date", 0x14 },
-        { "Read-date",         0x15 },
-        { "Size",              0x16 },
-        { "Name",              0x17 },
-        { "Filename",          0x18 },
-        { "Start",             0x19 },
-        { "Start-info",        0x1A },
-        { "Comment",           0x1B },
-        { "Domain",            0x1C },
-        { "Path",              0x1D }
-    };
-
     if ((type == WSP_VALUE_TYPE_LONG ||
          type == WSP_VALUE_TYPE_SHORT) && len > 0) {
         const struct mms_named_value* nv;
         nv = mms_find_named_value(nv_d, G_N_ELEMENTS(nv_d), val[0]);
         if (nv) {
-            struct wsp_parameter_iter pi;
-            struct wsp_parameter p;
-            wsp_parameter_iter_init(&pi, val + 1, len - 1);
             printf("%s", nv->name);
-            while (wsp_parameter_iter_next(&pi, &p)) {
-                nv = mms_find_named_value(nv_p, G_N_ELEMENTS(nv_p), p.type);
-                if (nv) {
-                    printf("; %s=", nv->name);
-                } else {
-                    printf(";0x%02x=", p.type);
-                }
-                switch (p.value) {
-                case WSP_PARAMETER_VALUE_TEXT:
-                    printf("%s", p.text);
-                    break;
-                case WSP_PARAMETER_VALUE_INT:
-                    printf("%u", p.integer);
-                    break;
-                case WSP_PARAMETER_VALUE_DATE:
-                    mms_value_print_date(p.date);
-                    break;
-                case WSP_PARAMETER_VALUE_Q:
-                    printf("%g", p.q);
-                    break;;
-                }
-            }
+            mms_value_decode_wsp_params(val + 1, len - 1);
             mms_value_verbose_dump(val, len, flags);
             return TRUE;
         }
@@ -835,22 +846,6 @@ mms_part_decode_headers(
 }
 
 static
-const char*
-mms_decode_charset(
-    const unsigned char *pdu,
-    unsigned int len)
-{
-    struct wsp_parameter_iter iter;
-    struct wsp_parameter param;
-    wsp_parameter_iter_init(&iter, pdu, len);
-    while (wsp_parameter_iter_next(&iter, &param)) {
-        if (param.type == WSP_PARAMETER_TYPE_CHARSET)
-            return param.text;
-    }
-    return NULL;
-}
-
-static
 gboolean
 mms_decode_attachments(
     struct wsp_header_iter* iter,
@@ -866,7 +861,6 @@ mms_decode_attachments(
             unsigned int ct_len = wsp_multipart_iter_get_content_type_len(&mi);
             if (wsp_decode_content_type(ct, ct_len, &type, &n, NULL)) {
                 struct wsp_header_iter hi;
-                const char* cs = mms_decode_charset(ct + n, ct_len - n);
                 const unsigned char* body = wsp_multipart_iter_get_body(&mi);
                 unsigned int len = wsp_multipart_iter_get_body_len(&mi);
                 unsigned int off = body - wsp_header_iter_get_pdu(iter);
@@ -878,11 +872,9 @@ mms_decode_attachments(
                     printf("Offset: %u\n", off);
                     printf("Length: %u\n", len);
                 }
-                if (cs) {
-                    printf("  Content-Type: %s;charset=%s\n", (char*)type, cs);
-                } else {
-                    printf("  Content-Type: %s\n", (char*)type);
-                }
+                printf("  Content-Type: %s", (char*)type);
+                mms_value_decode_wsp_params(ct + n, ct_len - n);
+                printf("\n");
                 wsp_header_iter_init(&hi, wsp_multipart_iter_get_hdr(&mi),
                     wsp_multipart_iter_get_hdr_len(&mi), 0);
                 if (mms_part_decode_headers(&hi, "  ", flags) &&
