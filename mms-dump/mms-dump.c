@@ -702,7 +702,7 @@ mms_value_decode_wsp_params(
         }
         switch (p.value) {
         case WSP_PARAMETER_VALUE_TEXT:
-            printf("%s", p.text);
+            printf("%s", p.text[0] == '"' ? (p.text + 1) : p.text);
             break;
         case WSP_PARAMETER_VALUE_INT:
             printf("%u", p.integer);
