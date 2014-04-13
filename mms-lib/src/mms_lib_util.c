@@ -23,7 +23,7 @@
 #endif
 
 #define MMS_DEFAULT_ROOT_DIR        "/tmp/mms"
-#define MMS_DEFAULT_USER_AGENT      "Jolla MMS"
+#define MMS_DEFAULT_USER_AGENT      "Mozilla/5.0 (Sailfish; Jolla)"
 #define MMS_DEFAULT_RETRY_SECS      (15)
 #define MMS_DEFAULT_IDLE_SECS       (20)
 #define MMS_DEFAULT_SIZE_LIMIT      (300*1024)
