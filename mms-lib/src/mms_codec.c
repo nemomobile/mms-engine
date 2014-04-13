@@ -3,6 +3,7 @@
  *  Multimedia Messaging Service
  *
  *  Copyright (C) 2010-2011  Intel Corporation. All rights reserved.
+ *  Copyright (C) 2013-2014  Jolla Ltd.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as
@@ -495,33 +496,6 @@ static gboolean extract_text(struct wsp_header_iter *iter, void *user)
 	return TRUE;
 }
 
-static gboolean extract_text_array_element(struct wsp_header_iter *iter,
-						void *user)
-{
-	char **out = user;
-	const char *element;
-	char *tmp;
-
-	element = decode_text(iter);
-	if (element == NULL)
-		return FALSE;
-
-	if (*out == NULL) {
-		*out = g_strdup(element);
-		return TRUE;
-	}
-
-	tmp = g_strjoin(",", *out, element, NULL);
-	if (tmp == NULL)
-		return FALSE;
-
-	g_free(*out);
-
-	*out = tmp;
-
-	return TRUE;
-}
-
 static char *decode_encoded_string_with_mib_enum(const unsigned char *p,
 		unsigned int l)
 {
@@ -584,6 +558,35 @@ static gboolean extract_encoded_text(struct wsp_header_iter *iter, void *user)
 		return FALSE;
 
 	*out = dec_text;
+
+	return TRUE;
+}
+
+static gboolean extract_encoded_text_element(struct wsp_header_iter *iter,
+						void *user)
+{
+	char **out = user;
+	char *element;
+	char *tmp;
+
+	if (!extract_encoded_text(iter, &element))
+		return FALSE;
+
+	if (*out == NULL) {
+		*out = element;
+		return TRUE;
+	}
+
+	tmp = g_strjoin(",", *out, element, NULL);
+	if (tmp == NULL) {
+		g_free(element);
+		return FALSE;
+	}
+
+	g_free(*out);
+	g_free(element);
+
+	*out = tmp;
 
 	return TRUE;
 }
@@ -915,9 +918,9 @@ static header_handler handler_for_type(enum mms_header header)
 {
 	switch (header) {
 	case MMS_HEADER_BCC:
-		return &extract_text_array_element;
+		return &extract_encoded_text_element;
 	case MMS_HEADER_CC:
-		return &extract_text_array_element;
+		return &extract_encoded_text_element;
 	case MMS_HEADER_CONTENT_LOCATION:
 		return &extract_text;
 	case MMS_HEADER_CONTENT_TYPE:
@@ -959,7 +962,7 @@ static header_handler handler_for_type(enum mms_header header)
 	case MMS_HEADER_SUBJECT:
 		return &extract_subject;
 	case MMS_HEADER_TO:
-		return &extract_text_array_element;
+		return &extract_encoded_text_element;
 	case MMS_HEADER_TRANSACTION_ID:
 		return &extract_text;
 	case MMS_HEADER_RETRIEVE_STATUS:
