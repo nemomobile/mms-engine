@@ -527,32 +527,28 @@ static char *decode_encoded_string_with_mib_enum(const unsigned char *p,
 			&bytes_read, &bytes_written, NULL);
 }
 
+static char* decode_encoded_text(enum wsp_value_type t,
+		const unsigned char *p, unsigned int l)
+{
+	switch (t) {
+	case WSP_VALUE_TYPE_TEXT:
+		/* Text-string */
+		return g_strdup(wsp_decode_text(p, l, NULL));
+	case WSP_VALUE_TYPE_LONG:
+		/* (Value-len) Char-set Text-string */
+		return decode_encoded_string_with_mib_enum(p, l);
+	default:
+		return NULL;
+	}
+}
+
 static gboolean extract_encoded_text(struct wsp_header_iter *iter, void *user)
 {
 	char **out = user;
-	const unsigned char *p;
-	unsigned int l;
-	const char *text;
-	char *dec_text;
-
-	p = wsp_header_iter_get_val(iter);
-	l = wsp_header_iter_get_val_len(iter);
-
-	switch (wsp_header_iter_get_val_type(iter)) {
-	case WSP_VALUE_TYPE_TEXT:
-		/* Text-string */
-		text = wsp_decode_text(p, l, NULL);
-		dec_text = g_strdup(text);
-		break;
-	case WSP_VALUE_TYPE_LONG:
-		/* (Value-len) Char-set Text-string */
-		dec_text = decode_encoded_string_with_mib_enum(p, l);
-		break;
-	default:
-	case WSP_VALUE_TYPE_SHORT:
-		dec_text = NULL;
-		break;
-	}
+	char *dec_text = decode_encoded_text(
+		wsp_header_iter_get_val_type(iter),
+		wsp_header_iter_get_val(iter),
+		wsp_header_iter_get_val_len(iter));
 
 	if (dec_text == NULL)
 		return FALSE;
@@ -685,7 +681,8 @@ static gboolean extract_from(struct wsp_header_iter *iter, void *user)
 	char **out = user;
 	const unsigned char *p;
 	unsigned int l;
-	const char *text;
+	enum wsp_value_type t;
+	char *text;
 
 	if (wsp_header_iter_get_val_type(iter) != WSP_VALUE_TYPE_LONG)
 		return FALSE;
@@ -701,11 +698,14 @@ static gboolean extract_from(struct wsp_header_iter *iter, void *user)
 		return TRUE;
 	}
 
-	text = wsp_decode_text(p + 1, l - 1, NULL);
+	if (!wsp_decode_field(p + 1, l - 1, &t, (const void **)&p, &l, NULL))
+		return FALSE;
+
+	text = decode_encoded_text(t, p, l);
 	if (text == NULL)
 		return FALSE;
 
-	*out = g_strdup(text);
+	*out = text;
 
 	return TRUE;
 }

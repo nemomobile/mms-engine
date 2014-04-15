@@ -61,6 +61,7 @@ int main(int argc, char* argv[])
         "m-retrieve_1.conf",
         "m-retrieve_2.conf",
         "m-retrieve_3.conf",
+        "m-retrieve_4.conf",
         "m-notifyresp.ind",
         "m-read-rec.ind",
         "m-send.conf"
