@@ -15,32 +15,22 @@
 #include "mms_log.h"
 #include "mms_codec.h"
 
-static
-gboolean
-test_parse_mms_pdu(
-    GBytes* bytes,
-    struct mms_message* msg)
-{
-    gsize len = 0;
-    const guint8* data = g_bytes_get_data(bytes, &len);
-    return mms_message_decode(data, len, msg);
-}
+#define DATA_DIR "data/"
 
 static
 gboolean
 test_file(
-    const char* file,
-    gboolean (*parse)(GBytes* bytes, struct mms_message* msg))
+    const char* file)
 {
     GError* error = NULL;
-    GMappedFile* map = g_mapped_file_new(file, FALSE, &error);
+    char* path = g_strconcat(DATA_DIR, file, NULL);
+    GMappedFile* map = g_mapped_file_new(path, FALSE, &error);
+    g_free(path);
     if (map) {
         struct mms_message* msg = g_new0(struct mms_message, 1);
         const void* data = g_mapped_file_get_contents(map);
         const gsize length = g_mapped_file_get_length(map);
-        GBytes* bytes = g_bytes_new_static(data, length);
-        gboolean ok = parse(bytes, msg);
-        g_bytes_unref(bytes);
+        gboolean ok = mms_message_decode(data, length, msg);
         g_mapped_file_unref(map);
         mms_message_free(msg);
         if (ok) {
@@ -59,13 +49,12 @@ static
 gboolean
 test_files(
     const char* files[],
-    int count,
-    gboolean (*parse)(GBytes* bytes, struct mms_message* msg))
+    int count)
 {
     int i;
     gboolean ok = TRUE;
     for (i=0; i<count; i++) {
-        if (!test_file(files[i], parse)) {
+        if (!test_file(files[i])) {
             ok = FALSE;
         }
     }
@@ -75,22 +64,22 @@ test_files(
 int main(int argc, char* argv[])
 {
     const char* mms_files[] = {
-        "data/m-acknowledge.ind",
-        "data/m-notification_1.0.ind",
-        "data/m-notification_1.1.ind",
-        "data/m-notification_1.2.ind",
-        "data/m-delivery.ind",
-        "data/m-read-orig.ind",
-        "data/m-retrieve_1.0.conf",
-        "data/m-retrieve_1.1.conf",
-        "data/m-retrieve_1.2.conf",
-        "data/m-notifyresp.ind",
-        "data/m-read-rec.ind",
-        "data/m-send.conf"
+        "m-acknowledge.ind",
+        "m-notification_1.ind",
+        "m-notification_2.ind",
+        "m-notification_3.ind",
+        "m-delivery.ind",
+        "m-read-orig.ind",
+        "m-retrieve_1.conf",
+        "m-retrieve_2.conf",
+        "m-retrieve_3.conf",
+        "m-notifyresp.ind",
+        "m-read-rec.ind",
+        "m-send.conf"
     };
     mms_log_stdout_timestamp = FALSE;
     mms_log_default.level = MMS_LOGLEVEL_INFO;
-    if (test_files(mms_files, G_N_ELEMENTS(mms_files), test_parse_mms_pdu)) {
+    if (test_files(mms_files, G_N_ELEMENTS(mms_files))) {
         return 0;
     } else {
         return 1;
