@@ -14,6 +14,7 @@
 
 #include "mms_attachment.h"
 #include "mms_lib_util.h"
+#include "mms_lib_log.h"
 #include "mms_log.h"
 
 #include <libexif/exif-content.h>
@@ -124,7 +125,8 @@ static const TestDesc resize_tests[] = {
     },{
         "Jpeg_Landscape2",
         "data/0002.jpg",
-        &test_auto_jpeg, 2,
+        &test_auto_jpeg,
+        2,
         2000000,
         {1088, 613}
     },{
@@ -134,6 +136,13 @@ static const TestDesc resize_tests[] = {
         3,
         3000000,
         {816, 460}
+    },{
+        "Jpeg_Broken",
+        "data/junk.jpg",
+        &test_jpeg,
+        1,
+        1000000,
+        {0, 0} /* Expect failure */
     },{
         "Png_1",
         "data/0003.png",
@@ -376,7 +385,7 @@ test_run_one(
                         ok = FALSE;
                     }
                 }
-                if (ok) {
+                if (ok && test->size.width && test->size.height) {
                     TestSize size;
                     if (test->type->filesize(at->file_name, &size)) {
                         if (size.width == test->size.width &&
@@ -393,6 +402,8 @@ test_run_one(
                                 test->size.width, test->size.height);
                         }
                     }
+                } else if (!ok && !test->size.width && !test->size.height) {
+                    ret = RET_OK;
                 }
                 mms_attachment_unref(at);
             } else {
@@ -455,7 +466,6 @@ int main(int argc, char* argv[])
     options = g_option_context_new("[TEST] - Resizing test");
     g_option_context_add_main_entries(options, entries, NULL);
     if (g_option_context_parse(options, &argc, &argv, NULL) && argc < 3) {
-
         const char* test = (argc == 2) ? argv[1] : NULL;
         MMSConfig config;
         mms_lib_default_config(&config);
@@ -464,9 +474,12 @@ int main(int argc, char* argv[])
 
         mms_log_stdout_timestamp = FALSE;
         mms_log_default.name = "test_resize";
-        mms_log_default.level = verbose ?
-            MMS_LOGLEVEL_VERBOSE :
-            MMS_LOGLEVEL_INFO;
+        if (verbose) {
+            mms_log_default.level = MMS_LOGLEVEL_VERBOSE;
+        } else {
+            mms_log_default.level = MMS_LOGLEVEL_INFO;
+            mms_attachment_log.level = MMS_LOGLEVEL_ERR;
+        }
         ret = test_run(&config, test);
     }
     g_option_context_free(options);
