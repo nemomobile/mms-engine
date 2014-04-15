@@ -17,6 +17,9 @@
 
 #define DATA_DIR "data/"
 
+#define RET_OK   (0)
+#define RET_ERR  (1)
+
 static
 gboolean
 test_file(
@@ -45,25 +48,10 @@ test_file(
     return FALSE;
 }
 
-static
-gboolean
-test_files(
-    const char* files[],
-    int count)
-{
-    int i;
-    gboolean ok = TRUE;
-    for (i=0; i<count; i++) {
-        if (!test_file(files[i])) {
-            ok = FALSE;
-        }
-    }
-    return ok;
-}
-
 int main(int argc, char* argv[])
 {
-    const char* mms_files[] = {
+    int i, ret = RET_OK;
+    const char* default_files[] = {
         "m-acknowledge.ind",
         "m-notification_1.ind",
         "m-notification_2.ind",
@@ -79,11 +67,21 @@ int main(int argc, char* argv[])
     };
     mms_log_stdout_timestamp = FALSE;
     mms_log_default.level = MMS_LOGLEVEL_INFO;
-    if (test_files(mms_files, G_N_ELEMENTS(mms_files))) {
-        return 0;
+    if (argc > 1) {
+        for (i=1; i<argc; i++) {
+            if (!test_file(argv[i])) {
+                ret = RET_ERR;
+            }
+        }
     } else {
-        return 1;
+        /* Default set of test files */
+        for (i=0; i<G_N_ELEMENTS(default_files); i++) {
+            if (!test_file(default_files[i])) {
+                ret = RET_ERR;
+            }
+        }
     }
+    return ret;
 }
 
 /*
