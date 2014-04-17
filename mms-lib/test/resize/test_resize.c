@@ -116,6 +116,20 @@ static const TestDesc resize_tests[] = {
         3000000,
         {460, 816}
     },{
+        "Jpeg_Portrait4",
+        "data/0004.jpg",
+        &test_jpeg,
+        2,
+        3000000,
+        {816, 1088}
+    },{
+        "Jpeg_Portrait5",
+        "data/0004.jpg",
+        &test_jpeg,
+        3,
+        3000000,
+        {612, 816}
+    },{
         "Jpeg_Landscape1",
         "data/0002.jpg",
         &test_auto_jpeg,
