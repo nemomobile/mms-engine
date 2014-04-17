@@ -15,6 +15,7 @@
 #include "mms_attachment.h"
 #include "mms_lib_util.h"
 #include "mms_lib_log.h"
+#include "mms_file_util.h"
 #include "mms_log.h"
 
 #include <libexif/exif-content.h>
@@ -343,31 +344,6 @@ test_png_size(
 }
 
 static
-gboolean
-test_file_copy(
-    const char* src,
-    const char* dest)
-{
-    gboolean ok = FALSE;
-    FILE* in = fopen(src, "rb");
-    if (in) {
-        FILE* out = fopen(dest, "wb");
-        if (out) {
-            const size_t buflen = 4096;
-            size_t nbytes;
-            void* buf = g_malloc(buflen);
-            while ((nbytes = fread(buf, 1, buflen, in)) > 0 &&
-                   fwrite(buf, 1, nbytes, out) == nbytes);
-            ok = (feof(in) && !ferror(in) && !ferror(out));
-            g_free(buf);
-            fclose(out);
-        }
-        fclose(in);
-    }
-    return ok;
-}
-
-static
 int
 test_run_one(
     const MMSConfig* config,
@@ -382,7 +358,7 @@ test_run_one(
     if (dir) {
         GError* error = NULL;
         char* testfile = g_strconcat(dir, "/", name, NULL);
-        if (test_file_copy(test->file, testfile)) {
+        if (mms_file_copy(test->file, testfile, NULL)) {
             MMSAttachment* at;
             MMSAttachmentInfo info;
             MMSConfig test_config = *config;

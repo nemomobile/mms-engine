@@ -177,6 +177,51 @@ mms_write_bytes(
     return mms_write_file(dir, file, data, len, path);
 }
 
+/**
+ * Copies the file. Assumes that the destination directory exists.
+ */
+gboolean
+mms_file_copy(
+    const char* src,
+    const char* dest,
+    GError** error)
+{
+    gboolean ok = FALSE;
+    int out = open(dest, O_CREAT|O_WRONLY|O_TRUNC|O_BINARY, MMS_FILE_PERM);
+    if (out >= 0) {
+        int in = open(src, O_RDONLY | O_BINARY);
+        if (in >= 0) {
+            int nbytes;
+            const size_t buflen = 4096;
+            void* buf = g_malloc(buflen);
+            ok = TRUE;
+            while ((nbytes = read(in, buf, buflen)) > 0) {
+                if (write(out, buf, nbytes) < nbytes) {
+                    ok = FALSE;
+                    MMS_ERROR(error, MMS_LIB_ERROR_IO,
+                        "Failed to write %s: %s", dest, strerror(errno));
+                    break;
+                }
+            }
+            if (nbytes < 0) {
+                ok = FALSE;
+                MMS_ERROR(error, MMS_LIB_ERROR_IO,
+                    "Failed to read %s: %s", src, strerror(errno));
+            }
+            g_free(buf);
+            close(in);
+        } else {
+            MMS_ERROR(error, MMS_LIB_ERROR_IO,
+                "Failed to open file %s: %s", src, strerror(errno));
+        }
+        close(out);
+    } else {
+        MMS_ERROR(error, MMS_LIB_ERROR_IO,
+            "Failed to create file %s: %s", dest, strerror(errno));
+    }
+    return ok;
+}
+
 /*
  * Local Variables:
  * mode: C
