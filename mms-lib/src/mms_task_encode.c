@@ -467,8 +467,6 @@ mms_task_encode_prepare_attachments(
         MMSAttachmentInfo info = parts[i];
         char* detected_type = NULL;
         char* path;
-        GFile* src;
-        GFile* dest;
 
         if (!info.content_type || !info.content_type[0]) {
             detected_type = mms_attachment_guess_content_type(info.file_name);
@@ -479,9 +477,7 @@ mms_task_encode_prepare_attachments(
             g_basename(info.file_name), info.content_type);
         G_GNUC_END_IGNORE_DEPRECATIONS;
 
-        src = g_file_new_for_path(info.file_name);
-        dest = g_file_new_for_path(path);
-        if (g_file_copy(src, dest, 0, NULL, NULL, NULL, error)) {
+        if (mms_file_copy(info.file_name, path, error)) {
             info.file_name = path;
             attachment = mms_attachment_new(config, &info, error);
             if (attachment) {
@@ -494,8 +490,7 @@ mms_task_encode_prepare_attachments(
         } else if (error && *error) {
             MMS_ERR("%s", MMS_ERRMSG(*error));
         }
-        g_object_unref(src);
-        g_object_unref(dest);
+
         g_free(detected_type);
         g_free(path);
         if (!attachment) break;

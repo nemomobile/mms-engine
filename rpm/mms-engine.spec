@@ -12,6 +12,8 @@ Requires: ofono
 
 BuildRequires: python
 BuildRequires: file-devel
+BuildRequires: libpng-devel
+BuildRequires: libexif-devel
 BuildRequires: libjpeg-turbo-devel
 BuildRequires: pkgconfig(glib-2.0) >= 2.32
 BuildRequires: pkgconfig(libsoup-2.4) >= 2.38
@@ -61,6 +63,9 @@ cp %{src}/%{dbusname}.dbus.conf %{buildroot}%{dbuspolicy}/%{dbusname}.conf
 cp %{src}/%{dbusname}.push.conf %{buildroot}%{pushconfig}/%{dbusname}.conf
 cp mms-dump/build/release/mms-dump %{buildroot}%{_prefix}/bin/
 cp mms-send/build/release/mms-send %{buildroot}%{_prefix}/bin/
+
+%check
+make -C mms-lib/test test
 
 %files
 %defattr(-,root,root,-)

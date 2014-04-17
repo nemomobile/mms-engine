@@ -69,6 +69,12 @@ mms_write_bytes(
     GBytes* bytes,
     char** path);
 
+gboolean
+mms_file_copy(
+    const char* src,
+    const char* dest,
+    GError** error);
+
 #define mms_message_dir(config,id) \
     (g_strconcat((config)->root_dir, "/" MMS_MESSAGE_DIR "/" , id, NULL))
 #define mms_task_dir(task) \
