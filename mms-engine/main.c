@@ -21,6 +21,9 @@
 #include "mms_lib_util.h"
 #include "mms_dispatcher.h"
 
+#define RET_OK  (0)
+#define RET_ERR (1)
+
 /* Options configurable from the command line */
 typedef struct mms_app_options {
     GBusType bus_type;
@@ -138,17 +141,25 @@ mms_app_option_verbose(
     return TRUE;
 }
 
-/* Parses command line and sets up application options */
+/**
+ * Parses command line and sets up application options. Returns TRUE if
+ * we should go ahead and run the application, FALSE if we should exit
+ * immediately.
+ */
 static
 gboolean
 mms_app_parse_options(
     MMSAppOptions* opt,
     int argc,
-    char* argv[])
+    char* argv[],
+    int* result)
 {
     gboolean ok;
     GError* error = NULL;
     gboolean session_bus = FALSE;
+#ifdef MMS_VERSION
+    gboolean print_version = FALSE;
+#endif
     gint size_limit_kb = opt->config.size_limit/1024;
     gdouble megapixels = opt->config.max_pixels / 1000000.0;
     char* root_dir_help = g_strdup_printf(
@@ -198,6 +209,10 @@ mms_app_parse_options(
           "Log output (stdout|syslog|glib) [stdout]", "TYPE" },
         { "log-level", 'l', 0, G_OPTION_ARG_CALLBACK, mms_app_option_loglevel,
           "Set log level (repeatable)", "[MODULE:]LEVEL" },
+#ifdef MMS_VERSION
+        { "version", 0, 0, G_OPTION_ARG_NONE, &print_version,
+          "Print program version and exit", NULL },
+#endif
         { NULL }
     };
 
@@ -212,6 +227,16 @@ mms_app_parse_options(
     g_free(size_limit_help);
     g_free(megapixels_help);
     g_free(description);
+
+#ifdef MMS_VERSION
+#  define MMS_STRING__(x) #x
+#  define MMS_STRING_(x) MMS_STRING__(x)
+    if (print_version) {
+        printf("MMS engine %s\n", MMS_STRING_(MMS_VERSION));
+        *result = RET_OK;
+        return FALSE;
+    } else
+#endif
 
     if (ok) {
         MMS_INFO("Starting");
@@ -233,22 +258,24 @@ mms_app_parse_options(
             MMS_DEBUG("Attaching to system bus");
             opt->bus_type = G_BUS_TYPE_SYSTEM;
         }
+        *result = RET_OK;
         return TRUE;
     } else {
         fprintf(stderr, "%s\n", MMS_ERRMSG(error));
         g_error_free(error);
+        *result = RET_ERR;
         return FALSE;
     }
 }
 
 int main(int argc, char* argv[])
 {
-    int result = 1;
+    int result = RET_ERR;
     MMSAppOptions opt = {0};
     mms_lib_init(argv[0]);
     mms_log_default.name = MMS_APP_LOG_PREFIX;
     mms_lib_default_config(&opt.config);
-    if (mms_app_parse_options(&opt, argc, argv)) {
+    if (mms_app_parse_options(&opt, argc, argv, &result)) {
         MMSEngine* engine;
         unsigned int engine_flags = 0;
         if (opt.keep_running) engine_flags |= MMS_ENGINE_FLAG_KEEP_RUNNING;
@@ -278,7 +305,6 @@ int main(int argc, char* argv[])
             mms_engine_unref(engine);
         }
         MMS_INFO("Exiting");
-        result = 0;
     }
     if (mms_log_func == mms_log_syslog) {
         closelog();
