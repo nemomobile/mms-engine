@@ -86,6 +86,8 @@ mms_task_send_done(
                 } else {
                     MMS_ERR("Unexpected response from MMSC");
                 }
+            } else {
+                MMS_ERR("Failed to parse MMSC response");
             }
             g_mapped_file_unref(map);
         } else {
