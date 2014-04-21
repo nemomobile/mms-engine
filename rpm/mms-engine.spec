@@ -17,7 +17,7 @@ BuildRequires: libexif-devel
 BuildRequires: libjpeg-turbo-devel
 BuildRequires: pkgconfig(glib-2.0) >= 2.32
 BuildRequires: pkgconfig(libsoup-2.4) >= 2.38
-BuildRequires: pkgconfig(libwspcodec) >= 2.1
+BuildRequires: pkgconfig(libwspcodec) >= 2.2
 #BuildRequires: pkgconfig(ImageMagick)
 BuildRequires:  pkgconfig(Qt5Gui)
 
