@@ -51,7 +51,7 @@ test_file(
 int main(int argc, char* argv[])
 {
     int i, ret = RET_OK;
-    const char* default_files[] = {
+    static const char* default_files[] = {
         "m-acknowledge.ind",
         "m-notification_1.ind",
         "m-notification_2.ind",
@@ -62,6 +62,7 @@ int main(int argc, char* argv[])
         "m-retrieve_2.conf",
         "m-retrieve_3.conf",
         "m-retrieve_4.conf",
+        "m-retrieve_5.conf",
         "m-notifyresp.ind",
         "m-read-rec.ind",
         "m-send.conf"
