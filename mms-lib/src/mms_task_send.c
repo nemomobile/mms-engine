@@ -81,7 +81,15 @@ mms_task_send_done(
                         }
                     } else {
                         MMS_ERR("MMSC responded with %u", pdu->sc.rsp_status);
-                        state = MMS_SEND_STATE_REFUSED;
+                        switch (pdu->sc.rsp_status) {
+                        case MMS_MESSAGE_RSP_STATUS_ERR_PERM_SERVICE_DENIED:
+                        case MMS_MESSAGE_RSP_STATUS_ERR_PERM_LACK_OF_PREPAID:
+                        case MMS_MESSAGE_RSP_STATUS_ERR_PERM_CONTENT_NOT_ACCEPTED:
+                            state = MMS_SEND_STATE_REFUSED;
+                            break;
+                        default:
+                            break;
+                        }
                     }
                 } else {
                     MMS_ERR("Unexpected response from MMSC");
