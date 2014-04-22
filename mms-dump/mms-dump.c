@@ -847,7 +847,7 @@ mms_part_decode_headers(
 
 static
 gboolean
-mms_decode_attachments(
+mms_decode_multipart(
     struct wsp_header_iter* iter,
     unsigned int flags)
 {
@@ -891,6 +891,37 @@ mms_decode_attachments(
 }
 
 static
+gboolean
+mms_decode_attachment(
+    struct wsp_header_iter* iter,
+    unsigned int flags)
+{
+    const unsigned char* pdu = iter->pdu + iter->pos + 1;
+    unsigned int len = iter->max - iter->pos - 1;
+    unsigned int consumed, parlen;
+    const void *type = NULL;
+    if (wsp_decode_content_type(pdu, len, &type, &consumed, &parlen)) {
+        unsigned int total = consumed + parlen;
+        unsigned int off = iter->pos + 1 + total;
+        len -= total;
+        printf("Attachment:\n");
+        if (flags & MMS_DUMP_FLAG_VERBOSE) {
+            printf("Offset: %u (0x%x)\n", off, off);
+            printf("Length: %u (0x%x)\n", len, len);
+        } else {
+            printf("Offset: %u\n", off);
+            printf("Length: %u\n", len);
+        }
+        printf("  Content-Type: %s", (char*)type);
+        mms_value_decode_wsp_params(pdu + consumed, parlen);
+        mms_value_verbose_dump(iter->pdu + iter->pos, total+1, flags);
+        printf("\n");
+        return TRUE;
+    }
+    return FALSE;
+}
+
+static
 int
 mms_decode_data(
     const guint8* data,
@@ -924,15 +955,21 @@ mms_decode_data(
     printf("MMS headers:\n");
     wsp_header_iter_init(&iter, data, len, WSP_HEADER_ITER_FLAG_REJECT_CP |
         WSP_HEADER_ITER_FLAG_DETECT_MMS_MULTIPART);
-    if (mms_message_decode_headers(&iter, "  ", flags) &&
-       (wsp_header_iter_at_end(&iter) ||
-       (wsp_header_iter_is_multipart(&iter) &&
-        mms_decode_attachments(&iter, flags) &&
-        wsp_header_iter_at_end(&iter)))) {
-        return RET_OK;
-    } else {
-        printf("Decoding FAILED\n");
+    if (mms_message_decode_headers(&iter, "  ", flags)) {
+        if (wsp_header_iter_at_end(&iter)) {
+            return RET_OK;
+        } else if (wsp_header_iter_is_content_type(&iter)) {
+            if (wsp_header_iter_is_multipart(&iter)) {
+                if (mms_decode_multipart(&iter, flags) &&
+                    wsp_header_iter_at_end(&iter)) {
+                    return RET_OK;
+                }
+            } else if (mms_decode_attachment(&iter, flags)) {
+                return RET_OK;
+            }
+        }
     }
+    printf("Decoding FAILED\n");
     return RET_ERR_DECODE;
 }
 

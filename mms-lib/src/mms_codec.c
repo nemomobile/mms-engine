@@ -1347,8 +1347,9 @@ static gboolean decode_retrieve_conf(struct wsp_header_iter *iter,
 	if (wsp_header_iter_at_end(iter) == TRUE)
 		return TRUE;
 
+	/* Ignore non-multipart attachments */
 	if (wsp_header_iter_is_multipart(iter) == FALSE)
-		return FALSE;
+		return wsp_header_iter_is_content_type(iter);
 
 	if (mms_parse_attachments(iter, out) == FALSE)
 		return FALSE;
