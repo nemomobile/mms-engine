@@ -122,7 +122,7 @@ static const TestDesc send_tests[] = {
         MMS_SEND_STATE_SENDING,
         "TestMessageId"
     },{
-        "Reject",
+        "ServiceDenied",
         ATTACHMENTS(test_files_reject),
         "Rejection test",
         "+1234567890",
@@ -134,6 +134,20 @@ static const TestDesc send_tests[] = {
         MMS_CONTENT_TYPE,
         SOUP_STATUS_OK,
         MMS_SEND_STATE_REFUSED,
+        NULL
+    },{
+        "Failure",
+        ATTACHMENTS(test_files_reject),
+        "Failure test",
+        "+1234567890",
+        NULL,
+        NULL,
+        NULL,
+        0,
+        "m-send.conf",
+        MMS_CONTENT_TYPE,
+        SOUP_STATUS_OK,
+        MMS_SEND_STATE_SEND_ERROR,
         NULL
     }
 };
