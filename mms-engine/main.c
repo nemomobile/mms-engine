@@ -157,7 +157,7 @@ mms_app_parse_options(
     gboolean ok;
     GError* error = NULL;
     gboolean session_bus = FALSE;
-#ifdef MMS_VERSION
+#ifdef MMS_ENGINE_VERSION
     gboolean print_version = FALSE;
 #endif
     gint size_limit_kb = opt->config.size_limit/1024;
@@ -209,7 +209,7 @@ mms_app_parse_options(
           "Log output (stdout|syslog|glib) [stdout]", "TYPE" },
         { "log-level", 'l', 0, G_OPTION_ARG_CALLBACK, mms_app_option_loglevel,
           "Set log level (repeatable)", "[MODULE:]LEVEL" },
-#ifdef MMS_VERSION
+#ifdef MMS_ENGINE_VERSION
         { "version", 0, 0, G_OPTION_ARG_NONE, &print_version,
           "Print program version and exit", NULL },
 #endif
@@ -228,11 +228,11 @@ mms_app_parse_options(
     g_free(megapixels_help);
     g_free(description);
 
-#ifdef MMS_VERSION
+#ifdef MMS_ENGINE_VERSION
 #  define MMS_STRING__(x) #x
 #  define MMS_STRING_(x) MMS_STRING__(x)
     if (print_version) {
-        printf("MMS engine %s\n", MMS_STRING_(MMS_VERSION));
+        printf("MMS engine %s\n", MMS_STRING_(MMS_ENGINE_VERSION));
         *result = RET_OK;
         return FALSE;
     } else
