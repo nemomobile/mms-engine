@@ -955,17 +955,16 @@ mms_decode_data(
     printf("MMS headers:\n");
     wsp_header_iter_init(&iter, data, len, WSP_HEADER_ITER_FLAG_REJECT_CP |
         WSP_HEADER_ITER_FLAG_DETECT_MMS_MULTIPART);
-    if (mms_message_decode_headers(&iter, "  ", flags) &&
-       (wsp_header_iter_at_end(&iter) ||
-        wsp_header_iter_is_content_type(&iter))) {
-
-        if (wsp_header_iter_is_multipart(&iter)) {
-            if (mms_decode_multipart(&iter, flags) &&
-                wsp_header_iter_at_end(&iter)) {
-                return RET_OK;
-            } 
-        } else {
-            if (mms_decode_attachment(&iter, flags)) {
+    if (mms_message_decode_headers(&iter, "  ", flags)) {
+        if (wsp_header_iter_at_end(&iter)) {
+            return RET_OK;
+        } else if (wsp_header_iter_is_content_type(&iter)) {
+            if (wsp_header_iter_is_multipart(&iter)) {
+                if (mms_decode_multipart(&iter, flags) &&
+                    wsp_header_iter_at_end(&iter)) {
+                    return RET_OK;
+                }
+            } else if (mms_decode_attachment(&iter, flags)) {
                 return RET_OK;
             }
         }
