@@ -46,7 +46,7 @@ MMS command line utilities
 %setup -q -n %{name}-%{version}
 
 %build
-make -C %{src} KEEP_SYMBOLS=1 MMS_VERSION="%{version}" release
+make -C %{src} KEEP_SYMBOLS=1 MMS_ENGINE_VERSION="%{version}" release
 make -C mms-dump KEEP_SYMBOLS=1 release
 make -C mms-send KEEP_SYMBOLS=1 release
 
