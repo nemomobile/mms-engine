@@ -67,6 +67,9 @@ int main(int argc, char* argv[])
         "m-retrieve_7.conf",
         "m-notifyresp.ind",
         "m-read-rec.ind",
+        "m-send_1.req",
+        "m-send_2.req",
+        "m-send_3.req",
         "m-send.conf"
     };
     mms_log_stdout_timestamp = FALSE;
