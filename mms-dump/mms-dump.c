@@ -64,7 +64,7 @@ typedef gboolean
     h(REPORT_ALLOWED,         "X-Mms-Report-Allowed",         0x11, bool     )\
     h(RESPONSE_STATUS,        "X-Mms-Response-Status",        0x12, respstat )\
     h(RESPONSE_TEXT,          "X-Mms-Response-Text",          0x13, etext    )\
-    h(SENDER_VISIBILITY,      "X-Mms-Sender-Visibility",      0x14, short    )\
+    h(SENDER_VISIBILITY,      "X-Mms-Sender-Visibility",      0x14, visiblty )\
     h(STATUS,                 "X-Mms-Status",                 0x15, status   )\
     h(SUBJECT,                "Subject",                      0x16, etext    )\
     h(TO,                     "To",                           0x17, etext    )\
@@ -577,6 +577,23 @@ mms_value_decode_etext(
     return mms_value_decode_unknown(type, val, len, flags);
 }
 
+/* Sender-visibility-value */
+static
+gboolean
+mms_value_decode_visiblty(
+    enum wsp_value_type type,
+    const guint8* val,
+    unsigned int len,
+    unsigned int flags)
+{
+    static const struct mms_named_value nv [] = {
+        { "Hide", 128 },
+        { "Show", 129 },
+    };
+    return mms_value_decode_enum(type, val, len, nv, G_N_ELEMENTS(nv), flags);
+}
+
+/* From-value */
 static
 gboolean
 mms_value_decode_from(
@@ -609,6 +626,7 @@ mms_value_decode_from(
     return mms_value_decode_unknown(type, val, len, flags);
 }
 
+/* Expiry-value */
 static
 gboolean
 mms_value_decode_expiry(
