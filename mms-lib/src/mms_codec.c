@@ -1020,10 +1020,10 @@ static gboolean mms_parse_headers(struct wsp_header_iter *iter,
 		p = wsp_header_iter_get_hdr(iter);
 		h = p[0] & 0x7f;
 
-		/* Stop parsing when we see an unknown header */
+		/* Unknown header, skip */
 		handler = handler_for_type(h);
 		if (handler == NULL)
-			break;
+			continue;
 
 		/* Unsupported header, skip */
 		if (entries[h].data == NULL)
