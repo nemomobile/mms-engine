@@ -76,8 +76,8 @@ typedef gboolean
     h(REPLY_CHARGING_DEADLINE,"X-Mms-Reply-Charging-Deadline",0x1D, unknown  )\
     h(REPLY_CHARGING_ID,      "X-Mms-Reply-Charging-ID",      0x1E, text     )\
     h(REPLY_CHARGING_SIZE,    "X-Mms-Reply-Charging-Size",    0x1F, long     )\
-    h(PREVIOUSLY_SENT_BY,     "X-Mms-Previously-Sent-By",     0x20, unknown  )\
-    h(PREVIOUSLY_SENT_DATE,   "X-Mms-Previously-Sent-Date",   0x21, unknown  )
+    h(PREVIOUSLY_SENT_BY,     "X-Mms-Previously-Sent-By",     0x20, prevby   )\
+    h(PREVIOUSLY_SENT_DATE,   "X-Mms-Previously-Sent-Date",   0x21, prevdate )
 
 #define WSP_WELL_KNOWN_HEADERS(h) \
     h(CONTENT_LOCATION,       "Content-Location",             0x0E, text     )\
@@ -283,6 +283,23 @@ mms_value_print_date(
 
 static
 gboolean
+mms_value_decode_date_value(
+    const guint8* val,
+    unsigned int len,
+    time_t* t)
+{
+    if (len <= sizeof(t)) {
+        unsigned int i;
+        for (*t=0, i=0; i<len; i++) {
+            *t = (((*t) << 8) | val[i]);
+        }
+        return TRUE;
+    }
+        return FALSE;
+}
+
+static
+gboolean
 mms_value_decode_date(
     enum wsp_value_type type,
     const guint8* val,
@@ -290,11 +307,8 @@ mms_value_decode_date(
     unsigned int flags)
 {
     time_t t;
-    if (type == WSP_VALUE_TYPE_LONG && len <= sizeof(t)) {
-        unsigned int i;
-        for (t=0, i=0; i<len; i++) {
-            t = ((t << 8) | val[i]);
-        }
+    if (type == WSP_VALUE_TYPE_LONG &&
+        mms_value_decode_date_value(val, len, &t)) {
         mms_value_print_date(t);
         if (flags & MMS_DUMP_FLAG_VERBOSE) printf(" (%lu)", (unsigned long)t);
         return TRUE;
@@ -477,14 +491,13 @@ mms_value_decode_respstat(
     return mms_value_decode_enum(type, val, len, nv, G_N_ELEMENTS(nv), flags);
 }
 
-/*/* Encoded-string-value */
+/* Encoded-string-value */
 static
 gboolean
-mms_value_decode_etext(
+mms_value_decode_encoded_text(
     enum wsp_value_type type,
     const guint8* val,
-    unsigned int len,
-    unsigned int flags)
+    unsigned int len)
 {
     /* http://www.iana.org/assignments/character-sets */
     static const struct mms_named_value nv [] = {
@@ -545,7 +558,6 @@ mms_value_decode_etext(
 
     if (type == WSP_VALUE_TYPE_TEXT) {
         printf("%s", val);
-        mms_value_verbose_dump(val, len, flags);
         return TRUE;
     } else if (type == WSP_VALUE_TYPE_LONG) {
         unsigned int charset = 0;
@@ -567,14 +579,29 @@ mms_value_decode_etext(
                 }
                 if (text) {
                     printf("%s", text);
-                    mms_value_verbose_dump(val, len, flags);
                     g_free(tmp);
                     return TRUE;
                 }
             }
         }
     }
-    return mms_value_decode_unknown(type, val, len, flags);
+    return FALSE;
+}
+
+static
+gboolean
+mms_value_decode_etext(
+    enum wsp_value_type type,
+    const guint8* val,
+    unsigned int len,
+    unsigned int flags)
+{
+    if (mms_value_decode_encoded_text(type, val, len)) {
+        mms_value_verbose_dump(val, len, flags);
+        return TRUE;
+    } else {
+        return mms_value_decode_unknown(type, val, len, flags);
+    }
 }
 
 /* Sender-visibility-value */
@@ -666,6 +693,77 @@ mms_value_decode_expiry(
      } else {
         return mms_value_decode_unknown(type, val, len, flags);
     }
+}
+
+/* Previously-sent-by-value */
+static
+gboolean
+mms_value_decode_prevby(
+    enum wsp_value_type type,
+    const guint8* val,
+    unsigned int len,
+    unsigned int flags)
+{
+    /*
+     * Value-length Forwarded-count-value Encoded-string-value
+     * Forwarded-count-value = Integer-value
+     */
+    if (type == WSP_VALUE_TYPE_LONG) {
+        unsigned int count = 0;
+        unsigned int consumed = 0;
+        if (wsp_decode_integer(val, len, &count, &consumed)) {
+            const guint8* ptr = val + consumed;
+            const unsigned int bytes_left = len - consumed;
+            enum wsp_value_type from_type;
+            const void* from_val;
+            unsigned int from_len;
+            if (wsp_decode_field(ptr, bytes_left, &from_type, &from_val,
+                &from_len, &consumed) && consumed == bytes_left &&
+                mms_value_decode_encoded_text(from_type, from_val, from_len)) {
+                printf("; count=%u", count);
+                mms_value_verbose_dump(val, len, flags);
+                return TRUE;
+            }
+        }
+    }
+    return mms_value_decode_unknown(type, val, len, flags);
+}
+
+/* Previously-sent-date-value */
+static
+gboolean
+mms_value_decode_prevdate(
+    enum wsp_value_type type,
+    const guint8* val,
+    unsigned int len,
+    unsigned int flags)
+{
+    /*
+     * Value-length Forwarded-count-value Date-value
+     * Forwarded-count-value = Integer-value
+     */
+    if (type == WSP_VALUE_TYPE_LONG) {
+        unsigned int count = 0;
+        unsigned int consumed = 0;
+        if (wsp_decode_integer(val, len, &count, &consumed)) {
+            const guint8* ptr = val + consumed;
+            const unsigned int bytes_left = len - consumed;
+            enum wsp_value_type date_type;
+            const void* date_val;
+            unsigned int date_len;
+            time_t t;
+            if (wsp_decode_field(ptr, bytes_left, &date_type, &date_val,
+                &date_len, &consumed) && consumed == bytes_left &&
+                date_type == WSP_VALUE_TYPE_LONG &&
+                mms_value_decode_date_value(date_val, date_len, &t)) {
+                mms_value_print_date(t);
+                printf("; count=%u", count);
+                mms_value_verbose_dump(val, len, flags);
+                return TRUE;
+            }
+        }
+    }
+    return mms_value_decode_unknown(type, val, len, flags);
 }
 
 static
