@@ -129,7 +129,9 @@ mms_task_retrieve_new(
         MMSTaskRetrieve* retrieve = mms_task_http_alloc(
             MMS_TYPE_TASK_RETRIEVE, config, handler, "Retrieve", id, imsi,
             pdu->ni.location, MMS_RETRIEVE_CONF_FILE, NULL);
-        retrieve->http.task.deadline = pdu->ni.expiry;
+        if (retrieve->http.task.deadline > pdu->ni.expiry) {
+            retrieve->http.task.deadline = pdu->ni.expiry;
+        }
         retrieve->transaction_id = g_strdup(pdu->transaction_id);
         return &retrieve->http.task;
     } else {

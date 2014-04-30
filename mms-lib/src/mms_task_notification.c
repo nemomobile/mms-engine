@@ -307,9 +307,6 @@ mms_task_notification_new(
             config, handler, "Notification", NULL, imsi);
         ind->push = g_bytes_ref(bytes);
         ind->pdu = pdu;
-        if (pdu->type == MMS_MESSAGE_TYPE_NOTIFICATION_IND) {
-            ind->task.deadline = pdu->ni.expiry;
-        }
         return &ind->task;
     } else {
         MMS_ERROR(error, MMS_LIB_ERROR_DECODE, "Failed to decode MMS PDU");
