@@ -29,6 +29,7 @@ typedef struct mms_app_options {
     GBusType bus_type;
     gboolean keep_running;
     char* dir;
+    char* user_agent;
     MMSConfig config;
 } MMSAppOptions;
 
@@ -165,6 +166,9 @@ mms_app_parse_options(
     char* root_dir_help = g_strdup_printf(
         "Root directory for MMS files [%s]",
         opt->config.root_dir);
+    char* user_agent_help = g_strdup_printf(
+        "User-Agent [%s]",
+        opt->config.user_agent);
     char* retry_secs_help = g_strdup_printf(
         "Retry period in seconds [%d]",
         opt->config.retry_secs);
@@ -194,6 +198,8 @@ mms_app_parse_options(
           &size_limit_kb, size_limit_help, "KB" },
         { "pix-limit", 'p', 0, G_OPTION_ARG_DOUBLE,
           &megapixels, megapixels_help, "MPIX" },
+        { "user-agent", 'u', 0, G_OPTION_ARG_STRING,
+          &opt->user_agent, user_agent_help, "STRING" },
         { "keep-running", 'k', 0, G_OPTION_ARG_NONE, &opt->keep_running,
           "Keep running after everything is done", NULL },
         { "keep-temp-files", 't', 0, G_OPTION_ARG_NONE,
@@ -222,6 +228,7 @@ mms_app_parse_options(
     ok = g_option_context_parse(options, &argc, &argv, &error);
     g_option_context_free(options);
     g_free(root_dir_help);
+    g_free(user_agent_help);
     g_free(retry_secs_help);
     g_free(idle_secs_help);
     g_free(size_limit_help);
@@ -251,6 +258,7 @@ mms_app_parse_options(
             opt->config.max_pixels = 0;
         }
         if (opt->dir) opt->config.root_dir = opt->dir;
+        if (opt->user_agent) opt->config.user_agent = opt->user_agent;
         if (session_bus) {
             MMS_DEBUG("Attaching to session bus");
             opt->bus_type = G_BUS_TYPE_SESSION;
@@ -310,6 +318,7 @@ int main(int argc, char* argv[])
         closelog();
     }
     g_free(opt.dir);
+    g_free(opt.user_agent);
     mms_lib_deinit();
     return result;
 }
