@@ -1,0 +1,2 @@
+This test sets a tiny size limit so that there's no way
+that PDU would possibly fit into that limit.

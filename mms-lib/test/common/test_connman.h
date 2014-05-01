@@ -17,6 +17,11 @@
 
 #include "mms_connman.h"
 
+typedef
+void
+(*mms_connman_test_connect_fn)(
+    void* param);
+
 MMSConnMan*
 mms_connman_test_new(void);
 
@@ -30,6 +35,12 @@ void
 mms_connman_test_set_default_imsi(
     MMSConnMan* cm,
     const char* imsi);
+
+void
+mms_connman_test_set_connect_callback(
+    MMSConnMan* cm,
+    mms_connman_test_connect_fn fn,
+    void* param);
 
 void
 mms_connman_test_close_connection(

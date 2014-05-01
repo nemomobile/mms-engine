@@ -36,6 +36,7 @@ typedef struct test_desc {
     const char* name;
     const MMSAttachmentInfo* parts;
     int nparts;
+    gsize size_limit;
     const char* subject;
     const char* to;
     const char* cc;
@@ -49,11 +50,16 @@ typedef struct test_desc {
     const char* msgid;
 } TestDesc;
 
+#define TEST_FLAG_CANCEL                  (0x1000)
 #define TEST_FLAG_REQUEST_DELIVERY_REPORT MMS_SEND_FLAG_REQUEST_DELIVERY_REPORT
 #define TEST_FLAG_REQUEST_READ_REPORT     MMS_SEND_FLAG_REQUEST_READ_REPORT
+
+/* ASSERT that test and dispatcher flags don't interfere with each other */ 
 #define TEST_DISPATCHER_FLAGS       (\
   TEST_FLAG_REQUEST_DELIVERY_REPORT |\
   TEST_FLAG_REQUEST_READ_REPORT     )
+#define TEST_PRIVATE_FLAGS                TEST_FLAG_CANCEL
+G_STATIC_ASSERT(!(TEST_PRIVATE_FLAGS & TEST_DISPATCHER_FLAGS));
 
 typedef struct test {
     const TestDesc* desc;
@@ -90,12 +96,17 @@ static const MMSAttachmentInfo test_files_reject [] = {
     { "test.txt", "text/plain", "text" }
 };
 
+static const MMSAttachmentInfo test_txt [] = {
+    { "test.txt", "text/plain", "text" }
+};
+
 #define ATTACHMENTS(a) a, G_N_ELEMENTS(a)
 
 static const TestDesc send_tests[] = {
     {
         "Accept",
         ATTACHMENTS(test_files_accept),
+        0,
         "Test of successful delivery",
         "+1234567890",
         "+2345678901,+3456789012",
@@ -110,6 +121,7 @@ static const TestDesc send_tests[] = {
     },{
         "AcceptNoExt",
         ATTACHMENTS(test_files_accept_no_ext),
+        0,
         "Test of successful delivery (no extensions)",
         "+1234567890",
         "+2345678901,+3456789012",
@@ -124,6 +136,7 @@ static const TestDesc send_tests[] = {
     },{
         "ServiceDenied",
         ATTACHMENTS(test_files_reject),
+        0,
         "Rejection test",
         "+1234567890",
         NULL,
@@ -138,6 +151,7 @@ static const TestDesc send_tests[] = {
     },{
         "Failure",
         ATTACHMENTS(test_files_reject),
+        0,
         "Failure test",
         "+1234567890",
         NULL,
@@ -148,6 +162,81 @@ static const TestDesc send_tests[] = {
         MMS_CONTENT_TYPE,
         SOUP_STATUS_OK,
         MMS_SEND_STATE_SEND_ERROR,
+        NULL
+    },{
+        "UnparsableResp",
+        ATTACHMENTS(test_txt),
+        0,
+        "Testing unparsable response",
+        "+1234567890",
+        NULL,
+        NULL,
+        NULL,
+        0,
+        "m-send.conf",
+        MMS_CONTENT_TYPE,
+        SOUP_STATUS_OK,
+        MMS_SEND_STATE_SEND_ERROR,
+        NULL
+    },{
+        "UnexpectedResp",
+        ATTACHMENTS(test_txt),
+        0,
+        "Testing unexpected response",
+        "+1234567890",
+        NULL,
+        NULL,
+        NULL,
+        0,
+        "m-send.conf",
+        MMS_CONTENT_TYPE,
+        SOUP_STATUS_OK,
+        MMS_SEND_STATE_SEND_ERROR,
+        NULL
+    },{
+        "EmptyMessageID",
+        ATTACHMENTS(test_txt),
+        0,
+        "Testing empty message id",
+        "+1234567890",
+        NULL,
+        NULL,
+        NULL,
+        0,
+        "m-send.conf",
+        MMS_CONTENT_TYPE,
+        SOUP_STATUS_OK,
+        MMS_SEND_STATE_SEND_ERROR,
+        NULL
+    },{
+        "Cancel",
+        ATTACHMENTS(test_txt),
+        0,
+        "Failure test",
+        "+1234567890",
+        NULL,
+        NULL,
+        NULL,
+        TEST_FLAG_CANCEL,
+        NULL,
+        NULL,
+        SOUP_STATUS_INTERNAL_SERVER_ERROR,
+        MMS_SEND_STATE_SEND_ERROR,
+        NULL
+    },{
+        "TooBig",
+        ATTACHMENTS(test_txt),
+        100,
+        "Size limit test",
+        "+1234567890",
+        NULL,
+        NULL,
+        NULL,
+        0,
+        NULL,
+        NULL,
+        SOUP_STATUS_INTERNAL_SERVER_ERROR,
+        MMS_SEND_STATE_TOO_BIG,
         NULL
     }
 };
@@ -174,7 +263,7 @@ test_finish(
                 MMS_ERR("%s msgid %s, expected %s", name, msgid, desc->msgid);
             } else if (msgid && !desc->msgid) {
                 test->ret = RET_ERR;
-                MMS_ERR("%s msgidis not expected", name);
+                MMS_ERR("%s msgid is not expected", name);
             }
         }
     }
@@ -211,18 +300,35 @@ test_timeout(
 }
 
 static
+void
+test_cancel(
+    void* param)
+{
+    Test* test = param;
+    MMS_DEBUG("Cancelling %s", test->id);
+    mms_dispatcher_cancel(test->disp, test->id);
+}
+
+static
 gboolean
 test_init(
     Test* test,
-    const MMSConfig* config,
+    MMSConfig* config,
     const TestDesc* desc)
 {
     gboolean ok = FALSE;
-    GError* error = NULL;
-    char* fn = g_strconcat(DATA_DIR, desc->name, "/", desc->resp_file, NULL);
     memset(test, 0, sizeof(*test));
-    test->resp_file = g_mapped_file_new(fn, FALSE, &error);
-    if (test->resp_file) {
+    if (desc->resp_file) {
+        GError* error = NULL;
+        char* f = g_strconcat(DATA_DIR, desc->name, "/", desc->resp_file, NULL);
+        test->resp_file = g_mapped_file_new(f, FALSE, &error);
+        if (!test->resp_file) {
+            MMS_ERR("%s", MMS_ERRMSG(error));
+            g_error_free(error);
+        }
+        g_free(f);
+    }
+    if (!desc->resp_file || test->resp_file) {
         int i;
         guint port;
         test->parts = g_new0(MMSAttachmentInfo, desc->nparts);
@@ -245,13 +351,13 @@ test_init(
             desc->resp_status);
         port = test_http_get_port(test->http);
         mms_connman_test_set_port(test->cm, port, TRUE);
+        if (desc->flags & TEST_FLAG_CANCEL) {
+            mms_connman_test_set_connect_callback(test->cm, test_cancel, test);
+        }
+        if (desc->size_limit) config->size_limit = desc->size_limit;
         test->ret = RET_ERR;
         ok = TRUE;
-    } else {
-        MMS_ERR("%s", MMS_ERRMSG(error));
-        g_error_free(error);
     }
-    g_free(fn);
     return ok;
 }
 
@@ -274,7 +380,7 @@ test_finalize(
     mms_handler_unref(test->handler);
     mms_dispatcher_unref(test->disp);
     g_main_loop_unref(test->loop);
-    g_mapped_file_unref(test->resp_file);
+    if (test->resp_file) g_mapped_file_unref(test->resp_file);
     for (i=0; i<test->desc->nparts; i++) g_free(test->files[i]);
     g_free(test->files);
     g_free(test->parts);
@@ -289,7 +395,8 @@ test_run_once(
     gboolean debug)
 {
     Test test;
-    if (test_init(&test, config, desc)) {
+    MMSConfig test_config = *config;
+    if (test_init(&test, &test_config, desc)) {
         GError* error = NULL;
         char* imsi = desc->imsi ? g_strdup(desc->imsi) :
             mms_connman_default_imsi(test.cm);
@@ -380,7 +487,7 @@ int main(int argc, char* argv[])
         config.root_dir = tmpd;
         config.idle_secs = 0;
 
-        mms_log_default.name = "test_send";
+        mms_log_set_type(MMS_LOG_TYPE_STDOUT, "test_send");
         if (verbose) {
             mms_log_default.level = MMS_LOGLEVEL_VERBOSE;
         } else {

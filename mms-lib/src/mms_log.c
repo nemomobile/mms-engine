@@ -50,11 +50,11 @@ static const struct _mms_log_level {
     { "verbose", "From verbose trace messages to errors" }
 };
 
-static const char MMS_LOG_TYPE_STDOUT[] = "stdout";
-static const char MMS_LOG_TYPE_GLIB[]   = "glib";
-static const char MMS_LOG_TYPE_CUSTOM[] = "custom";
+const char MMS_LOG_TYPE_STDOUT[] = "stdout";
+const char MMS_LOG_TYPE_GLIB[]   = "glib";
+const char MMS_LOG_TYPE_CUSTOM[] = "custom";
 #ifdef MMS_LOG_SYSLOG
-static const char MMS_LOG_TYPE_SYSLOG[] = "syslog";
+const char MMS_LOG_TYPE_SYSLOG[] = "syslog";
 #endif
 
 G_STATIC_ASSERT(G_N_ELEMENTS(mms_log_levels) > MMS_LOGLEVEL_MAX);

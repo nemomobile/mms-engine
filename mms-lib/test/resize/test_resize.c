@@ -395,6 +395,9 @@ test_run_one(
                 } else if (!ok && !test->size.width && !test->size.height) {
                     ret = RET_OK;
                 }
+                /* Extra ref/unref improves the coverage */
+                mms_attachment_ref(at);
+                mms_attachment_unref(at);
                 mms_attachment_unref(at);
             } else {
                 MMS_ERR("%s", MMS_ERRMSG(error));

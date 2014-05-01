@@ -1,0 +1,1 @@
+Test of m-send.conf containing unparsable garbage

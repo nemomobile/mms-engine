@@ -103,8 +103,12 @@ mms_logv(
     const char* format,
     va_list va);
 
+extern const char MMS_LOG_TYPE_STDOUT[];
+extern const char MMS_LOG_TYPE_GLIB[];
+extern const char MMS_LOG_TYPE_CUSTOM[];
 #ifdef unix
 #  define MMS_LOG_SYSLOG
+extern const char MMS_LOG_TYPE_SYSLOG[];
 #endif
 
 /* Available log handlers */
