@@ -73,6 +73,7 @@ int main(int argc, char* argv[])
         "m-send_3.req",
         "m-send.conf"
     };
+    mms_log_set_type(MMS_LOG_TYPE_STDOUT, "test_mms_codec");
     mms_log_stdout_timestamp = FALSE;
     mms_log_default.level = MMS_LOGLEVEL_INFO;
     if (argc > 1) {

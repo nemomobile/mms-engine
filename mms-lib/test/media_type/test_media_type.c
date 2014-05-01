@@ -116,6 +116,7 @@ run_tests(
 
 int main(int argc, char* argv[])
 {
+    mms_log_set_type(MMS_LOG_TYPE_STDOUT, "test_media_type");
     mms_log_stdout_timestamp = FALSE;
     mms_log_default.level = MMS_LOGLEVEL_INFO;
     return !run_tests(media_type_tests, G_N_ELEMENTS(media_type_tests));
