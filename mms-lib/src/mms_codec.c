@@ -473,6 +473,13 @@ static const char *decode_text(struct wsp_header_iter *iter)
 	const unsigned char *p;
 	unsigned int l;
 
+	if (wsp_header_iter_get_val_type(iter) == WSP_VALUE_TYPE_LONG) {
+		if (iter->len == 0) /* The only way to encode an empty string */
+			return (char*)(iter->pdu + iter->pos - 1);
+
+		return NULL;
+	}
+
 	if (wsp_header_iter_get_val_type(iter) != WSP_VALUE_TYPE_TEXT)
 		return NULL;
 
