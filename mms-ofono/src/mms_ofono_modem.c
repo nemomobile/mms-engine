@@ -15,15 +15,15 @@
 #include "mms_ofono_modem.h"
 #include "mms_ofono_names.h"
 
-/* Logging */
-#define MMS_LOG_MODULE_NAME mms_ofono_modem_log
-#include "mms_ofono_log.h"
-MMS_LOG_MODULE_DEFINE("mms-ofono-modem");
-
 /* Generated headers */
 #include "org.ofono.Modem.h"
 #include "org.ofono.SimManager.h"
 #include "org.ofono.ConnectionManager.h"
+
+/* Logging */
+#define MMS_LOG_MODULE_NAME mms_ofono_modem_log
+#include "mms_ofono_log.h"
+MMS_LOG_MODULE_DEFINE("mms-ofono-modem");
 
 typedef struct mms_context_info {
     char* path;

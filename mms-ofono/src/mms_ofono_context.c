@@ -17,13 +17,13 @@
 #include "mms_ofono_connection.h"
 #include "mms_ofono_names.h"
 
+/* Generated headers */
+#include "org.ofono.ConnectionContext.h"
+
 /* Logging */
 #define MMS_LOG_MODULE_NAME mms_ofono_context_log
 #include "mms_ofono_log.h"
 MMS_LOG_MODULE_DEFINE("mms-ofono-context");
-
-/* Generated headers */
-#include "org.ofono.ConnectionContext.h"
 
 static
 void

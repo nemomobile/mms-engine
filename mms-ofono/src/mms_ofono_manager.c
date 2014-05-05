@@ -17,13 +17,13 @@
 #include "mms_ofono_names.h"
 #include "mms_ofono_names.h"
 
+/* Generated headers */
+#include "org.ofono.Manager.h"
+
 /* Logging */
 #define MMS_LOG_MODULE_NAME mms_ofono_manager_log
 #include "mms_ofono_log.h"
 MMS_LOG_MODULE_DEFINE("mms-ofono-manager");
-
-/* Generated headers */
-#include "org.ofono.Manager.h"
 
 struct mms_ofono_manager {
     GDBusConnection* bus;

@@ -17,13 +17,13 @@
 #include "mms_ofono_modem.h"
 #include "mms_ofono_names.h"
 
+/* Generated headers */
+#include "org.ofono.ConnectionContext.h"
+
 /* Logging */
 #define MMS_LOG_MODULE_NAME mms_connection_log
 #include "mms_lib_log.h"
 MMS_LOG_MODULE_DEFINE("mms-ofono-connection");
-
-/* Generated headers */
-#include "org.ofono.ConnectionContext.h"
 
 typedef MMSConnectionClass MMSOfonoConnectionClass;
 
