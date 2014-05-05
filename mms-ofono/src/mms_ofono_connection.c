@@ -22,7 +22,7 @@
 
 /* Logging */
 #define MMS_LOG_MODULE_NAME mms_connection_log
-#include "mms_lib_log.h"
+#include "mms_ofono_log.h"
 MMS_LOG_MODULE_DEFINE("mms-ofono-connection");
 
 typedef MMSConnectionClass MMSOfonoConnectionClass;

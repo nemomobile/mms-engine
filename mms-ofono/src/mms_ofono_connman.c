@@ -21,7 +21,7 @@
 
 /* Logging */
 #define MMS_LOG_MODULE_NAME mms_connman_log
-#include "mms_lib_log.h"
+#include "mms_ofono_log.h"
 MMS_LOG_MODULE_DEFINE("mms-ofono-connman");
 
 typedef MMSConnManClass MMSOfonoConnManClass;
