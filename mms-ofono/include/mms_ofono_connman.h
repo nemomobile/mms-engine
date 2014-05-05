@@ -15,7 +15,6 @@
 #ifndef JOLLA_MMS_CONNMAN_OFONO_H
 #define JOLLA_MMS_CONNMAN_OFONO_H
 
-#include <gio/gio.h>
 #include "mms_connman.h"
 
 MMSConnMan*
