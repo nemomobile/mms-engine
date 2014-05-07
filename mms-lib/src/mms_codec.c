@@ -1348,6 +1348,8 @@ static gboolean decode_retrieve_conf(struct wsp_header_iter *iter,
 				0, &out->rc.msgid,
 				MMS_HEADER_DATE,
 				HEADER_FLAG_MANDATORY, &out->rc.date,
+				MMS_HEADER_READ_REPORT,
+				0, &out->rc.rr,
 				MMS_HEADER_INVALID) == FALSE)
 		return FALSE;
 

@@ -119,6 +119,7 @@ struct mms_retrieve_conf {
 	enum mms_message_priority priority;
 	char *msgid;
 	time_t date;
+	gboolean rr;
 };
 
 struct mms_send_req {
