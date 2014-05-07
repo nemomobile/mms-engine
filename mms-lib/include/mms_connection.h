@@ -17,17 +17,6 @@
 
 #include "mms_lib_types.h"
 
-/* Connection errors */
-#define G_MMS_CONNECTION_ERROR mms_connection_error_quark()
-GQuark mms_connection__error_quark(void);
-
-typedef enum _MMS_CONNECTION_ERROR {
-    MMS_CONNECTION_ERROR_NOT_FOUND,     /* Requested SIM not found */
-    MMS_CONNECTION_ERROR_NOT_ALLOWED,   /* Data transfer disabled */
-    MMS_CONNECTION_ERROR_FAILED,        /* Connection failed */
-    MMS_CONNECTION_ERROR_INTERRUPTED    /* Interrupted by something */
-} MMS_CONNECTION_ERROR;
-
 /* Connection state. There are only two state change sequences allowed:
  * OPENING -> FAILED and OPENING -> OPEN -> CLOSE. Once connection fails
  * to open or gets closed, it will remain on FAILED or CLOSED state forever.

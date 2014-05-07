@@ -50,7 +50,7 @@ test_connection_test_open(
 {
     MMSConnectionTest* test = param;
     mms_connection_test_set_state(test, test->netif ?
-        MMS_CONNECTION_STATE_OPEN : MMS_CONNECTION_ERROR_FAILED);
+        MMS_CONNECTION_STATE_OPEN : MMS_CONNECTION_STATE_FAILED);
     mms_connection_unref(test);
     return FALSE;
 }

@@ -24,12 +24,6 @@ G_DEFINE_TYPE(MMSConnection, mms_connection, G_TYPE_OBJECT);
 #define MMS_CONNECTION(obj) \
     (G_TYPE_CHECK_INSTANCE_CAST((obj), MMS_TYPE_CONNECTION, MMSConnection))
 
-GQuark
-mms_connection_error_quark()
-{
-    return g_quark_from_static_string("mms-connection-error-quark");
-}
-
 MMSConnection*
 mms_connection_ref(
     MMSConnection* conn)
