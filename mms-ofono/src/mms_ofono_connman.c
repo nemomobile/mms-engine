@@ -26,7 +26,7 @@ MMS_LOG_MODULE_DEFINE("mms-ofono-connman");
 
 typedef MMSConnManClass MMSOfonoConnManClass;
 typedef struct mms_ofono_connman {
-    GObject cm;
+    MMSConnMan cm;
     guint ofono_watch_id;
     GDBusConnection* bus;
     MMSOfonoManager* man;

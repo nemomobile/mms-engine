@@ -17,6 +17,12 @@
 
 #include "mms_lib_types.h"
 
+/* Instance */
+struct mms_connman {
+    GObject object;
+};
+
+/* Class */
 typedef struct mms_connman_class {
     GObjectClass parent;
     char* (*fn_default_imsi)(MMSConnMan* cm);

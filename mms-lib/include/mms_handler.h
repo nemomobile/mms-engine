@@ -56,6 +56,11 @@ typedef enum _mmm_delivery_status {
 /* Read status */
 typedef MMSReadStatus MMS_READ_STATUS;
 
+/* Instance */
+struct mms_handler {
+    GObject object;
+};
+
 /* Class */
 typedef struct mms_handler_class {
     GObjectClass parent;

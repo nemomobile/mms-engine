@@ -64,8 +64,8 @@ typedef struct mms_attachment_info {
 } MMSAttachmentInfo;
 
 /* Types */
-typedef GObject MMSHandler;
-typedef GObject MMSConnMan;
+typedef struct mms_handler MMSHandler;
+typedef struct mms_connman MMSConnMan;
 typedef struct mms_log_module MMSLogModule;
 typedef struct mms_dispatcher MMSDispatcher;
 typedef struct mms_connection MMSConnection;
