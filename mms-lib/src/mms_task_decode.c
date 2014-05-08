@@ -149,6 +149,7 @@ mms_task_decode_process_retrieve_conf(
     msg->subject = g_strdup(rc->subject);
     msg->cls = g_strdup(rc->cls ? rc->cls : MMS_MESSAGE_CLASS_PERSONAL);
     msg->date = rc->date ? rc->date : time(NULL);
+    msg->read_report_req = rc->rr;
 
     switch (rc->priority) {
     case MMS_MESSAGE_PRIORITY_LOW:
