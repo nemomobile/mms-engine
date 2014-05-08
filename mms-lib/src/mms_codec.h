@@ -120,6 +120,7 @@ struct mms_retrieve_conf {
 	char *msgid;
 	time_t date;
 	gboolean rr;
+	enum mms_message_retrieve_status retrieve_status;
 };
 
 struct mms_send_req {

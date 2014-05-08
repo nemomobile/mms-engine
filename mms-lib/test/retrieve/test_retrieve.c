@@ -210,6 +210,18 @@ static const TestDesc retrieve_tests[] = {
         TEST_PARTS_NONE,
         0
     },{
+        "MessageNotFound",
+        NULL,
+        "m-notification.ind",
+        "m-retrieve.conf",
+        SOUP_STATUS_OK,
+        MMS_CONTENT_TYPE,
+        NULL,
+        MMS_RECEIVE_STATE_DOWNLOAD_ERROR,
+        MMS_MESSAGE_TYPE_NONE,
+        TEST_PARTS_NONE,
+        0
+    },{
         "GarbageRetrieve",
         NULL,
         "m-notification.ind",

@@ -90,7 +90,7 @@ enum mms_header {
 	MMS_HEADER_SUBJECT =			0x16,
 	MMS_HEADER_TO =				0x17,
 	MMS_HEADER_TRANSACTION_ID =		0x18,
-	MMS_HEADER_RETRIEVE_STATUS =	0x19,
+	MMS_HEADER_RETRIEVE_STATUS =		0x19,
 	MMS_HEADER_RETRIEVE_TEXT =		0x1a,
 	MMS_HEADER_READ_STATUS =		0x1b,
 	__MMS_HEADER_MAX =			0x1c,
@@ -853,7 +853,8 @@ static gboolean extract_status(struct wsp_header_iter *iter, void *user)
 	return FALSE;
 }
 
-static gboolean extract_retrieve_status(struct wsp_header_iter *iter, void *user)
+static gboolean extract_retrieve_status(struct wsp_header_iter *iter,
+								void *user)
 {
 	unsigned char *out = user;
 	const unsigned char *p;
@@ -863,6 +864,7 @@ static gboolean extract_retrieve_status(struct wsp_header_iter *iter, void *user
 
 	p = wsp_header_iter_get_val(iter);
 
+	/* Accept known codes, ignore unknown ones */
 	switch (p[0]) {
 	case MMS_MESSAGE_RETRIEVE_STATUS_OK:
 	case MMS_MESSAGE_RETRIEVE_STATUS_ERR_TRANS_FAILURE:
@@ -873,10 +875,10 @@ static gboolean extract_retrieve_status(struct wsp_header_iter *iter, void *user
 	case MMS_MESSAGE_RETRIEVE_STATUS_ERR_PERM_MESSAGE_NOT_FOUND:
 	case MMS_MESSAGE_RETRIEVE_STATUS_ERR_PERM_CONTENT_UNSUPPORTED:
 		*out = p[0];
-		return TRUE;
+		break;
 	}
 
-	return FALSE;
+	return TRUE;
 }
 
 static gboolean extract_read_status(struct wsp_header_iter *iter, void *user)
@@ -1350,6 +1352,8 @@ static gboolean decode_retrieve_conf(struct wsp_header_iter *iter,
 				HEADER_FLAG_MANDATORY, &out->rc.date,
 				MMS_HEADER_READ_REPORT,
 				0, &out->rc.rr,
+				MMS_HEADER_RETRIEVE_STATUS,
+				0, &out->rc.retrieve_status,
 				MMS_HEADER_INVALID) == FALSE)
 		return FALSE;
 
