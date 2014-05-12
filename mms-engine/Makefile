@@ -4,6 +4,7 @@
 .PHONY: mms_lib_debug_lib mms_lib_release_lib
 .PHONY: mms_ofono_debug_lib mms_ofono_release_lib
 .PHONY: mms_handler_debug_lib mms_handler_release_lib
+.PHONY: mms_settings_debug_lib mms_settings_release_lib
 
 #
 # Pull in mms-lib configuration
@@ -15,7 +16,7 @@ include ../mms-lib/Config.mak
 # Required packages
 #
 
-PKGS = gio-unix-2.0 gio-2.0 glib-2.0
+PKGS = gio-unix-2.0 gio-2.0
 LIB_PKGS = libwspcodec libsoup-2.4 $(RESIZE_PKG) $(PKGS)
 
 #
@@ -73,6 +74,16 @@ MMS_HANDLER_DEBUG_LIB = $(MMS_HANDLER_BUILD_DIR)/debug/$(MMS_HANDLER_LIB)
 MMS_HANDLER_RELEASE_LIB = $(MMS_HANDLER_BUILD_DIR)/release/$(MMS_HANDLER_LIB)
 
 #
+# mms-settings-dconf
+#
+
+MMS_SETTINGS_LIB = libmms-settings-dconf.a
+MMS_SETTINGS_DIR = ../mms-settings-dconf
+MMS_SETTINGS_BUILD_DIR = $(MMS_SETTINGS_DIR)/build
+MMS_SETTINGS_DEBUG_LIB = $(MMS_SETTINGS_BUILD_DIR)/debug/$(MMS_SETTINGS_LIB)
+MMS_SETTINGS_RELEASE_LIB = $(MMS_SETTINGS_BUILD_DIR)/release/$(MMS_SETTINGS_LIB)
+
+#
 # Tools and flags
 #
 
@@ -85,7 +96,7 @@ RELEASE_DEFS =
 WARN = -Wall
 CFLAGS = -fPIC $(shell pkg-config --cflags $(PKGS)) -I. -I$(GEN_DIR) \
  -I$(MMS_LIB_DIR)/include -I$(MMS_OFONO_DIR)/include \
- -I$(MMS_HANDLER_DIR)/include -MMD
+ -I$(MMS_HANDLER_DIR)/include -I$(MMS_SETTINGS_DIR)/include -MMD
 
 ifndef KEEP_SYMBOLS
 KEEP_SYMBOLS = 0
@@ -107,11 +118,13 @@ LIBS = $(shell pkg-config --libs $(LIB_PKGS)) -lmagic -ljpeg $(RESIZE_LIBS)
 DEBUG_LIBS = \
   $(MMS_OFONO_DEBUG_LIB) \
   $(MMS_HANDLER_DEBUG_LIB) \
+  $(MMS_SETTINGS_DEBUG_LIB) \
   $(MMS_LIB_DEBUG_LIB) \
   $(LIBS)
 RELEASE_LIBS = \
   $(MMS_OFONO_RELEASE_LIB) \
   $(MMS_HANDLER_RELEASE_LIB) \
+  $(MMS_SETTINGS_RELEASE_LIB) \
   $(MMS_LIB_RELEASE_LIB) \
   $(LIBS)
 
@@ -135,19 +148,23 @@ GEN_FILES = $(GEN_SRC:%=$(GEN_DIR)/%)
 DEBUG_DEPS = \
   mms_lib_debug_lib \
   mms_ofono_debug_lib \
-  mms_handler_debug_lib
+  mms_handler_debug_lib \
+  mms_settings_debug_lib
 RELEASE_DEPS = \
   mms_lib_release_lib \
   mms_ofono_release_lib \
-  mms_handler_release_lib
+  mms_handler_release_lib \
+  mms_settings_release_lib
 DEBUG_EXE_DEPS = \
   $(MMS_LIB_DEBUG_LIB) \
   $(MMS_OFONO_DEBUG_LIB) \
-  $(MMS_HANDLER_DEBUG_LIB)
+  $(MMS_HANDLER_DEBUG_LIB) \
+  $(MMS_SETTINGS_DEBUG_LIB)
 RELEASE_EXE_DEPS = \
   $(MMS_LIB_RELEASE_LIB) \
   $(MMS_OFONO_RELEASE_LIB) \
-  $(MMS_HANDLER_RELEASE_LIB)
+  $(MMS_HANDLER_RELEASE_LIB) \
+  $(MMS_SETTINGS_RELEASE_LIB)
 DEPS = $(DEBUG_OBJS:%.o=%.d) $(RELEASE_OBJS:%.o=%.d)
 ifneq ($(MAKECMDGOALS),clean)
 ifneq ($(strip $(DEPS)),)
@@ -178,6 +195,7 @@ cleaner: clean
 	make -C $(MMS_LIB_DIR) $(SUBMAKE_OPTS) clean
 	make -C $(MMS_OFONO_DIR) $(SUBMAKE_OPTS) clean
 	make -C $(MMS_HANDLER_DIR) $(SUBMAKE_OPTS) clean
+	make -C $(MMS_SETTINGS_DIR) $(SUBMAKE_OPTS) clean
 
 $(GEN_DIR):
 	mkdir -p $@
@@ -206,6 +224,12 @@ mms_handler_debug_lib:
 mms_handler_release_lib:
 	make -C $(MMS_HANDLER_DIR) $(SUBMAKE_OPTS) release
 
+mms_settings_debug_lib:
+	make -C $(MMS_SETTINGS_DIR) $(SUBMAKE_OPTS) debug
+
+mms_settings_release_lib:
+	make -C $(MMS_SETTINGS_DIR) $(SUBMAKE_OPTS) release
+
 $(MMS_LIB_DEBUG_LIB): mms_lib_debug_lib
 
 $(MMS_LIB_RELEASE_LIB): mms_lib_release_lib
@@ -217,6 +241,10 @@ $(MMS_OFONO_RELEASE_LIB): mms_ofono_release_lib
 $(MMS_HANDLER_DEBUG_LIB): mms_handler_debug_lib
 
 $(MMS_HANDLER_RELEASE_LIB): mms_handler_release_lib
+
+$(MMS_SETTINGS_DEBUG_LIB): mms_settings_debug_lib
+
+$(MMS_SETTINGS_RELEASE_LIB): mms_settings_release_lib
 
 $(GEN_DIR)/%.c: $(SPEC_DIR)/%.xml
 	gdbus-codegen --generate-c-code $(@:%.c=%) $<

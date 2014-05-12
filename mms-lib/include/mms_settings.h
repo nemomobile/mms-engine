@@ -45,6 +45,12 @@ struct mms_settings {
     GObject object;
     const MMSConfig* config;
     MMSSettingsSimDataCopy sim_defaults;
+    unsigned int flags;
+
+#define MMS_SETTINGS_FLAG_OVERRIDE_USER_AGENT   (0x01)
+#define MMS_SETTINGS_FLAG_OVERRIDE_SIZE_LIMIT   (0x02)
+#define MMS_SETTINGS_FLAG_OVERRIDE_MAX_PIXELS   (0x04)
+#define MMS_SETTINGS_FLAG_OVERRIDE_ALLOW_DR     (0x08)
 };
 
 /* Class */
@@ -99,6 +105,14 @@ mms_settings_sim_data_copy_new(
 void
 mms_settings_sim_data_copy_free(
     MMSSettingsSimDataCopy* data);
+
+void
+mms_settings_sim_data_copy(
+    MMSSettingsSimDataCopy* dest,
+    const MMSSettingsSimData* src);
+
+#define mms_settings_sim_data_reset(data) \
+    mms_settings_sim_data_copy(data,NULL)
 
 #endif /* JOLLA_MMS_SETTINGS_H */
 

@@ -5,9 +5,11 @@ DBUS_INTERFACE_DIR = $$_PRO_FILE_PWD_
 MMS_LIB_DIR = $$_PRO_FILE_PWD_/../mms-lib
 MMS_OFONO_DIR = $$_PRO_FILE_PWD_/../mms-ofono
 MMS_HANDLER_DIR = $$_PRO_FILE_PWD_/../mms-handler-dbus
+MMS_SETTINGS_DIR = $$_PRO_FILE_PWD_/../mms-settings-dconf
 INCLUDEPATH += $$MMS_OFONO_DIR/include
 INCLUDEPATH += $$MMS_LIB_DIR/include
 INCLUDEPATH += $$MMS_HANDLER_DIR/include
+INCLUDEPATH += $$MMS_SETTINGS_DIR/include
 QMAKE_CFLAGS += -Wno-unused
 
 include(../mms-lib/mms-lib-config.pri)
@@ -34,11 +36,13 @@ CONFIG(debug, debug|release) {
     LIBS += $$MMS_OFONO_DIR/build/debug/libmms-ofono.a
     LIBS += $$MMS_HANDLER_DIR/build/debug/libmms-handler-dbus.a
     LIBS += $$MMS_LIB_DIR/build/debug/libmms-lib.a
+    LIBS += $$MMS_SETTINGS_DIR/build/debug/libmms-settings-dconf.a
 } else {
     DESTDIR = $$_PRO_FILE_PWD_/build/release
     LIBS += $$MMS_OFONO_DIR/build/release/libmms-ofono.a
     LIBS += $$MMS_HANDLER_DIR/build/release/libmms-handler-dbus.a
     LIBS += $$MMS_LIB_DIR/build/release/libmms-lib.a
+    LIBS += $$MMS_SETTINGS_DIR/build/release/libmms-settings-dconf.a
 }
 
 LIBS += -lmagic -ljpeg
