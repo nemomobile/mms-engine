@@ -17,6 +17,7 @@
 
 #include "mms_log.h"
 #include "mms_lib_util.h"
+#include "mms_settings.h"
 #include "mms_dispatcher.h"
 
 #define RET_OK      (0)
@@ -80,16 +81,18 @@ test_init(
     const MMSConfig* config,
     const TestDesc* desc)
 {
+    MMSSettings* settings = mms_settings_default_new(config);
     memset(test, 0, sizeof(*test));
     test->desc = desc;
     test->cm = mms_connman_test_new();
     test->handler = mms_handler_test_new();
-    test->disp = mms_dispatcher_new(config, test->cm, test->handler);
+    test->disp = mms_dispatcher_new(settings, test->cm, test->handler);
     test->pdu = g_bytes_new_static(desc->pdu, desc->pdusize);
     test->loop = g_main_loop_new(NULL, FALSE);
     test->delegate.fn_done = test_done;
     mms_dispatcher_set_delegate(test->disp, &test->delegate);
     test->timeout_id = g_timeout_add_seconds(10, test_timeout, test);
+    mms_settings_unref(settings);
     test->ret = RET_ERR;
 }
 

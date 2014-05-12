@@ -1,0 +1,111 @@
+/*
+ * Copyright (C) 2014 Jolla Ltd.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
+
+#ifndef JOLLA_MMS_SETTINGS_H
+#define JOLLA_MMS_SETTINGS_H
+
+#include "mms_lib_types.h"
+
+/* Static configuration, chosen at startup and never changing since then */
+struct mms_config {
+    const char* root_dir;       /* Root directory for storing MMS files */
+    int retry_secs;             /* Retry timeout in seconds */
+    int idle_secs;              /* Idle timeout */
+    gboolean keep_temp_files;   /* Keep temporary files around */
+    gboolean attic_enabled;     /* Keep unrecognized push message in attic */
+};
+
+/* Persistent mutable per-SIM settings */
+struct mms_settings_sim_data {
+    const char* user_agent;     /* User agent string */
+    unsigned int size_limit;    /* Maximum size of m-Send.req PDU */
+    unsigned int max_pixels;    /* Pixel limit for outbound images */
+    gboolean allow_dr;          /* Allow sending delivery reports */
+};
+
+/* Copy of per-SIM settings */
+typedef struct mms_settings_sim_data_copy {
+    MMSSettingsSimData data;    /* Settings data */
+    char* user_agent;           /* Allocated copy of user_agent */
+} MMSSettingsSimDataCopy;
+
+/* Instance */
+struct mms_settings {
+    GObject object;
+    const MMSConfig* config;
+    MMSSettingsSimDataCopy sim_defaults;
+};
+
+/* Class */
+typedef struct mms_settings_class {
+    GObjectClass parent;
+    const MMSSettingsSimData* (*fn_get_sim_data)(
+        MMSSettings* settings,
+        const char* imsi);
+} MMSSettingsClass;
+
+/* Default values */
+#define MMS_SETTINGS_DEFAULT_USER_AGENT     "Mozilla/5.0 (Sailfish; Jolla)"
+#define MMS_SETTINGS_DEFAULT_SIZE_LIMIT     (300*1024)
+#define MMS_SETTINGS_DEFAULT_MAX_PIXELS     (3000000)
+#define MMS_SETTINGS_DEFAULT_ALLOW_DR       TRUE
+
+GType mms_settings_get_type(void);
+#define MMS_TYPE_SETTINGS (mms_settings_get_type())
+#define MMS_SETTINGS_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST((klass), \
+        MMS_TYPE_SETTINGS, MMSSettingsClass))
+
+MMSSettings*
+mms_settings_ref(
+    MMSSettings* settings);
+
+void
+mms_settings_unref(
+    MMSSettings* settings);
+
+MMSSettings*
+mms_settings_default_new(
+    const MMSConfig* config);
+
+const MMSSettingsSimData*
+mms_settings_get_sim_data(
+    MMSSettings* settings,
+    const char* imsi);
+
+void
+mms_settings_sim_data_default(
+    MMSSettingsSimData* data);
+
+void
+mms_settings_set_sim_defaults(
+    MMSSettings* settings,
+    const MMSSettingsSimData* data);
+
+MMSSettingsSimDataCopy*
+mms_settings_sim_data_copy_new(
+    const MMSSettingsSimData* data);
+
+void
+mms_settings_sim_data_copy_free(
+    MMSSettingsSimDataCopy* data);
+
+#endif /* JOLLA_MMS_SETTINGS_H */
+
+/*
+ * Local Variables:
+ * mode: C
+ * c-basic-offset: 4
+ * indent-tabs-mode: nil
+ * End:
+ */

@@ -23,11 +23,8 @@
 #endif
 
 #define MMS_DEFAULT_ROOT_DIR        "/tmp/mms"
-#define MMS_DEFAULT_USER_AGENT      "Mozilla/5.0 (Sailfish; Jolla)"
 #define MMS_DEFAULT_RETRY_SECS      (15)
 #define MMS_DEFAULT_IDLE_SECS       (20)
-#define MMS_DEFAULT_SIZE_LIMIT      (300*1024)
-#define MMS_DEFAULT_MAX_PIXELS      (3000000)
 
 /**
  * MMS error domain
@@ -75,14 +72,10 @@ mms_lib_default_config(
     MMSConfig* config)
 {
     config->root_dir = MMS_DEFAULT_ROOT_DIR;
-    config->user_agent = MMS_DEFAULT_USER_AGENT;
     config->retry_secs = MMS_DEFAULT_RETRY_SECS;
     config->idle_secs = MMS_DEFAULT_IDLE_SECS;
-    config->size_limit = MMS_DEFAULT_SIZE_LIMIT;
-    config->max_pixels = MMS_DEFAULT_MAX_PIXELS;
     config->keep_temp_files = FALSE;
     config->attic_enabled = FALSE;
-    config->send_dr = TRUE;
 }
 
 /*

@@ -53,11 +53,20 @@ GType mms_task_http_get_type(void);
 void*
 mms_task_http_alloc(
     GType type,                 /* Zero for MMS_TYPE_TASK_HTTP       */
-    const MMSConfig* config,    /* Global configuration              */
+    MMSSettings* settings,      /* Settings                          */
     MMSHandler* handler,        /* MMS handler                       */
     const char* name,           /* Task name                         */
     const char* id,             /* Database message id               */
     const char* imsi,           /* IMSI associated with the message  */
+    const char* uri,            /* NULL to use MMSC URL              */
+    const char* receive_file,   /* File to write data to (optional)  */
+    const char* send_file);     /* File to read data from (optional) */
+
+void*
+mms_task_http_alloc_with_parent(
+    GType type,                 /* Zero for MMS_TYPE_TASK_HTTP       */
+    MMSTask* parent,            /* Parent task                       */
+    const char* name,           /* Task name                         */
     const char* uri,            /* NULL to use MMSC URL              */
     const char* receive_file,   /* File to write data to (optional)  */
     const char* send_file);     /* File to read data from (optional) */

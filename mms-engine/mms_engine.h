@@ -15,22 +15,25 @@
 #ifndef JOLLA_MMS_ENGINE_H
 #define JOLLA_MMS_ENGINE_H
 
-#include <glib.h>
 #include <gio/gio.h>
-#include "mms_lib_types.h"
+#include "mms_settings.h"
 
 #define MMS_APP_LOG_PREFIX  "mms-engine"
 
 #define MMS_ENGINE_SERVICE  "org.nemomobile.MmsEngine"
 #define MMS_ENGINE_PATH      "/"
 
-#define MMS_ENGINE_FLAG_KEEP_RUNNING   (0x01)
+#define MMS_ENGINE_FLAG_KEEP_RUNNING        (0x01)
+#define MMS_ENGINE_FLAG_OVERRIDE_USER_AGENT (0x02)
+#define MMS_ENGINE_FLAG_OVERRIDE_SIZE_LIMIT (0x04)
+#define MMS_ENGINE_FLAG_OVERRIDE_MAX_PIXELS (0x08)
 
 typedef struct mms_engine MMSEngine;
 
 MMSEngine*
 mms_engine_new(
     const MMSConfig* config,
+    const MMSSettingsSimData* settings,
     unsigned int flags,
     MMSLogModule* log_modules[],
     int log_count);

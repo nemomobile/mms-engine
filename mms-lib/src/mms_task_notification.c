@@ -100,8 +100,8 @@ mms_task_notification_ind(
 
             /* Schedule the download task */
             if (!mms_task_queue_and_unref(task->delegate,
-                    mms_task_retrieve_new(task->config, task->handler,
-                        task->id, task->imsi, ind->pdu, NULL))) {
+                 mms_task_retrieve_new(task->settings, task->handler,
+                 task->id, task->imsi, ind->pdu, NULL))) {
                 mms_handler_message_receive_state_changed(task->handler, id,
                     MMS_RECEIVE_STATE_DOWNLOAD_ERROR);
             }
@@ -111,12 +111,11 @@ mms_task_notification_ind(
     } else if (!mms_task_retry(task)) {
         mms_task_make_id(task);
         mms_task_queue_and_unref(task->delegate,
-            mms_task_notifyresp_new(task->config, task->handler, task->id,
-                task->imsi, ind->pdu->transaction_id,
+            mms_task_notifyresp_new(task, ind->pdu->transaction_id,
                 MMS_MESSAGE_NOTIFY_STATUS_REJECTED));
     }
 
-    if (task->config->keep_temp_files) {
+    if (task_config(task)->keep_temp_files) {
         mms_task_notification_write_file(ind, MMS_NOTIFICATION_IND_FILE);
     }
 }
@@ -130,7 +129,7 @@ mms_task_delivery_ind(
     MMSTaskNotification* ind)
 {
     MMS_DELIVERY_STATUS ds;
-    MMSTask* t = &ind->task;
+    MMSTask* task = &ind->task;
     const struct mms_delivery_ind* di = &ind->pdu->di;
     const char* to = mms_strip_address_type(di->to);
     MMS_DEBUG("Processing M-Delivery.ind PDU");
@@ -163,8 +162,8 @@ mms_task_delivery_ind(
         ds = MMS_DELIVERY_STATUS_UNKNOWN;
         break;
     }
-    mms_handler_delivery_report(t->handler, t->imsi, di->msgid, to, ds);
-    if (t->config->keep_temp_files) {
+    mms_handler_delivery_report(task->handler, task->imsi, di->msgid, to, ds);
+    if (task_config(task)->keep_temp_files) {
         mms_task_notification_write_file(ind, MMS_DELIVERY_IND_FILE);
     }
 }
@@ -178,7 +177,7 @@ mms_task_read_orig_ind(
     MMSTaskNotification* ind)
 {
     MMS_READ_STATUS rs;
-    MMSTask* t = &ind->task;
+    MMSTask* task = &ind->task;
     const struct mms_read_ind* ri = &ind->pdu->ri;
     const char* to = mms_strip_address_type(ri->to);
     MMS_DEBUG("Processing M-Read-Orig.ind");
@@ -195,8 +194,8 @@ mms_task_read_orig_ind(
         rs = MMS_READ_STATUS_INVALID;
         break;
     }
-    mms_handler_read_report(t->handler, t->imsi, ri->msgid, to, rs);
-    if (ind->task.config->keep_temp_files) {
+    mms_handler_read_report(task->handler, task->imsi, ri->msgid, to, rs);
+    if (task_config(task)->keep_temp_files) {
         mms_task_notification_write_file(ind,  MMS_READ_ORIG_IND_FILE);
     }
 }
@@ -245,7 +244,7 @@ mms_task_notification_run(
         break;
     default:
         MMS_INFO("Ignoring MMS push PDU of type %u", ind->pdu->type);
-        mms_task_notification_unrecornized(task->config, ind->push);
+        mms_task_notification_unrecornized(task_config(task), ind->push);
         break;
     }
     if (task->state == MMS_TASK_STATE_READY) {
@@ -283,7 +282,7 @@ mms_task_notification_init(
 /* Create MMS notification task */
 MMSTask*
 mms_task_notification_new(
-    const MMSConfig* config,
+    MMSSettings* settings,
     MMSHandler* handler,
     const char* imsi,
     GBytes* bytes,
@@ -304,13 +303,13 @@ mms_task_notification_new(
 #endif /* MMS_LOG_DEBUG */
 
         ind = mms_task_alloc(MMS_TYPE_TASK_NOTIFICATION,
-            config, handler, "Notification", NULL, imsi);
+            settings, handler, "Notification", NULL, imsi);
         ind->push = g_bytes_ref(bytes);
         ind->pdu = pdu;
         return &ind->task;
     } else {
         MMS_ERROR(error, MMS_LIB_ERROR_DECODE, "Failed to decode MMS PDU");
-        mms_task_notification_unrecornized(config, bytes);
+        mms_task_notification_unrecornized(settings->config, bytes);
         return NULL;
     }
 }

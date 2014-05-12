@@ -74,14 +74,14 @@ mms_task_publish_init(
 /* Create MMS publish task */
 MMSTask*
 mms_task_publish_new(
-    const MMSConfig* config,
+    MMSSettings* settings,
     MMSHandler* handler,
     MMSMessage* msg)
 {
     MMS_ASSERT(msg && msg->id);
     if (msg && msg->id) {
         MMSTaskPublish* pub = mms_task_alloc(MMS_TYPE_TASK_PUBLISH,
-            config, handler, "Publish", msg->id, NULL);
+            settings, handler, "Publish", msg->id, NULL);
         pub->msg = mms_message_ref(msg);
         return &pub->task;
     } else {

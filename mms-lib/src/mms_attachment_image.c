@@ -13,6 +13,7 @@
  */
 
 #include "mms_attachment_image.h"
+#include "mms_settings.h"
 #include "mms_file_util.h"
 
 #ifdef MMS_RESIZE_IMAGEMAGICK
@@ -32,13 +33,16 @@ G_DEFINE_TYPE(MMSAttachmentImage, mms_attachment_image, MMS_TYPE_ATTACHMENT);
 int
 mms_attachment_image_next_resize_step(
     MMSAttachmentImage* image,
+    const MMSSettingsSimData* settings,
     unsigned int columns,
     unsigned int rows)
 {
     int next_step = image->resize_step + 1;
-    if (image->attachment.config->max_pixels > 0) {
+    const unsigned int max_pixels = settings ? settings->max_pixels :
+        MMS_SETTINGS_DEFAULT_MAX_PIXELS;
+    if (max_pixels > 0) {
         unsigned int size = (columns/(next_step+1))*(rows/(next_step+1));
-        while (size > 0 && size > image->attachment.config->max_pixels) {
+        while (size > 0 && size > max_pixels) {
             next_step++;
             size = (columns/(next_step+1))*(rows/(next_step+1));
         }
@@ -70,7 +74,8 @@ mms_attachment_image_prepare_filename(
 static
 gboolean
 mms_attachment_image_resize_default(
-    MMSAttachmentImage* image)
+    MMSAttachmentImage* image,
+    const MMSSettingsSimData* settings)
 {
     gboolean ok = FALSE;
 #ifdef MMS_RESIZE_IMAGEMAGICK
@@ -88,7 +93,7 @@ mms_attachment_image_resize_default(
             const unsigned int src_cols = src->magick_columns;
             const unsigned int src_rows = src->magick_rows;
             const int next_step = mms_attachment_image_next_resize_step(image,
-                src_cols, src_rows);
+                settings, src_cols, src_rows);
             const unsigned int cols = src_cols/(next_step+1);
             const unsigned int rows = src_rows/(next_step+1);
             Image* dest;
@@ -119,7 +124,7 @@ mms_attachment_image_resize_default(
     DestroyImageInfo(info);
 #else
 #  ifdef MMS_RESIZE_QT
-    ok = mms_attachment_image_resize_qt(image);
+    ok = mms_attachment_image_resize_qt(image, settings);
 #  endif /* MMS_RESIZE_QT */
 #endif /* MMS_RESIZE_IMAGEMAGICK */
     return ok;
@@ -128,7 +133,8 @@ mms_attachment_image_resize_default(
 static
 gboolean
 mms_attachment_image_resize_type_specific(
-    MMSAttachmentImage* image)
+    MMSAttachmentImage* image,
+    const MMSSettingsSimData* settings)
 {
     /* If klass->fn_resize_new is not NULL, then we assume that all
      * other callbacks are present as well */
@@ -141,7 +147,7 @@ mms_attachment_image_resize_type_specific(
         gboolean can_resize;
         const char* fname = mms_attachment_image_prepare_filename(image);
         const int next_step = mms_attachment_image_next_resize_step(image,
-            resize->image.width, resize->image.height);
+            settings, resize->image.width, resize->image.height);
         MMSAttachmentImageSize image_size;
         MMSAttachmentImageSize out_size;
         image_size = resize->image;
@@ -248,7 +254,8 @@ mms_attachment_image_resize_type_specific(
 static
 gboolean
 mms_attachment_image_resize(
-    MMSAttachment* at)
+    MMSAttachment* at,
+    const MMSSettingsSimData* settings)
 {
     MMSAttachmentImage* image = MMS_ATTACHMENT_IMAGE(at);
     gboolean ok;
@@ -256,8 +263,8 @@ mms_attachment_image_resize(
         g_mapped_file_unref(at->map);
         at->map = NULL;
     }
-    ok = mms_attachment_image_resize_type_specific(image);
-    if (!ok) ok = mms_attachment_image_resize_default(image);
+    ok = mms_attachment_image_resize_type_specific(image, settings);
+    if (!ok) ok = mms_attachment_image_resize_default(image, settings);
     if (ok) {
         GError* error = NULL;
         GMappedFile* map = g_mapped_file_new(image->resized, FALSE, &error);

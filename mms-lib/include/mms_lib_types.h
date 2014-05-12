@@ -43,19 +43,6 @@
 #  define HAVE_REALPATH
 #endif
 
-/* Static configuration, chosen at startup and never changing since then */
-typedef struct mms_config {
-    const char* root_dir;       /* Root directory for storing MMS files */
-    const char* user_agent;     /* User agent string */
-    int retry_secs;             /* Retry timeout in seconds */
-    int idle_secs;              /* Idle timeout */
-    gsize size_limit;           /* Maximum size of m-Send.req PDU */
-    guint max_pixels;           /* Pixel limit for outbound images */
-    gboolean keep_temp_files;   /* Keep temporary files around */
-    gboolean attic_enabled;     /* Keep unrecognized push message in attic */
-    gboolean send_dr;           /* Allow sending delivery reports */
-} MMSConfig;
-
 /* Attachment information */
 typedef struct mms_attachment_info {
     const char* file_name;      /* Full path name */
@@ -64,6 +51,9 @@ typedef struct mms_attachment_info {
 } MMSAttachmentInfo;
 
 /* Types */
+typedef struct mms_config MMSConfig;
+typedef struct mms_settings MMSSettings;
+typedef struct mms_settings_sim_data MMSSettingsSimData;
 typedef struct mms_handler MMSHandler;
 typedef struct mms_connman MMSConnMan;
 typedef struct mms_log_module MMSLogModule;

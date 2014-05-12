@@ -24,14 +24,15 @@ extern "C" {
 
 gboolean
 mms_attachment_image_resize_qt(
-    MMSAttachmentImage* image)
+    MMSAttachmentImage* image,
+    const MMSSettingsSimData* s)
 {
     gboolean ok = FALSE;
     QImage qimage;
     if (qimage.load(image->attachment.original_file)) {
         const int w = qimage.width();
         const int h = qimage.height();
-        const int step = mms_attachment_image_next_resize_step(image, w, h);
+        const int step = mms_attachment_image_next_resize_step(image, s, w, h);
         const char* fname = mms_attachment_image_prepare_filename(image);
         const int w1 = w/(step+1);
         QImage scaled = qimage.scaledToWidth(w1, Qt::SmoothTransformation);

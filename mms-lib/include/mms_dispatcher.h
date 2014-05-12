@@ -28,7 +28,7 @@ struct mms_dispatcher_delegate {
 
 MMSDispatcher*
 mms_dispatcher_new(
-    const MMSConfig* config,
+    MMSSettings* settings,
     MMSConnMan* cm,
     MMSHandler* handler);
 

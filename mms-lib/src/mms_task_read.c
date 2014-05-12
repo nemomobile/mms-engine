@@ -61,7 +61,7 @@ mms_task_read_encode(
  */
 MMSTask*
 mms_task_read_new(
-    const MMSConfig* config,
+    MMSSettings* settings,
     MMSHandler* handler,
     const char* id,
     const char* imsi,
@@ -70,9 +70,10 @@ mms_task_read_new(
     MMSReadStatus rs,
     GError** err)
 {
-    const char* file = mms_task_read_encode(config, id, msg_id, to, rs, err);
+    const char* file = mms_task_read_encode(settings->config,
+        id, msg_id, to, rs, err);
     if (file) {
-        return mms_task_http_alloc(0, config, handler, "Read",
+        return mms_task_http_alloc(0, settings, handler, "Read",
             id, imsi, NULL, NULL, file);
     }
     return NULL;

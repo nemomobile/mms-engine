@@ -136,7 +136,7 @@ mms_task_decode_retrieve_conf(
     MMS_DEBUG("  %u parts", nparts);
 #endif /* MMS_LOG_DEBUG */
 
-    if (task->config->keep_temp_files) {
+    if (task_config(task)->keep_temp_files) {
         msg->flags |= MMS_MESSAGE_FLAG_KEEP_FILES;
     }
 
@@ -218,10 +218,10 @@ mms_task_decode_process_pdu(
                 if (msg) {
                     /* Successfully received and decoded MMS message */
                     mms_task_queue_and_unref(task->delegate,
-                        mms_task_ack_new(task->config, task->handler,
-                            task->id, task->imsi, dec->transaction_id));
+                        mms_task_ack_new(task, dec->transaction_id));
                     mms_task_queue_and_unref(task->delegate,
-                        mms_task_publish_new(task->config, task->handler, msg));
+                        mms_task_publish_new(task->settings,
+                            task->handler, msg));
                     mms_message_unref(msg);
                     return;
                 }
@@ -243,8 +243,7 @@ mms_task_decode_process_pdu(
 
     /* Tell MMS server that we didn't understand this PDU */
     mms_task_queue_and_unref(task->delegate,
-        mms_task_notifyresp_new(task->config, task->handler, task->id,
-            task->imsi, dec->transaction_id,
+        mms_task_notifyresp_new(task, dec->transaction_id,
             MMS_MESSAGE_NOTIFY_STATUS_UNRECOGNISED));
     mms_handler_message_receive_state_changed(task->handler, task->id,
         MMS_RECEIVE_STATE_DECODING_ERROR);
@@ -267,7 +266,7 @@ mms_task_decode_finalize(
     GObject* object)
 {
     MMSTaskDecode* dec = MMS_TASK_DECODE(object);
-    if (!dec->task.config->keep_temp_files) {
+    if (!task_config(&dec->task)->keep_temp_files) {
         mms_remove_file_and_dir(dec->file);
     }
     g_mapped_file_unref(dec->map);
@@ -295,15 +294,13 @@ mms_task_decode_init(
 /* Create MMS decode task */
 MMSTask*
 mms_task_decode_new(
-    const MMSConfig* config,
-    MMSHandler* handler,
-    const char* id,
-    const char* imsi,
+    MMSTask* parent,
     const char* transaction_id,
     const char* file)
 {
     MMSTaskDecode* dec = mms_task_alloc(MMS_TYPE_TASK_DECODE,
-        config, handler, "Decode", id, imsi);
+        parent->settings, parent->handler, "Decode", parent->id,
+        parent->imsi);
     GError* error = NULL;
     dec->map = g_mapped_file_new(file, FALSE, &error);
     if (dec->map) {

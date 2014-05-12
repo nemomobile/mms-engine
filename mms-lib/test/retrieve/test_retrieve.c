@@ -20,6 +20,7 @@
 #include "mms_file_util.h"
 #include "mms_lib_log.h"
 #include "mms_lib_util.h"
+#include "mms_settings.h"
 #include "mms_dispatcher.h"
 
 #include <libsoup/soup-status.h>
@@ -438,11 +439,12 @@ test_init(
         if (rc) test->retrieve_conf = g_mapped_file_new(rc, FALSE, &error);
         if (test->retrieve_conf || !rc) {
             guint port;
+            MMSSettings* settings = mms_settings_default_new(config);
             g_mapped_file_ref(test->notification_ind);
             test->desc = desc;
             test->cm = mms_connman_test_new();
             test->handler = mms_handler_test_new();
-            test->disp = mms_dispatcher_new(config, test->cm, test->handler);
+            test->disp = mms_dispatcher_new(settings, test->cm, test->handler);
             test->loop = g_main_loop_new(NULL, FALSE);
             test->timeout_id = g_timeout_add_seconds(10, test_timeout, test);
             test->delegate.fn_done = test_done;
@@ -454,6 +456,7 @@ test_init(
             if (desc->flags & TEST_DEFER_RECEIVE) {
                 mms_handler_test_defer_receive(test->handler, test->disp);
             }
+            mms_settings_unref(settings);
             test->ret = RET_ERR;
             ok = TRUE;
         } else {

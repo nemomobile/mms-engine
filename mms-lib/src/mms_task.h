@@ -15,7 +15,7 @@
 #ifndef JOLLA_MMS_TASK_H
 #define JOLLA_MMS_TASK_H
 
-#include "mms_lib_types.h"
+#include "mms_settings.h"
 
 /* Claim MMS 1.1 support */
 #define MMS_VERSION MMS_MESSAGE_VERSION_1_1
@@ -55,7 +55,7 @@ struct mms_task {
     char* name;                          /* Task name for debug purposes */
     char* id;                            /* Database record ID */
     char* imsi;                          /* Associated subscriber identity */
-    const MMSConfig* config;             /* Immutable configuration */
+    MMSSettings* settings;               /* Settings */
     MMSHandler* handler;                 /* Message database interface */
     MMSTaskDelegate* delegate;           /* Observer */
     MMS_TASK_STATE state;                /* Task state */
@@ -90,7 +90,7 @@ GType mms_task_get_type(void);
 void*
 mms_task_alloc(
     GType type,
-    const MMSConfig* config,
+    MMSSettings* settings,
     MMSHandler* handler,
     const char* name,
     const char* id,
@@ -153,10 +153,17 @@ const char*
 mms_task_make_id(
     MMSTask* task);
 
+const MMSSettingsSimData*
+mms_task_sim_settings(
+    MMSTask* task);
+
+#define task_config(task) \
+    ((task)->settings->config)
+
 /* Create particular types of tasks */
 MMSTask*
 mms_task_notification_new(
-    const MMSConfig* config,
+    MMSSettings* settings,
     MMSHandler* handler,
     const char* imsi,
     GBytes* bytes,
@@ -164,7 +171,7 @@ mms_task_notification_new(
 
 MMSTask*
 mms_task_retrieve_new(
-    const MMSConfig* config,
+    MMSSettings* settings,
     MMSHandler* handler,
     const char* id,
     const char* imsi,
@@ -173,33 +180,24 @@ mms_task_retrieve_new(
 
 MMSTask*
 mms_task_decode_new(
-    const MMSConfig* config,
-    MMSHandler* handler,
-    const char* id,
-    const char* imsi,
+    MMSTask* parent,
     const char* transaction_id,
     const char* file);
 
 MMSTask*
 mms_task_notifyresp_new(
-    const MMSConfig* config,
-    MMSHandler* handler,
-    const char* id,
-    const char* imsi,
+    MMSTask* parent,
     const char* transaction_id,
     MMSNotifyStatus status);
 
 MMSTask*
 mms_task_ack_new(
-    const MMSConfig* config,
-    MMSHandler* handler,
-    const char* id,
-    const char* imsi,
+    MMSTask* parent,
     const char* transaction_id);
 
 MMSTask*
 mms_task_read_new(
-    const MMSConfig* config,
+    MMSSettings* settings,
     MMSHandler* handler,
     const char* id,
     const char* imsi,
@@ -210,13 +208,13 @@ mms_task_read_new(
 
 MMSTask*
 mms_task_publish_new(
-    const MMSConfig* config,
+    MMSSettings* settings,
     MMSHandler* handler,
     MMSMessage* msg);
 
 MMSTask*
 mms_task_encode_new(
-    const MMSConfig* config,
+    MMSSettings* settings,
     MMSHandler* handler,
     const char* id,
     const char* imsi,
@@ -231,10 +229,7 @@ mms_task_encode_new(
 
 MMSTask*
 mms_task_send_new(
-    const MMSConfig* config,
-    MMSHandler* handler,
-    const char* id,
-    const char* imsi);
+    MMSTask* parent);
 
 #endif /* JOLLA_MMS_TASK_H */
 

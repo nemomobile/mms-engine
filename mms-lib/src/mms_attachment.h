@@ -37,8 +37,11 @@ struct _mms_attachment {
 
 typedef struct mms_attachment_class {
     GObjectClass parent;
-    void (*fn_reset)(MMSAttachment* attachment);
-    gboolean (*fn_resize)(MMSAttachment* attachment);
+    void (*fn_reset)(
+        MMSAttachment* attachment);
+    gboolean (*fn_resize)(
+        MMSAttachment* attachment,
+        const MMSSettingsSimData* settings);
 } MMSAttachmentClass;
 
 GType mms_attachment_get_type(void);
@@ -80,7 +83,8 @@ mms_attachment_guess_content_type(
 
 gboolean
 mms_attachment_resize(
-    MMSAttachment* attachment);
+    MMSAttachment* attachment,
+    const MMSSettingsSimData* settings);
 
 #endif /* JOLLA_MMS_ATTACHMENT_H */
 
