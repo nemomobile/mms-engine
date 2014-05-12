@@ -72,7 +72,8 @@ int main(int argc, char* argv[])
         "m-send_2.req",
         "m-send_3.req",
         "m-send_1.conf",
-        "m-send_2.conf"
+        "m-send_2.conf",
+        "m-send_3.conf"
     };
     mms_log_set_type(MMS_LOG_TYPE_STDOUT, "test_mms_codec");
     mms_log_stdout_timestamp = FALSE;
