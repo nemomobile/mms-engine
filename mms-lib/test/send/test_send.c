@@ -21,6 +21,7 @@
 #include "mms_file_util.h"
 #include "mms_lib_log.h"
 #include "mms_lib_util.h"
+#include "mms_settings.h"
 #include "mms_dispatcher.h"
 
 #include <gio/gio.h>
@@ -331,6 +332,7 @@ test_init(
     if (!desc->resp_file || test->resp_file) {
         int i;
         guint port;
+        MMSSettings* settings = mms_settings_default_new(config);
         test->parts = g_new0(MMSAttachmentInfo, desc->nparts);
         test->files = g_new0(char*, desc->nparts);
         for (i=0; i<desc->nparts; i++) {
@@ -343,7 +345,7 @@ test_init(
         test->desc = desc;
         test->cm = mms_connman_test_new();
         test->handler = mms_handler_test_new();
-        test->disp = mms_dispatcher_new(config, test->cm, test->handler);
+        test->disp = mms_dispatcher_new(settings, test->cm, test->handler);
         test->loop = g_main_loop_new(NULL, FALSE);
         test->delegate.fn_done = test_done;
         mms_dispatcher_set_delegate(test->disp, &test->delegate);
@@ -354,7 +356,14 @@ test_init(
         if (desc->flags & TEST_FLAG_CANCEL) {
             mms_connman_test_set_connect_callback(test->cm, test_cancel, test);
         }
-        if (desc->size_limit) config->size_limit = desc->size_limit;
+        if (desc->size_limit) {
+            MMSSettingsSimData sim_settings;
+            mms_settings_sim_data_default(&sim_settings);
+            sim_settings.size_limit = desc->size_limit;
+            mms_settings_set_sim_defaults(settings, NULL);
+            mms_settings_set_sim_defaults(settings, &sim_settings);
+        }
+        mms_settings_unref(settings);
         test->ret = RET_ERR;
         ok = TRUE;
     }

@@ -74,6 +74,7 @@ typedef struct mms_attachment_image_class {
 int
 mms_attachment_image_next_resize_step(
     MMSAttachmentImage* image,
+    const MMSSettingsSimData* settings,
     unsigned int columns,
     unsigned int rows);
 
@@ -84,7 +85,8 @@ mms_attachment_image_prepare_filename(
 #ifdef MMS_RESIZE_QT
 gboolean
 mms_attachment_image_resize_qt(
-    MMSAttachmentImage* image);
+    MMSAttachmentImage* image,
+    const MMSSettingsSimData* settings);
 #endif
 
 #endif /* JOLLA_MMS_ATTACHMENT_IMAGE_H */

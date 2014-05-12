@@ -14,6 +14,7 @@
 
 #include "mms_engine.h"
 #include "mms_dispatcher.h"
+#include "mms_settings.h"
 #include "mms_lib_util.h"
 #include "mms_ofono_connman.h"
 #include "mms_handler_dbus.h"
@@ -54,9 +55,9 @@ struct mms_engine {
 
 typedef GObjectClass MMSEngineClass;
 G_DEFINE_TYPE(MMSEngine, mms_engine, G_TYPE_OBJECT);
-#define MMS_ENGINE_TYPE (mms_engine_get_type())
+#define MMS_TYPE_ENGINE (mms_engine_get_type())
 #define MMS_ENGINE(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj),\
-        MMS_ENGINE_TYPE, MMSEngine))
+        MMS_TYPE_ENGINE, MMSEngine))
 
 inline static MMSEngine*
 mms_engine_from_dispatcher_delegate(MMSDispatcherDelegate* delegate)
@@ -408,15 +409,31 @@ mms_engine_handle_set_log_type(
 MMSEngine*
 mms_engine_new(
     const MMSConfig* config,
+    const MMSSettingsSimData* override,
     unsigned int flags,
     MMSLogModule* log_modules[],
     int log_count)
 {
     MMSConnMan* cm = mms_connman_ofono_new();
     if (cm) {
-        MMSEngine* mms = g_object_new(MMS_ENGINE_TYPE, NULL);
+        MMSEngine* mms = g_object_new(MMS_TYPE_ENGINE, NULL);
         MMSHandler* handler = mms_handler_dbus_new();
-        mms->dispatcher = mms_dispatcher_new(config, cm, handler);
+        MMSSettings* settings = mms_settings_default_new(config);
+
+        if (flags & MMS_ENGINE_FLAG_OVERRIDE_USER_AGENT) {
+            g_free(settings->sim_defaults.user_agent);
+            settings->sim_defaults.data.user_agent =
+            settings->sim_defaults.user_agent = g_strdup(override->user_agent);
+        }
+        if (flags & MMS_ENGINE_FLAG_OVERRIDE_SIZE_LIMIT) {
+            settings->sim_defaults.data.size_limit = override->size_limit;
+        }
+        if (flags & MMS_ENGINE_FLAG_OVERRIDE_MAX_PIXELS) {
+            settings->sim_defaults.data.max_pixels = override->max_pixels;
+        }
+
+        mms->dispatcher = mms_dispatcher_new(settings, cm, handler);
+        mms_settings_unref(settings);
         mms_connman_unref(cm);
         mms_handler_unref(handler);
         mms_dispatcher_set_delegate(mms->dispatcher,

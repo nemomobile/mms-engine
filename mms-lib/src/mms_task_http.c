@@ -14,6 +14,7 @@
 
 #include "mms_task_http.h"
 #include "mms_connection.h"
+#include "mms_settings.h"
 #include "mms_file_util.h"
 
 #ifndef _WIN32
@@ -100,7 +101,7 @@ mms_http_uri_parse(
 static
 SoupSession*
 mms_http_create_session(
-    const MMSConfig* cfg,
+    const MMSSettingsSimData* cfg,
     MMSConnection* conn)
 {
     SoupSession* session = NULL;
@@ -162,7 +163,7 @@ mms_http_create_session(
         }
     }
 
-    if (cfg->user_agent) {
+    if (cfg && cfg->user_agent) {
         g_object_set(session, SOUP_SESSION_USER_AGENT, cfg->user_agent, NULL);
     }
 
@@ -172,7 +173,7 @@ mms_http_create_session(
 static
 MMSHttpTransfer*
 mms_http_transfer_new(
-    const MMSConfig* config,
+    const MMSSettingsSimData* cfg,
     MMSConnection* connection,
     const char* method,
     const char* uri,
@@ -182,7 +183,7 @@ mms_http_transfer_new(
     SoupURI* soup_uri = mms_http_uri_parse(uri);
     if (soup_uri) {
         MMSHttpTransfer* tx = g_new(MMSHttpTransfer, 1);
-        tx->session = mms_http_create_session(config, connection);
+        tx->session = mms_http_create_session(cfg, connection);
         tx->message = soup_message_new_from_uri(method, soup_uri);
         tx->connection = mms_connection_ref(connection);
         tx->receive_fd = receive_fd;
@@ -413,9 +414,9 @@ mms_task_http_start(
 
         /* Set up the transfer */
         const char* uri = priv->uri ? priv->uri : connection->mmsc;
-        priv->tx = mms_http_transfer_new(http->task.config, connection,
-            priv->send_path ? SOUP_METHOD_POST : SOUP_METHOD_GET, uri,
-            receive_fd, send_fd);
+        priv->tx = mms_http_transfer_new(mms_task_sim_settings(&http->task),
+            connection, priv->send_path ? SOUP_METHOD_POST : SOUP_METHOD_GET,
+            uri, receive_fd, send_fd);
         if (priv->tx) {
             SoupMessage* msg = priv->tx->message;
             soup_message_body_set_accumulate(msg->response_body, FALSE);
@@ -541,7 +542,7 @@ mms_task_http_finalize(
     MMS_ASSERT(!http->priv->got_chunk_signal_id);
     MMS_ASSERT(!http->priv->wrote_headers_signal_id);
     MMS_ASSERT(!http->priv->wrote_chunk_signal_id);
-    if (!http->task.config->keep_temp_files) {
+    if (!task_config(&http->task)->keep_temp_files) {
         mms_remove_file_and_dir(http->priv->send_path);
         mms_remove_file_and_dir(http->priv->receive_path);
     }
@@ -586,7 +587,7 @@ mms_task_http_init(
 void*
 mms_task_http_alloc(
     GType type,                 /* Zero for MMS_TYPE_TASK_HTTP       */
-    const MMSConfig* config,    /* Global configuration              */
+    MMSSettings* settings,      /* Settings                          */
     MMSHandler* handler,        /* MMS handler                       */
     const char* name,           /* Task name                         */
     const char* id,             /* Database message id               */
@@ -596,7 +597,7 @@ mms_task_http_alloc(
     const char* send_file)      /* File to read data from (optional) */
 {
     MMSTaskHttp* http = mms_task_alloc(type ? type : MMS_TYPE_TASK_HTTP,
-        config, handler, name, id, imsi);
+        settings, handler, name, id, imsi);
     MMSTaskHttpPrivate* priv = g_new0(MMSTaskHttpPrivate, 1);
     http->priv = priv;
     priv->uri = g_strdup(uri);
@@ -606,6 +607,19 @@ mms_task_http_alloc(
         MMS_ASSERT(g_file_test(priv->send_path, G_FILE_TEST_IS_REGULAR));
     }
     return http;
+}
+
+void*
+mms_task_http_alloc_with_parent(
+    GType type,                 /* Zero for MMS_TYPE_TASK_HTTP       */
+    MMSTask* parent,            /* Parent task                       */
+    const char* name,           /* Task name                         */
+    const char* uri,            /* NULL to use MMSC URL              */
+    const char* receive_file,   /* File to write data to (optional)  */
+    const char* send_file)      /* File to read data from (optional) */
+{
+    return mms_task_http_alloc(type, parent->settings, parent->handler,
+        name, parent->id, parent->imsi, uri, receive_file, send_file);
 }
 
 /*

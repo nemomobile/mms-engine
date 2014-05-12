@@ -60,7 +60,7 @@ mms_task_schedule_wakeup(
     unsigned int secs)
 {
     const time_t now = time(NULL);
-    if (!secs) secs = task->config->retry_secs;
+    if (!secs) secs = task->settings->config->retry_secs;
 
     /* Cancel the previous sleep */
     if (task->wakeup_id) {
@@ -119,7 +119,7 @@ mms_task_finalize(
     MMS_ASSERT(!task->delegate);
     MMS_ASSERT(!task->wakeup_id);
     if (task->id) {
-        if (!task->config->keep_temp_files) {
+        if (!task_config(task)->keep_temp_files) {
             char* dir = mms_task_dir(task);
             if (rmdir(dir) == 0) {
                 MMS_VERBOSE("Deleted %s", dir);
@@ -130,6 +130,7 @@ mms_task_finalize(
     }
     g_free(task->name);
     g_free(task->imsi);
+    mms_settings_unref(task->settings);
     mms_handler_unref(task->handler);
     G_OBJECT_CLASS(mms_task_parent_class)->finalize(object);
 }
@@ -154,7 +155,7 @@ mms_task_init(
 void*
 mms_task_alloc(
     GType type,
-    const MMSConfig* config,
+    MMSSettings* settings,
     MMSHandler* handler,
     const char* name,
     const char* id,
@@ -164,7 +165,7 @@ mms_task_alloc(
     const time_t now = time(NULL);
     time_t max_lifetime = MMS_TASK_GET_CLASS(task)->max_lifetime;
     if (!max_lifetime) max_lifetime = MMS_TASK_DEFAULT_LIFETIME;
-    task->config = config;
+    task->settings = mms_settings_ref(settings);
     task->handler = mms_handler_ref(handler);
     if (name) {
         task->name = id ?
@@ -249,7 +250,8 @@ mms_task_set_state(
             mms_task_state_name(task->state),
             mms_task_state_name(state));
         if (state == MMS_TASK_STATE_SLEEP && !task->wakeup_id) {
-            if (!mms_task_schedule_wakeup(task, task->config->retry_secs)) {
+            const unsigned int secs = task_config(task)->retry_secs;
+            if (!mms_task_schedule_wakeup(task, secs)) {
                 MMS_DEBUG("%s SLEEP -> DONE (no time left)", task->name);
                 state = MMS_TASK_STATE_DONE;
             }
@@ -325,8 +327,8 @@ mms_task_make_id(
     MMSTask* task)
 {
     if (!task->id || !task->id[0]) {
-        char* msgdir = g_strconcat(task->config->root_dir, "/",
-            MMS_MESSAGE_DIR, NULL);
+        const char* root_dir = task_config(task)->root_dir;
+        char* msgdir = g_strconcat(root_dir, "/", MMS_MESSAGE_DIR, NULL);
         int err = g_mkdir_with_parents(msgdir, MMS_DIR_PERM);
         if (!err || errno == EEXIST) {
             char* tmpl = g_strconcat(msgdir, "/XXXXXX" , NULL);
@@ -337,12 +339,22 @@ mms_task_make_id(
             }
             g_free(tmpl);
         } else {
-            MMS_ERR("Failed to create %s: %s", task->config->root_dir,
-                strerror(errno));
+            MMS_ERR("Failed to create %s: %s", root_dir, strerror(errno));
         }
         g_free(msgdir);
     }
     return task->id;
+}
+
+const MMSSettingsSimData*
+mms_task_sim_settings(
+    MMSTask* task)
+{
+    if (task && task->settings) {
+        return mms_settings_get_sim_data(task->settings, task->imsi);
+    } else {
+        return NULL;
+    }
 }
 
 /*

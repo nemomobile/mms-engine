@@ -18,6 +18,7 @@
 #include "mms_file_util.h"
 #include "mms_lib_log.h"
 #include "mms_lib_util.h"
+#include "mms_settings.h"
 #include "mms_dispatcher.h"
 
 #define RET_OK      (0)
@@ -127,16 +128,18 @@ test_init(
     test->config = config;
     test->notification_ind = g_mapped_file_new(ni, FALSE, &error);
     if (test->notification_ind) {
+        MMSSettings* settings = mms_settings_default_new(config);
         test->desc = desc;
         test->cm = mms_connman_test_new();
         test->handler = mms_handler_test_new();
-        test->disp = mms_dispatcher_new(config, test->cm, test->handler);
+        test->disp = mms_dispatcher_new(settings, test->cm, test->handler);
         test->loop = g_main_loop_new(NULL, FALSE);
         test->timeout_id = g_timeout_add_seconds(10, test_timeout, test);
         test->delegate.fn_done = test_done;
         mms_dispatcher_set_delegate(test->disp, &test->delegate);
         test->id = g_strdup(mms_handler_test_send_new(test->handler, "IMSI"));
         mms_handler_message_sent(test->handler, test->id, desc->mmsid);
+        mms_settings_unref(settings);
         test->ret = RET_ERR;
         ok = TRUE;
     } else {

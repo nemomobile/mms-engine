@@ -48,17 +48,15 @@ mms_task_notifyresp_encode(
  */
 MMSTask*
 mms_task_notifyresp_new(
-    const MMSConfig* config,
-    MMSHandler* handler,
-    const char* id,
-    const char* imsi,
+    MMSTask* parent,
     const char* tx_id,
     MMSNotifyStatus ns)
 {
-    const char* file = mms_task_notifyresp_encode(config, id, tx_id, ns);
+    const char* file = mms_task_notifyresp_encode(task_config(parent),
+        parent->id, tx_id, ns);
     if (file) {
-        return mms_task_http_alloc(0, config, handler, "NotifyResp",
-            id, imsi, NULL, NULL, file);
+        return mms_task_http_alloc_with_parent(0, parent, "NotifyResp",
+            NULL, NULL, file);
     }
     return NULL;
 }

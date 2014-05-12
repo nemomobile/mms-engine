@@ -39,6 +39,7 @@ SOURCES += \
   src/mms_message.c \
   src/mms_lib_util.c \
   src/mms_log.c \
+  src/mms_settings.c \
   src/mms_task.c \
   src/mms_task_ack.c \
   src/mms_task_decode.c \
@@ -71,4 +72,5 @@ HEADERS += \
   include/mms_lib_types.h \
   include/mms_lib_util.h \
   include/mms_log.h \
-  include/mms_message.h
+  include/mms_message.h \
+  include/mms_settings.h

@@ -14,6 +14,7 @@
 
 #include "mms_attachment.h"
 #include "mms_file_util.h"
+#include "mms_settings.h"
 #include "mms_codec.h"
 
 #ifdef HAVE_MAGIC
@@ -344,12 +345,13 @@ mms_attachment_reset(
 
 gboolean
 mms_attachment_resize(
-    MMSAttachment* at)
+    MMSAttachment* at,
+    const MMSSettingsSimData* settings)
 {
     if (at) {
         MMSAttachmentClass* klass = MMS_ATTACHMENT_GET_CLASS(at);
         if (klass->fn_resize) {
-            return klass->fn_resize(at);
+            return klass->fn_resize(at, settings);
         }
     }
     return FALSE;

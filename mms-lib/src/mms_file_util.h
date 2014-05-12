@@ -78,9 +78,9 @@ mms_file_copy(
 #define mms_message_dir(config,id) \
     (g_strconcat((config)->root_dir, "/" MMS_MESSAGE_DIR "/" , id, NULL))
 #define mms_task_dir(task) \
-    mms_message_dir((task)->config,(task)->id)
+    mms_message_dir(task_config(task),(task)->id)
 #define mms_task_file(task,file) \
-    (g_strconcat((task)->config->root_dir, "/" MMS_MESSAGE_DIR "/" , \
+    (g_strconcat(task_config(task)->root_dir, "/" MMS_MESSAGE_DIR "/" , \
     (task)->id, "/", file, NULL))
 
 #endif /* JOLLA_MMS_FILE_UTIL_H */

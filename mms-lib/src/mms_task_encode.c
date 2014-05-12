@@ -15,6 +15,7 @@
 #include "mms_task.h"
 #include "mms_attachment.h"
 #include "mms_dispatcher.h"
+#include "mms_settings.h"
 #include "mms_handler.h"
 #include "mms_file_util.h"
 #include "mms_util.h"
@@ -64,6 +65,7 @@ typedef struct mms_encode_job {
     GCancellable* cancellable;      /* Can be used to cancel the job */
     GMainContext* context;          /* Pointer to the main contex */
     char* path;                     /* Path to the encoded file */
+    MMSSettingsSimDataCopy* settings;  /* Copy of settings to use */
     MMS_ENCODE_STATE state;         /* Job state */
 } MMSEncodeJob;
 
@@ -108,7 +110,7 @@ mms_encode_job_resize(
     }
     if (resize_me) {
         MMS_DEBUG("Resizing %s", resize_me->original_file);
-        return mms_attachment_resize(resize_me);
+        return mms_attachment_resize(resize_me, &job->settings->data);
     } else {
         MMS_DEBUG("There is nothing to resize");
         return FALSE;
@@ -205,8 +207,9 @@ mms_encode_job_run(
 {
     int i;
     gsize size;
-    const MMSConfig* config = job->enc->task.config;
     MMSTaskEncode* enc = job->enc;
+    const unsigned int size_limit = job->settings ?
+        job->settings->data.size_limit : MMS_SETTINGS_DEFAULT_SIZE_LIMIT;
 
     job->state = MMS_ENCODE_STATE_RUNNING;
 
@@ -217,7 +220,7 @@ mms_encode_job_run(
 
     /* Keep resizing attachments until we squeeze them into the limit */
     size = mms_encode_job_encode(job);
-    while (config->size_limit && size > config->size_limit &&
+    while (size_limit && size > size_limit &&
            !g_cancellable_is_cancelled(job->cancellable) &&
            mms_encode_job_resize(job)) {
         gsize last_size = size;
@@ -225,7 +228,7 @@ mms_encode_job_run(
         if (!size || size >= last_size) break;
     }
 
-    if (size > 0 && (!config->size_limit || size <= config->size_limit)) {
+    if (size > 0 && (!size_limit || size <= size_limit)) {
         job->state = MMS_ENCODE_STATE_DONE;
     } else {
         unlink(job->path);
@@ -259,6 +262,7 @@ mms_encode_job_unref(
             mms_task_unref(&job->enc->task);
             g_object_unref(job->cancellable);
             g_main_context_unref(job->context);
+            mms_settings_sim_data_copy_free(job->settings);
             g_free(job->path);
             g_free(job);
         }
@@ -271,11 +275,13 @@ mms_encode_job_new(
     MMSTaskEncode* enc)
 {
     MMSEncodeJob* job = g_new0(MMSEncodeJob, 1);
+    const MMSSettingsSimData* sim_data = mms_task_sim_settings(&enc->task);
     mms_task_ref(&enc->task);
     job->ref_count = 1;
     job->enc = enc;
     job->cancellable = g_cancellable_new();
     job->context = g_main_context_ref(g_main_context_default());
+    job->settings = mms_settings_sim_data_copy_new(sim_data);
     return job;
 }
 
@@ -315,8 +321,7 @@ mms_task_encode_job_done(
         MMS_VERBOSE_("Encoding completion state %d", job->state);
         enc->active_job = NULL;
         if (job->state == MMS_ENCODE_STATE_DONE) {
-            mms_task_queue_and_unref(task->delegate, mms_task_send_new(
-                task->config, task->handler, task->id, task->imsi));
+            mms_task_queue_and_unref(task->delegate, mms_task_send_new(task));
         } else {
             mms_handler_message_send_state_changed(task->handler, task->id,
                 (job->state == MMS_ENCODE_STATE_TOO_BIG) ?
@@ -594,7 +599,7 @@ mms_task_encode_init(
 /* Create MMS encode task */
 MMSTask*
 mms_task_encode_new(
-    const MMSConfig* config,
+    MMSSettings* settings,
     MMSHandler* handler,
     const char* id,
     const char* imsi,
@@ -612,15 +617,15 @@ mms_task_encode_new(
         int err;
         char* dir;
         MMSTaskEncode* enc = mms_task_alloc(MMS_TYPE_TASK_ENCODE,
-            config, handler, "Encode", id, imsi);
+            settings, handler, "Encode", id, imsi);
         MMSTask* task = &enc->task;
 
         mms_task_make_id(task);
         dir = mms_task_file(task, MMS_ENCODE_DIR);
         err = g_mkdir_with_parents(dir, MMS_DIR_PERM);
         if (!err || errno == EEXIST) {
-            GPtrArray* array = mms_task_encode_prepare_attachments(config,
-                dir, parts, nparts, error);
+            GPtrArray* array = mms_task_encode_prepare_attachments(
+                settings->config, dir, parts, nparts, error);
             if (array) {
                 enc->nparts = array->len;
                 enc->parts = (MMSAttachment**)g_ptr_array_free(array, FALSE);

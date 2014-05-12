@@ -14,6 +14,7 @@
 
 #include "mms_dispatcher.h"
 #include "mms_handler.h"
+#include "mms_settings.h"
 #include "mms_connection.h"
 #include "mms_connman.h"
 #include "mms_file_util.h"
@@ -31,7 +32,7 @@ MMS_LOG_MODULE_DEFINE("mms-dispatcher");
 
 struct mms_dispatcher {
     gint ref_count;
-    const MMSConfig* config;
+    MMSSettings* settings;
     MMSTask* active_task;
     MMSTaskDelegate task_delegate;
     MMSHandler* handler;
@@ -162,7 +163,7 @@ mms_dispatcher_network_idle_check(
         /* Schedule idle inactivity timeout callback */
         MMS_VERBOSE("Network connection is inactive");
         disp->network_idle_id = mms_dispatcher_timeout_callback_schedule(disp,
-            disp->config->idle_secs, mms_dispatcher_network_idle_run);
+            disp->settings->config->idle_secs, mms_dispatcher_network_idle_run);
     }
 }
 
@@ -387,15 +388,15 @@ gboolean
 mms_dispatcher_start(
     MMSDispatcher* disp)
 {
-    int err = g_mkdir_with_parents(disp->config->root_dir, MMS_DIR_PERM);
+    const char* root_dir = disp->settings->config->root_dir;
+    int err = g_mkdir_with_parents(root_dir, MMS_DIR_PERM);
     if (!err || errno == EEXIST) {
         if (!g_queue_is_empty(disp->tasks)) {
             mms_dispatcher_next_run_schedule(disp);
             return TRUE;
         }
     } else {
-        MMS_ERR("Failed to create %s: %s", disp->config->root_dir,
-            strerror(errno));
+        MMS_ERR("Failed to create %s: %s", root_dir, strerror(errno));
     }
     return FALSE;
 }
@@ -436,7 +437,7 @@ mms_dispatcher_handle_push(
     GError** error)
 {
     return mms_dispatcher_queue_and_unref_task(disp,
-        mms_task_notification_new(disp->config, disp->handler,
+        mms_task_notification_new(disp->settings, disp->handler,
             imsi, push, error));
 }
 
@@ -458,7 +459,7 @@ mms_dispatcher_receive_message(
         MMS_ASSERT(pdu->type == MMS_MESSAGE_TYPE_NOTIFICATION_IND);
         if (pdu->type == MMS_MESSAGE_TYPE_NOTIFICATION_IND) {
             ok = mms_dispatcher_queue_and_unref_task(disp,
-                mms_task_retrieve_new(disp->config, disp->handler,
+                mms_task_retrieve_new(disp->settings, disp->handler,
                     id, imsi, pdu, error));
         }
         mms_message_free(pdu);
@@ -482,7 +483,7 @@ mms_dispatcher_send_read_report(
     GError** error)
 {
     return mms_dispatcher_queue_and_unref_task(disp,
-        mms_task_read_new(disp->config, disp->handler,
+        mms_task_read_new(disp->settings, disp->handler,
             id, imsi, message_id, to, status, error));
 }
 
@@ -510,7 +511,7 @@ mms_dispatcher_send_message(
     }
     if (imsi) {
         if (mms_dispatcher_queue_and_unref_task(disp,
-            mms_task_encode_new(disp->config, disp->handler, id, imsi,
+            mms_task_encode_new(disp->settings, disp->handler, id, imsi,
             to, cc, bcc, subject, flags, parts, nparts, error))) {
             return default_imsi ? default_imsi : g_strdup(imsi);
         }
@@ -611,13 +612,13 @@ mms_dispatcher_delegate_task_state_changed(
  */
 MMSDispatcher*
 mms_dispatcher_new(
-    const MMSConfig* config,
+    MMSSettings* settings,
     MMSConnMan* cm,
     MMSHandler* handler)
 {
     MMSDispatcher* disp = g_new0(MMSDispatcher, 1);
     disp->ref_count = 1;
-    disp->config = config;
+    disp->settings = mms_settings_ref(settings);
     disp->tasks = g_queue_new();
     disp->handler = mms_handler_ref(handler);
     disp->cm = mms_connman_ref(cm);
@@ -639,9 +640,8 @@ mms_dispatcher_finalize(
     MMSDispatcher* disp)
 {
     MMSTask* task;
-    char* msg_dir = g_strconcat(disp->config->root_dir,
-        "/" MMS_MESSAGE_DIR "/", NULL);
-
+    const char* root_dir = disp->settings->config->root_dir;
+    char* msg_dir = g_strconcat(root_dir, "/" MMS_MESSAGE_DIR "/", NULL);
     MMS_VERBOSE_("");
     mms_dispatcher_close_connection(disp);
     while ((task = g_queue_pop_head(disp->tasks)) != NULL) {
@@ -650,6 +650,7 @@ mms_dispatcher_finalize(
         mms_task_unref(task);
     }
     g_queue_free(disp->tasks);
+    mms_settings_unref(disp->settings);
     mms_handler_unref(disp->handler);
     mms_connman_unref(disp->cm);
 

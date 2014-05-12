@@ -19,7 +19,7 @@
 #include "mms_ofono_log.h"
 #include "mms_lib_log.h"
 #include "mms_lib_util.h"
-#include "mms_dispatcher.h"
+#include "mms_settings.h"
 
 #define RET_OK  (0)
 #define RET_ERR (1)
@@ -27,10 +27,11 @@
 /* Options configurable from the command line */
 typedef struct mms_app_options {
     GBusType bus_type;
-    gboolean keep_running;
+    int flags;
     char* dir;
     char* user_agent;
     MMSConfig config;
+    MMSSettingsSimData settings;
 } MMSAppOptions;
 
 /* All known log modules */
@@ -161,26 +162,18 @@ mms_app_parse_options(
 #ifdef MMS_ENGINE_VERSION
     gboolean print_version = FALSE;
 #endif
-    gint size_limit_kb = opt->config.size_limit/1024;
-    gdouble megapixels = opt->config.max_pixels / 1000000.0;
+    gboolean keep_running = FALSE;
+    gint size_limit_kb = -1;
+    gdouble megapixels = -1;
     char* root_dir_help = g_strdup_printf(
         "Root directory for MMS files [%s]",
         opt->config.root_dir);
-    char* user_agent_help = g_strdup_printf(
-        "User-Agent [%s]",
-        opt->config.user_agent);
     char* retry_secs_help = g_strdup_printf(
         "Retry period in seconds [%d]",
         opt->config.retry_secs);
     char* idle_secs_help = g_strdup_printf(
         "Inactivity timeout in seconds [%d]",
         opt->config.idle_secs);
-    char* size_limit_help = g_strdup_printf(
-        "Maximum size for outgoing messages [%d]",
-        size_limit_kb);
-    char* megapixels_help = g_strdup_printf(
-        "Maximum pixel count for outgoing images [%.1f]",
-        megapixels);
     char* description = mms_log_description(mms_app_log_modules,
         G_N_ELEMENTS(mms_app_log_modules));
 
@@ -195,12 +188,12 @@ mms_app_parse_options(
         { "idle-secs", 'i', 0, G_OPTION_ARG_INT,
           &opt->config.idle_secs, idle_secs_help, "SEC" },
         { "size-limit", 's', 0, G_OPTION_ARG_INT,
-          &size_limit_kb, size_limit_help, "KB" },
+          &size_limit_kb, "Maximum size for outgoing messages", "KB" },
         { "pix-limit", 'p', 0, G_OPTION_ARG_DOUBLE,
-          &megapixels, megapixels_help, "MPIX" },
+          &megapixels, "Maximum pixel count for outgoing images", "MPIX" },
         { "user-agent", 'u', 0, G_OPTION_ARG_STRING,
-          &opt->user_agent, user_agent_help, "STRING" },
-        { "keep-running", 'k', 0, G_OPTION_ARG_NONE, &opt->keep_running,
+          &opt->user_agent, "User-Agent header", "STRING" },
+        { "keep-running", 'k', 0, G_OPTION_ARG_NONE, &keep_running,
           "Keep running after everything is done", NULL },
         { "keep-temp-files", 't', 0, G_OPTION_ARG_NONE,
            &opt->config.keep_temp_files,
@@ -228,37 +221,41 @@ mms_app_parse_options(
     ok = g_option_context_parse(options, &argc, &argv, &error);
     g_option_context_free(options);
     g_free(root_dir_help);
-    g_free(user_agent_help);
     g_free(retry_secs_help);
     g_free(idle_secs_help);
-    g_free(size_limit_help);
-    g_free(megapixels_help);
     g_free(description);
 
 #ifdef MMS_ENGINE_VERSION
 #  define MMS_STRING__(x) #x
 #  define MMS_STRING_(x) MMS_STRING__(x)
+#  define MMS_VERVION_STRING MMS_STRING_(MMS_ENGINE_VERSION)
     if (print_version) {
-        printf("MMS engine %s\n", MMS_STRING_(MMS_ENGINE_VERSION));
+        printf("MMS engine %s\n", MMS_VERVION_STRING);
         *result = RET_OK;
         return FALSE;
     } else
 #endif
 
     if (ok) {
+#ifdef MMS_ENGINE_VERSION
+        MMS_INFO("Version %s starting", MMS_VERVION_STRING);
+#else
         MMS_INFO("Starting");
+#endif
         if (size_limit_kb >= 0) {
-            opt->config.size_limit = size_limit_kb * 1024;
-        } else {
-            opt->config.size_limit = 0;
+            opt->settings.size_limit = size_limit_kb * 1024;
+            opt->flags |= MMS_ENGINE_FLAG_OVERRIDE_SIZE_LIMIT;
         }
         if (megapixels >= 0) {
-            opt->config.max_pixels = (int)(megapixels*1000)*1000;
-        } else {
-            opt->config.max_pixels = 0;
+            opt->settings.max_pixels = (int)(megapixels*1000)*1000;
+            opt->flags |= MMS_ENGINE_FLAG_OVERRIDE_MAX_PIXELS;
+        }
+        if (opt->user_agent) {
+            opt->settings.user_agent = opt->user_agent;
+            opt->flags |= MMS_ENGINE_FLAG_OVERRIDE_USER_AGENT;
         }
         if (opt->dir) opt->config.root_dir = opt->dir;
-        if (opt->user_agent) opt->config.user_agent = opt->user_agent;
+        if (keep_running) opt->flags |= MMS_ENGINE_FLAG_KEEP_RUNNING;
         if (session_bus) {
             MMS_DEBUG("Attaching to session bus");
             opt->bus_type = G_BUS_TYPE_SESSION;
@@ -283,13 +280,12 @@ int main(int argc, char* argv[])
     mms_lib_init(argv[0]);
     mms_log_default.name = MMS_APP_LOG_PREFIX;
     mms_lib_default_config(&opt.config);
+    mms_settings_sim_data_default(&opt.settings);
     if (mms_app_parse_options(&opt, argc, argv, &result)) {
         MMSEngine* engine;
-        unsigned int engine_flags = 0;
-        if (opt.keep_running) engine_flags |= MMS_ENGINE_FLAG_KEEP_RUNNING;
 
         /* Create engine instance. This may fail */
-        engine = mms_engine_new(&opt.config, engine_flags,
+        engine = mms_engine_new(&opt.config, &opt.settings, opt.flags,
             mms_app_log_modules, G_N_ELEMENTS(mms_app_log_modules));
         if (engine) {
             guint name_id;

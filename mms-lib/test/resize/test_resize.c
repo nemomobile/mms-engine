@@ -13,10 +13,10 @@
  */
 
 #include "mms_attachment.h"
+#include "mms_settings.h"
 #include "mms_lib_util.h"
 #include "mms_lib_log.h"
 #include "mms_file_util.h"
-#include "mms_log.h"
 
 #include <libexif/exif-content.h>
 #include <libexif/exif-loader.h>
@@ -361,17 +361,18 @@ test_run_one(
         if (mms_file_copy(test->file, testfile, NULL)) {
             MMSAttachment* at;
             MMSAttachmentInfo info;
-            MMSConfig test_config = *config;
-            test_config.max_pixels = test->max_pixels;
+            MMSSettingsSimData sim_settings;
+            mms_settings_sim_data_default(&sim_settings);
+            sim_settings.max_pixels = test->max_pixels;
             info.file_name = testfile;
             info.content_type = test->type->content_type;
             info.content_id = name;
-            at = mms_attachment_new(&test_config, &info, &error);
+            at = mms_attachment_new(config, &info, &error);
             if (at) {
                 int i;
                 gboolean ok = TRUE;
                 for (i=0; i<test->steps && ok; i++) {
-                    if (!mms_attachment_resize(at)) {
+                    if (!mms_attachment_resize(at, &sim_settings)) {
                         ok = FALSE;
                     }
                 }

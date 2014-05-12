@@ -138,13 +138,9 @@ mms_task_send_init(
 /* Create MMS send task */
 MMSTask*
 mms_task_send_new(
-    const MMSConfig* config,
-    MMSHandler* handler,
-    const char* id,
-    const char* imsi)
+    MMSTask* parent)
 {
-    return mms_task_http_alloc(
-        MMS_TYPE_TASK_SEND, config, handler, "Send", id, imsi,
+    return mms_task_http_alloc_with_parent(MMS_TYPE_TASK_SEND, parent, "Send",
         NULL, MMS_SEND_CONF_FILE, MMS_SEND_REQ_FILE);
 }
 
