@@ -102,7 +102,7 @@ mms_task_decode_make_content_id(
 
 static
 MMSMessage*
-mms_task_decode_process_retrieve_conf(
+mms_task_decode_retrieve_conf(
     MMSTask* task,
     const MMSPdu* pdu,
     const guint8* pdu_data,
@@ -200,25 +200,54 @@ mms_task_decode_process_retrieve_conf(
 }
 
 static
-MMSMessage*
+void
 mms_task_decode_process_pdu(
-    MMSTask* task,
-    const guint8* data,
-    gsize len)
+    MMSTaskDecode* dec,
+    MMSPdu* pdu)
 {
-    MMSMessage* msg = NULL;
-    MMSPdu* pdu = g_new0(MMSPdu, 1);
+    MMSTask* task = &dec->task;
+    const void* data = g_mapped_file_get_contents(dec->map);
+    const gsize len = g_mapped_file_get_length(dec->map);
     if (mms_message_decode(data, len, pdu)) {
         if (pdu->type == MMS_MESSAGE_TYPE_RETRIEVE_CONF) {
-            msg = mms_task_decode_process_retrieve_conf(task, pdu, data, len);
+            struct mms_retrieve_conf* rc = &pdu->rc;
+            if (rc->retrieve_status == 0 /* no status at all */ ||
+                rc->retrieve_status == MMS_MESSAGE_RETRIEVE_STATUS_OK) {
+                MMSMessage* msg;
+                msg = mms_task_decode_retrieve_conf(task, pdu, data, len);
+                if (msg) {
+                    /* Successfully received and decoded MMS message */
+                    mms_task_queue_and_unref(task->delegate,
+                        mms_task_ack_new(task->config, task->handler,
+                            task->id, task->imsi, dec->transaction_id));
+                    mms_task_queue_and_unref(task->delegate,
+                        mms_task_publish_new(task->config, task->handler, msg));
+                    mms_message_unref(msg);
+                    return;
+                }
+            } else {
+                /* MMS server returned an error. Most likely, MMS message
+                 * has expired. We need more MMS_RECEIVE_STATE values to
+                 * better describe it to the user. */
+                MMS_ERR("MMSC responded with %u", rc->retrieve_status);
+                mms_handler_message_receive_state_changed(task->handler,
+                    task->id, MMS_RECEIVE_STATE_DOWNLOAD_ERROR);
+                return;
+            }
         } else {
             MMS_ERR("Unexpected MMS PDU type %u", (guint)pdu->type);
         }
     } else {
         MMS_ERR("Failed to decode MMS PDU");
     }
-    mms_message_free(pdu);
-    return msg;
+
+    /* Tell MMS server that we didn't understand this PDU */
+    mms_task_queue_and_unref(task->delegate,
+        mms_task_notifyresp_new(task->config, task->handler, task->id,
+            task->imsi, dec->transaction_id,
+            MMS_MESSAGE_NOTIFY_STATUS_UNRECOGNISED));
+    mms_handler_message_receive_state_changed(task->handler, task->id,
+        MMS_RECEIVE_STATE_DECODING_ERROR);
 }
 
 static
@@ -226,25 +255,9 @@ void
 mms_task_decode_run(
     MMSTask* task)
 {
-    MMSTaskDecode* dec = MMS_TASK_DECODE(task);
-    const void* data = g_mapped_file_get_contents(dec->map);
-    const gsize size = g_mapped_file_get_length(dec->map);
-    MMSMessage* msg = mms_task_decode_process_pdu(task, data, size);
-    if (msg) {
-        mms_task_queue_and_unref(task->delegate,
-            mms_task_ack_new(task->config, task->handler, task->id, task->imsi,
-                dec->transaction_id));
-        mms_task_queue_and_unref(task->delegate,
-            mms_task_publish_new(task->config, task->handler, msg));
-        mms_message_unref(msg);
-    } else {
-        mms_handler_message_receive_state_changed(task->handler, task->id,
-            MMS_RECEIVE_STATE_DECODING_ERROR);
-        mms_task_queue_and_unref(task->delegate,
-            mms_task_notifyresp_new(task->config, task->handler, task->id,
-                task->imsi, dec->transaction_id,
-                MMS_MESSAGE_NOTIFY_STATUS_UNRECOGNISED));
-    }
+    MMSPdu* pdu = g_new0(MMSPdu, 1);
+    mms_task_decode_process_pdu(MMS_TASK_DECODE(task), pdu);
+    mms_message_free(pdu);
     mms_task_set_state(task, MMS_TASK_STATE_DONE);
 }
 
