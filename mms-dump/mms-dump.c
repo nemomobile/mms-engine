@@ -16,7 +16,8 @@
 #include <wsputil.h>
 #include <string.h>
 #include <stdio.h>
- 
+#include <ctype.h>
+
 static const char pname[] = "mms-dump";
 
 enum app_ret_value {
@@ -27,6 +28,7 @@ enum app_ret_value {
 };
 
 #define MMS_DUMP_FLAG_VERBOSE (0x01)
+#define MMS_DUMP_FLAG_DATA    (0x02)
 
 #define WSP_QUOTE (127)
 
@@ -962,6 +964,41 @@ mms_part_decode_headers(
 }
 
 static
+void
+mms_decode_dump_data(
+    const unsigned char* data,
+    unsigned int len)
+{
+    const unsigned int linelen = 16;
+    unsigned int i;
+    char line[80];
+    for (i=0; i<len; i+=linelen) {
+        unsigned int j;
+        char tmp[8];
+        sprintf(line,"  %04x: ", (unsigned int)i);
+        for (j=i; j<(i+linelen); j++) {
+            if ((j%16) == 8) strcat(line, " ");
+            if (j < len) {
+                sprintf(tmp, "%02x ", (unsigned int)data[j]);
+                strcat(line, tmp);
+            } else {
+                strcat(line, "   ");
+            }
+        }
+        strcat(line, "  ");
+        for (j=i; j<(i+linelen); j++) {
+            if (j<len) {
+                sprintf(tmp, "%c", isprint(data[j]) ? data[j] : '.');
+                strcat(line, tmp);
+            } else {
+                strcat(line, " ");
+            }
+        }
+        printf("%s\n", line);
+    }
+}
+
+static
 gboolean
 mms_decode_multipart(
     struct wsp_header_iter* iter,
@@ -994,10 +1031,12 @@ mms_decode_multipart(
                 printf("\n");
                 wsp_header_iter_init(&hi, wsp_multipart_iter_get_hdr(&mi),
                     wsp_multipart_iter_get_hdr_len(&mi), 0);
-                if (mms_part_decode_headers(&hi, "  ", flags) &&
-                    wsp_header_iter_at_end(&hi)) {
-                    continue;
+                mms_part_decode_headers(&hi, "  ", flags);
+                if (flags & MMS_DUMP_FLAG_DATA) {
+                    printf("Data:\n");
+                    mms_decode_dump_data(body, len);
                 }
+                if (wsp_header_iter_at_end(&hi)) continue;
             }
             return FALSE;
         }
@@ -1113,11 +1152,13 @@ mms_decode_file(
 int main(int argc, char* argv[])
 {
     int ret = RET_ERR_CMDLINE;
-    gboolean ok, verbose = FALSE;
+    gboolean ok, verbose = FALSE, data = FALSE;
     GError* error = NULL;
     GOptionEntry entries[] = {
         { "verbose", 'v', 0, G_OPTION_ARG_NONE, &verbose,
           "Enable verbose output", NULL },
+        { "data", 'd', 0, G_OPTION_ARG_NONE, &data,
+          "Dump attachment data", NULL },
         { NULL }
     };
     GOptionContext* options = g_option_context_new("FILES");
@@ -1127,6 +1168,7 @@ int main(int argc, char* argv[])
         if (argc > 1) {
             int i, flags = 0;
             if (verbose) flags |= MMS_DUMP_FLAG_VERBOSE;
+            if (data) flags |= MMS_DUMP_FLAG_DATA;
             for (i=1; i<argc; i++) {
                 const char* fname = argv[i];
                 if (argc > 2) printf("\n%s\n\n", fname);
