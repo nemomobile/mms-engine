@@ -54,7 +54,8 @@ typedef struct test_desc {
     int flags;
 
 #define TEST_PUSH_HANDLING_FAILURE_OK (0x01)
-#define TEST_DEFER_RECEIVE (0x02)
+#define TEST_DEFER_RECEIVE            (0x02)
+#define TEST_REJECT_RECEIVE           (0x04)
 
 } TestDesc;
 
@@ -163,7 +164,7 @@ static const TestDesc retrieve_tests[] = {
         TEST_PARTS(retrieve_success1_parts),
         TEST_DEFER_RECEIVE
      },{
-        "Expired",
+        "Expired1",
         NULL,
         "m-notification.ind",
         NULL,
@@ -174,6 +175,18 @@ static const TestDesc retrieve_tests[] = {
         MMS_MESSAGE_TYPE_NONE,
         TEST_PARTS_NONE,
         0
+     },{
+        "Expired2",
+        NULL,
+        "m-notification.ind",
+        NULL,
+        SOUP_STATUS_OK,
+        NULL,
+        NULL,
+        MMS_RECEIVE_STATE_INVALID,
+        MMS_MESSAGE_TYPE_NOTIFYRESP_IND,
+        TEST_PARTS_NONE,
+        TEST_REJECT_RECEIVE
     },{
         "SoonExpired",
         NULL,
@@ -453,6 +466,9 @@ test_init(
                 test->desc->content_type, test->desc->status);
             port = test_http_get_port(test->http);
             mms_connman_test_set_port(test->cm, port, TRUE);
+            if (desc->flags & TEST_REJECT_RECEIVE) {
+                mms_handler_test_reject_receive(test->handler);
+            }
             if (desc->flags & TEST_DEFER_RECEIVE) {
                 mms_handler_test_defer_receive(test->handler, test->disp);
             }
@@ -561,45 +577,55 @@ test_retrieve(
 
 int main(int argc, char* argv[])
 {
-    int ret;
-    MMSConfig config;
-    const char* test_name = NULL;
+    int ret = RET_ERR;
+    gboolean keep_temp = FALSE;
+    gboolean verbose = FALSE;
+    GError* error = NULL;
+    GOptionContext* options;
+    GOptionEntry entries[] = {
+        { "verbose", 'v', 0, G_OPTION_ARG_NONE, &verbose,
+          "Enable verbose output", NULL },
+        { "keep", 'k', 0, G_OPTION_ARG_NONE, &keep_temp,
+          "Keep temporary files", NULL },
+        { NULL }
+    };
 
     mms_lib_init(argv[0]);
-    mms_lib_default_config(&config);
-    mms_log_default.name = "test_retrieve";
-
-    if (argc > 1 && !strcmp(argv[1], "-v")) {
-        mms_log_default.level = MMS_LOGLEVEL_VERBOSE;
-        memmove(argv + 1, argv + 2, (argc-2)*sizeof(argv[0]));
-        argc--;
-    } else {
-        mms_log_default.level = MMS_LOGLEVEL_INFO;
-        mms_task_http_log.level =
-        mms_task_decode_log.level =
-        mms_task_retrieve_log.level =
-        mms_task_notification_log.level = MMS_LOGLEVEL_NONE;
-        mms_log_stdout_timestamp = FALSE;
-    }
-
-    if (argc == 2 && argv[1][0] != '-') {
-        test_name = argv[1];
-    }
-
-    if (argc == 1 || test_name) {
+    options = g_option_context_new("[TEST] - MMS retrieve test");
+    g_option_context_add_main_entries(options, entries, NULL);
+    if (g_option_context_parse(options, &argc, &argv, &error) && argc < 3) {
+        MMSConfig config;
+        const char* test_name = (argc == 2) ? argv[1] : NULL;
         char* tmpd = g_mkdtemp(g_strdup("/tmp/test_retrieve_XXXXXX"));
         MMS_VERBOSE("Temporary directory %s", tmpd);
+ 
+        mms_lib_default_config(&config);
         config.root_dir = tmpd;
+        config.keep_temp_files = keep_temp;
         config.idle_secs = 0;
         config.attic_enabled = TRUE;
+
+        mms_log_set_type(MMS_LOG_TYPE_STDOUT, "test_retrieve");
+        if (verbose) {
+            mms_log_default.level = MMS_LOGLEVEL_VERBOSE;
+        } else {
+            mms_log_default.level = MMS_LOGLEVEL_INFO;
+            mms_task_http_log.level =
+            mms_task_decode_log.level =
+            mms_task_retrieve_log.level =
+            mms_task_notification_log.level = MMS_LOGLEVEL_NONE;
+            mms_log_stdout_timestamp = FALSE;
+        }
+
         ret = test_retrieve(&config, test_name);
         remove(tmpd);
         g_free(tmpd);
     } else {
-        printf("Usage: test_retrieve [-v] [TEST]\n");
+        fprintf(stderr, "%s\n", MMS_ERRMSG(error));
+        g_error_free(error);
         ret = RET_ERR;
     }
-
+    g_option_context_free(options);
     mms_lib_deinit();
     return ret;
 }

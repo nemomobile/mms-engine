@@ -81,6 +81,10 @@ mms_task_notification_ind(
     MMS_DEBUG("  Expiry: %s", expiry);
 #endif /* MMS_LOG_DEBUG */
 
+    if (task->deadline > ni->expiry) {
+        task->deadline = ni->expiry;
+    }
+
     id = mms_handler_message_notify(task->handler, task->imsi,
         mms_strip_address_type(ni->from), ni->subject, ni->expiry, ind->push);
     if (id) {

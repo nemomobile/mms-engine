@@ -27,6 +27,10 @@ typedef struct mms_handler_test {
     unsigned int last_id;
     GHashTable* recs;
     MMSDispatcher* dispatcher;
+    int flags;
+
+#define MMS_HANDLER_TEST_FLAG_REJECT_NOTIFY (0x01)
+
 } MMSHandlerTest;
 
 typedef enum mms_handler_record_type {
@@ -54,7 +58,7 @@ typedef struct mms_handler_record_receive {
     MMSDispatcher* dispatcher;
     MMSMessage* msg;
     GBytes* data;
-    guint receive_message_id;
+    guint defer_id;
 } MMSHandlerRecordReceive;
 
 G_DEFINE_TYPE(MMSHandlerTest, mms_handler_test, MMS_TYPE_HANDLER);
@@ -219,7 +223,7 @@ mms_handler_test_receive_pending_check(
     MMSHandlerRecord* rec = value;
     if (rec->type == MMS_HANDLER_RECORD_RECEIVE) {
         MMSHandlerRecordReceive* recv = mms_handler_test_record_receive(rec);
-        if (recv->receive_message_id) {
+        if (recv->defer_id) {
             gboolean* pending = user_data;
             *pending = TRUE;
         }
@@ -235,7 +239,7 @@ mms_handler_test_receive_pending(
     if (id) {
         MMSHandlerRecordReceive* recv;
         recv = mms_handler_test_get_receive_record(test, id);
-        return recv && recv->receive_message_id;
+        return recv && recv->defer_id;
     } else {
         gboolean pending = FALSE;
         g_hash_table_foreach(test->recs,
@@ -274,9 +278,9 @@ mms_handler_test_hash_remove_record(
     g_free(rec->id);
     if (rec->type == MMS_HANDLER_RECORD_RECEIVE) {
         MMSHandlerRecordReceive* recv = mms_handler_test_record_receive(rec);
-        if (recv->receive_message_id) {
-            g_source_remove(recv->receive_message_id);
-            recv->receive_message_id = 0;
+        if (recv->defer_id) {
+            g_source_remove(recv->defer_id);
+            recv->defer_id = 0;
         }
         mms_dispatcher_unref(recv->dispatcher);
         mms_message_unref(recv->msg);
@@ -296,10 +300,10 @@ mms_handler_test_receive(
 {
     MMSHandlerRecordReceive* recv = data;
     MMSDispatcher* disp = recv->dispatcher;
-    MMS_ASSERT(recv->receive_message_id);
+    MMS_ASSERT(recv->defer_id);
     MMS_ASSERT(recv->dispatcher);
     MMS_DEBUG("Initiating receive of message %s", recv->rec.id);
-    recv->receive_message_id = 0;
+    recv->defer_id = 0;
     recv->dispatcher = NULL;
     mms_dispatcher_receive_message(disp, recv->rec.id, recv->rec.imsi,
         TRUE, recv->data, NULL);
@@ -319,21 +323,27 @@ mms_handler_test_message_notify(
     GBytes* data)
 {
     MMSHandlerTest* test = MMS_HANDLER_TEST(handler);
-    MMSHandlerRecordReceive* recv = g_new0(MMSHandlerRecordReceive, 1);
-    char* id = g_strdup_printf("%u", (++test->last_id));
-    recv->rec.id = id;
-    recv->rec.imsi = g_strdup(imsi);
-    recv->rec.type = MMS_HANDLER_RECORD_RECEIVE;
-    recv->state = MMS_RECEIVE_STATE_INVALID;
-    recv->data = g_bytes_ref(data);
-    MMS_DEBUG("Push %s imsi=%s from=%s subj=%s", id, imsi, from, subj);
-    g_hash_table_replace(test->recs, id, &recv->rec);
-    if (test->dispatcher) {
-        recv->receive_message_id = g_idle_add(mms_handler_test_receive, recv);
-        recv->dispatcher = mms_dispatcher_ref(test->dispatcher);
-        return g_strdup("");
+    if (test->flags & MMS_HANDLER_TEST_FLAG_REJECT_NOTIFY) {
+        MMS_DEBUG("Rejecting push imsi=%s from=%s subj=%s", imsi, from, subj);
+        return NULL;
     } else {
-        return g_strdup(id);
+        MMSHandlerRecordReceive* recv = g_new0(MMSHandlerRecordReceive, 1);
+        char* id = g_strdup_printf("%u", (++test->last_id));
+        recv->rec.id = id;
+        recv->rec.imsi = g_strdup(imsi);
+        recv->rec.type = MMS_HANDLER_RECORD_RECEIVE;
+        recv->state = MMS_RECEIVE_STATE_INVALID;
+        recv->data = g_bytes_ref(data);
+        MMS_DEBUG("Push %s imsi=%s from=%s subj=%s", id, imsi, from, subj);
+        g_hash_table_replace(test->recs, id, &recv->rec);
+        if (test->dispatcher) {
+            MMS_DEBUG("Deferring push");
+            recv->defer_id = g_idle_add(mms_handler_test_receive, recv);
+            recv->dispatcher = mms_dispatcher_ref(test->dispatcher);
+            return g_strdup("");
+        } else {
+            return g_strdup(id);
+        }
     }
 }
 
@@ -539,6 +549,14 @@ mms_handler_test_defer_receive(
 }
 
 void
+mms_handler_test_reject_receive(
+    MMSHandler* handler)
+{
+    MMSHandlerTest* test = MMS_HANDLER_TEST(handler);
+    test->flags |= MMS_HANDLER_TEST_FLAG_REJECT_NOTIFY;
+}
+
+void
 mms_handler_test_reset(
     MMSHandler* handler)
 {
@@ -546,6 +564,7 @@ mms_handler_test_reset(
     g_hash_table_remove_all(test->recs);
     mms_dispatcher_unref(test->dispatcher);
     test->dispatcher = NULL;
+    test->flags = 0;
 }
 
 /*

@@ -66,6 +66,10 @@ mms_handler_test_defer_receive(
     MMSDispatcher* dispatcher);
 
 void
+mms_handler_test_reject_receive(
+    MMSHandler* handler);
+
+void
 mms_handler_test_reset(
     MMSHandler* handler);
 
