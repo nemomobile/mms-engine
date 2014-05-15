@@ -43,6 +43,11 @@
 #include "wsputil.h"
 #include "mms_codec.h"
 
+/* Logging */
+#define MMS_LOG_MODULE_NAME mms_codec_log
+#include "mms_lib_log.h"
+MMS_LOG_MODULE_DEFINE("mms-codec");
+
 #define MAX_ENC_VALUE_BYTES 6
 
 #ifdef TEMP_FAILURE_RETRY
@@ -1295,8 +1300,13 @@ static gboolean mms_parse_attachments(struct wsp_header_iter *iter,
 			return FALSE;
 
 		if (attachment_parse_headers(&hi, part) == FALSE) {
-			free_attachment(part, NULL);
-			return FALSE;
+
+			/*
+			 * Better to ignore this. It doesn't stop us from
+			 * parsing the rest of the PDU. And yes, it does
+			 * happen in real life.
+			 */
+			MMS_WARN("Failed to parse part headers");
 		}
 
 		if (wsp_header_iter_at_end(&hi) == FALSE) {

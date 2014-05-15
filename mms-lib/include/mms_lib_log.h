@@ -22,6 +22,7 @@
     log(mms_handler_log)\
     log(mms_message_log)\
     log(mms_attachment_log)\
+    log(mms_codec_log)\
     log(mms_task_log)\
     log(mms_task_http_log)\
     log(mms_task_decode_log)\
