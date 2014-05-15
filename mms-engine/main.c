@@ -162,6 +162,7 @@ mms_app_parse_options(
 #ifdef MMS_ENGINE_VERSION
     gboolean print_version = FALSE;
 #endif
+    gboolean log_modules = FALSE;
     gboolean keep_running = FALSE;
     gint size_limit_kb = -1;
     gdouble megapixels = -1;
@@ -174,8 +175,7 @@ mms_app_parse_options(
     char* idle_secs_help = g_strdup_printf(
         "Inactivity timeout in seconds [%d]",
         opt->config.idle_secs);
-    char* description = mms_log_description(mms_app_log_modules,
-        G_N_ELEMENTS(mms_app_log_modules));
+    char* description = mms_log_description(NULL, 0);
 
     GOptionContext* options;
     GOptionEntry entries[] = {
@@ -208,6 +208,8 @@ mms_app_parse_options(
           "Log output (stdout|syslog|glib) [stdout]", "TYPE" },
         { "log-level", 'l', 0, G_OPTION_ARG_CALLBACK, mms_app_option_loglevel,
           "Set log level (repeatable)", "[MODULE:]LEVEL" },
+        { "log-modules", 0, 0, G_OPTION_ARG_NONE, &log_modules,
+          "List available log modules", NULL },
 #ifdef MMS_ENGINE_VERSION
         { "version", 0, 0, G_OPTION_ARG_NONE, &print_version,
           "Print program version and exit", NULL },
@@ -225,18 +227,28 @@ mms_app_parse_options(
     g_free(idle_secs_help);
     g_free(description);
 
+    if (!ok) {
+        fprintf(stderr, "%s\n", MMS_ERRMSG(error));
+        g_error_free(error);
+        *result = RET_ERR;
+        return FALSE;
+    } else if (log_modules) {
+        unsigned int i;
+        for (i=0; i<G_N_ELEMENTS(mms_app_log_modules); i++) {
+            printf("%s\n", mms_app_log_modules[i]->name);
+        }
+        *result = RET_OK;
+        return FALSE;
 #ifdef MMS_ENGINE_VERSION
 #  define MMS_STRING__(x) #x
 #  define MMS_STRING_(x) MMS_STRING__(x)
 #  define MMS_VERVION_STRING MMS_STRING_(MMS_ENGINE_VERSION)
-    if (print_version) {
+    } else if (print_version) {
         printf("MMS engine %s\n", MMS_VERVION_STRING);
         *result = RET_OK;
         return FALSE;
-    } else
 #endif
-
-    if (ok) {
+    } else {
 #ifdef MMS_ENGINE_VERSION
         MMS_INFO("Version %s starting", MMS_VERVION_STRING);
 #else
@@ -265,11 +277,6 @@ mms_app_parse_options(
         }
         *result = RET_OK;
         return TRUE;
-    } else {
-        fprintf(stderr, "%s\n", MMS_ERRMSG(error));
-        g_error_free(error);
-        *result = RET_ERR;
-        return FALSE;
     }
 }
 
