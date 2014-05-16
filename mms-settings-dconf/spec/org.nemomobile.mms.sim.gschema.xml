@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <!-- Path is /IMSI/ -->
+  <schema id="org.nemomobile.mms.sim">
+    <key type="s" name="user-agent">
+      <default>'Mozilla/5.0 (Sailfish; Jolla)'</default>
+      <summary>User-Agent string.</summary>
+      <description>The value of User-Agent header to use when communicating with the MMS server.</description>
+    </key>
+    <key type="u" name="max-message-size">
+      <default>307200</default>
+      <summary>Maximum size of an outbound MMS message.</summary>
+      <description>Maximum size of an outbound MMS message.</description>
+    </key>
+    <key type="u" name="max-pixels">
+      <default>3000000</default>
+      <summary>Maximum number of pixels in an outbound image.</summary>
+      <description>Maximum number of pixels in an outbound image.</description>
+    </key>
+    <key type="b" name="allow-delivery-reports">
+      <default>true</default>
+      <summary>Allow sending delivery reports.</summary>
+      <description>Whether or not we (as a recipient) allow sending delivery reports.</description>
+    </key>
+  </schema>
+</schemalist>

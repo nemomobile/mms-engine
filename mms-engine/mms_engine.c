@@ -18,6 +18,7 @@
 #include "mms_lib_util.h"
 #include "mms_ofono_connman.h"
 #include "mms_handler_dbus.h"
+#include "mms_settings_dconf.h"
 #include "mms_log.h"
 
 /* Generated code */
@@ -418,17 +419,20 @@ mms_engine_new(
     if (cm) {
         MMSEngine* mms = g_object_new(MMS_TYPE_ENGINE, NULL);
         MMSHandler* handler = mms_handler_dbus_new();
-        MMSSettings* settings = mms_settings_default_new(config);
+        MMSSettings* settings = mms_settings_dconf_new(config);
 
         if (flags & MMS_ENGINE_FLAG_OVERRIDE_USER_AGENT) {
+            settings->flags |= MMS_SETTINGS_FLAG_OVERRIDE_USER_AGENT;
             g_free(settings->sim_defaults.user_agent);
             settings->sim_defaults.data.user_agent =
             settings->sim_defaults.user_agent = g_strdup(override->user_agent);
         }
         if (flags & MMS_ENGINE_FLAG_OVERRIDE_SIZE_LIMIT) {
+            settings->flags |= MMS_SETTINGS_FLAG_OVERRIDE_SIZE_LIMIT;
             settings->sim_defaults.data.size_limit = override->size_limit;
         }
         if (flags & MMS_ENGINE_FLAG_OVERRIDE_MAX_PIXELS) {
+            settings->flags |= MMS_SETTINGS_FLAG_OVERRIDE_MAX_PIXELS;
             settings->sim_defaults.data.max_pixels = override->max_pixels;
         }
 

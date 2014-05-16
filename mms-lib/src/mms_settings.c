@@ -46,7 +46,6 @@ mms_settings_sim_data_default(
     data->allow_dr = MMS_SETTINGS_DEFAULT_ALLOW_DR;
 }
 
-static
 void
 mms_settings_sim_data_copy(
     MMSSettingsSimDataCopy* dest,
@@ -79,7 +78,7 @@ mms_settings_sim_data_copy_free(
     MMSSettingsSimDataCopy* copy)
 {
     if (copy) {
-        g_free(copy->user_agent);
+        mms_settings_sim_data_reset(copy);
         g_free(copy);
     }
 }
@@ -130,7 +129,7 @@ mms_settings_finalize(
     GObject* object)
 {
     MMSSettings* settings = MMS_SETTINGS(object);
-    g_free(settings->sim_defaults.user_agent);
+    mms_settings_sim_data_reset(&settings->sim_defaults);
     G_OBJECT_CLASS(mms_settings_parent_class)->finalize(object);
 }
 
