@@ -12,7 +12,8 @@
  *
  */
 
-#include "mms_log.h"
+#include "mms_lib_util.h"
+#include "mms_lib_log.h"
 #include "mms_codec.h"
 
 #define DATA_DIR "data/"
@@ -50,7 +51,6 @@ test_file(
 
 int main(int argc, char* argv[])
 {
-    int i, ret = RET_OK;
     static const char* default_files[] = {
         "m-acknowledge.ind",
         "m-notification_1.ind",
@@ -66,6 +66,7 @@ int main(int argc, char* argv[])
         "m-retrieve_6.conf",
         "m-retrieve_7.conf",
         "m-retrieve_8.conf",
+        "m-retrieve_9.conf",
         "m-notifyresp.ind",
         "m-read-rec.ind",
         "m-send_1.req",
@@ -75,23 +76,49 @@ int main(int argc, char* argv[])
         "m-send_2.conf",
         "m-send_3.conf"
     };
-    mms_log_set_type(MMS_LOG_TYPE_STDOUT, "test_mms_codec");
-    mms_log_stdout_timestamp = FALSE;
-    mms_log_default.level = MMS_LOGLEVEL_INFO;
-    if (argc > 1) {
-        for (i=1; i<argc; i++) {
-            if (!test_file(argv[i])) {
-                ret = RET_ERR;
-            }
+
+    int ret = RET_ERR;
+    gboolean verbose = FALSE;
+    GOptionContext* options;
+    GOptionEntry entries[] = {
+        { "verbose", 'v', 0, G_OPTION_ARG_NONE, &verbose,
+          "Enable verbose output", NULL },
+        { NULL }
+    };
+
+    mms_lib_init(argv[0]);
+    options = g_option_context_new("[TESTS...] - MMS codec test");
+    g_option_context_add_main_entries(options, entries, NULL);
+    if (g_option_context_parse(options, &argc, &argv, NULL)) {
+        int i;
+
+        mms_log_set_type(MMS_LOG_TYPE_STDOUT, "test_mms_codec");
+        if (verbose) {
+            mms_log_default.level = MMS_LOGLEVEL_VERBOSE;
+        } else {
+            mms_log_stdout_timestamp = FALSE;
+            mms_log_default.level = MMS_LOGLEVEL_INFO;
+            mms_codec_log.level = MMS_LOGLEVEL_ERR;
         }
-    } else {
-        /* Default set of test files */
-        for (i=0; i<G_N_ELEMENTS(default_files); i++) {
-            if (!test_file(default_files[i])) {
-                ret = RET_ERR;
+
+        ret = RET_OK;
+        if (argc > 1) {
+            for (i=1; i<argc; i++) {
+                if (!test_file(argv[i])) {
+                    ret = RET_ERR;
+                }
+            }
+        } else {
+            /* Default set of test files */
+            for (i=0; i<G_N_ELEMENTS(default_files); i++) {
+                if (!test_file(default_files[i])) {
+                    ret = RET_ERR;
+                }
             }
         }
     }
+    g_option_context_free(options);
+    mms_lib_deinit();
     return ret;
 }
 
