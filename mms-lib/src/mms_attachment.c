@@ -28,6 +28,7 @@
 MMS_LOG_MODULE_DEFINE("mms-attachment");
 
 #define MMS_ATTACHMENT_DEFAULT_TYPE "application/octet-stream"
+#define CONTENT_TYPE_PARAM_NAME     "name"
 
 G_DEFINE_TYPE(MMSAttachment, mms_attachment, G_TYPE_OBJECT);
 
@@ -250,6 +251,8 @@ mms_attachment_new(
         GMappedFile* map = g_mapped_file_new(path, FALSE, error);
         if (map) {
             unsigned int flags = 0;
+            char* media_type = NULL;
+            char* name = g_path_get_basename(path);
             char* content_type = NULL;
             GType type;
             MMSAttachment* at;
@@ -257,43 +260,61 @@ mms_attachment_new(
             if (info->content_type && info->content_type[0]) {
                 char** ct = mms_parse_http_content_type(info->content_type);
                 if (ct) {
-                    content_type = mms_unparse_http_content_type(ct);
+                    char** ptr;
+                    gboolean append_name = TRUE;
                     if (!strcmp(ct[0], SMIL_CONTENT_TYPE)) {
                         flags |= MMS_ATTACHMENT_SMIL;
                     }
+                    for (ptr = ct+1; *ptr; ptr+=2) {
+                        if (!g_ascii_strcasecmp(ptr[0], CONTENT_TYPE_PARAM_NAME)) {
+                            g_free(ptr[1]);
+                            ptr[1] = g_strdup(name);
+                            append_name = FALSE;
+                        }
+                    }
+                    if (append_name) {
+                        const guint len = g_strv_length(ct);
+                        ct = g_renew(gchar*, ct, len+3);
+                        ct[len] = g_strdup(CONTENT_TYPE_PARAM_NAME);
+                        ct[len+1] = g_strdup(name);
+                        ct[len+2] = NULL;
+                    }
+                    content_type = mms_unparse_http_content_type(ct);
+                    media_type = g_strdup(ct[0]);
                     g_strfreev(ct);
                 }
             }
 
             if (!content_type) {
-                char* detected_type = mms_attachment_guess_content_type(path);
                 const char* default_charset = "utf-8";
                 const char* charset = NULL;
-                const char* ct[4];
+                const char* ct[6];
                 int n = 0;
 
-                if (!strcmp(detected_type, SMIL_CONTENT_TYPE)) {
+                media_type = mms_attachment_guess_content_type(path);
+                if (!strcmp(media_type, SMIL_CONTENT_TYPE)) {
                     flags |= MMS_ATTACHMENT_SMIL;
                     charset = default_charset;
-                } else if (g_str_has_prefix(detected_type, "text/")) {
+                } else if (g_str_has_prefix(media_type, "text/")) {
                     charset = default_charset;
                 }
 
-                ct[n++] = detected_type;
+                ct[n++] = media_type;
                 if (charset) {
                     ct[n++] = "charset";
                     ct[n++] = charset;
                 }
+                ct[n++] = CONTENT_TYPE_PARAM_NAME;
+                ct[n++] = name;
                 ct[n++] = NULL;
                 content_type = mms_unparse_http_content_type((char**)ct);
-                g_free(detected_type);
             }
 
             MMS_DEBUG("%s: %s", path, content_type);
 
-            if (!strcmp(content_type, "image/jpeg")) {
+            if (!strcmp(media_type, "image/jpeg")) {
                 type = MMS_TYPE_ATTACHMENT_JPEG;
-            } else if (g_str_has_prefix(content_type, "image/")) {
+            } else if (g_str_has_prefix(media_type, "image/")) {
                 type = MMS_TYPE_ATTACHMENT_IMAGE;
             } else {
                 type = MMS_TYPE_ATTACHMENT;
@@ -305,10 +326,12 @@ mms_attachment_new(
             at->flags |= flags;
             at->file_name = at->original_file = path;
             at->content_type = content_type;
-            at->content_location = g_path_get_basename(path);
+            at->content_location = name;
             at->content_id = (info->content_id && info->content_id[0]) ?
                 g_strdup(info->content_id) :
                 g_strdup(at->content_location);
+
+            g_free(media_type);
             return at;
         }
         g_free(path);

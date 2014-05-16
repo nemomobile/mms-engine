@@ -32,10 +32,8 @@
 #  define ssize_t int
 #  define write _write
 #  include <io.h>
-#  define uninitialized_var(x) x
 #else
 #  include <unistd.h>
-#  define uninitialized_var(x) x = x
 #endif
 
 #include <glib.h>
@@ -1853,6 +1851,25 @@ static gboolean encode_quoted_string(struct file_buffer *fb,
 {
 	char *ptr;
 	char **text = user;
+
+	if (!*text)
+		return TRUE;
+
+	ptr = fb_request_field(fb, header, strlen(*text) + 2);
+	if (ptr == NULL)
+		return FALSE;
+
+	ptr[0] = '"';
+	strcpy(ptr + 1, *text);
+
+	return TRUE;
+}
+
+static gboolean encode_content_id(struct file_buffer *fb,
+				enum mms_header header, void *user)
+{
+	char *ptr;
+	char **text = user;
 	unsigned int len;
 
 	if (!*text)
@@ -2067,7 +2084,7 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 	unsigned int ct_len;
 	unsigned int cs_len;
 	const char *ct_str;
-	const char *uninitialized_var(cs_str);
+	char *name = NULL;
 	unsigned int ctp_len;
 	unsigned int cid_len;
 	unsigned int cloc_len;
@@ -2099,7 +2116,7 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 		const char *key = parsed[i];
 
 		if (g_ascii_strcasecmp("charset", key) == 0) {
-			cs_str = parsed[i+1];
+			const char *cs_str = parsed[i+1];
 
 			len += 1;
 
@@ -2111,6 +2128,10 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 				goto done;
 
 			len += cs_len;
+
+		} else if (g_ascii_strcasecmp("name", key) == 0) {
+			name = parsed[i+1];
+			len += 2 + strlen(name) + 1;
 		}
 	}
 
@@ -2179,9 +2200,16 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 		memcpy(ptr, &cs_val, cs_len);
 	}
 
+	/* Encode "name" param */
+	if (name) {
+		if (encode_quoted_string(fb, WSP_PARAMETER_TYPE_NAME_DEFUNCT,
+						&name) == FALSE)
+			goto done;
+	}
+
 	/* Encode content-id */
 	if (part->content_id != NULL) {
-		if (encode_quoted_string(fb, MMS_PART_HEADER_CONTENT_ID,
+		if (encode_content_id(fb, MMS_PART_HEADER_CONTENT_ID,
 						&part->content_id) == FALSE)
 			goto done;
 	}

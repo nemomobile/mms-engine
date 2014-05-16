@@ -80,9 +80,9 @@ typedef struct test {
 } Test;
 
 static const MMSAttachmentInfo test_files_accept [] = {
-    { "smil", NULL, NULL },
-    { "0001.jpg", "image/jpeg", "image" },
-    { "test.txt", "text/plain;charset=utf-8", "text" }
+    { "smil", "application/smil;charset=us-ascii", NULL },
+    { "0001.jpg", "image/jpeg;name=0001.jpg", "image" },
+    { "test.txt", "text/plain;charset=utf-8;name=wrong.name", "text" }
 };
 
 static const MMSAttachmentInfo test_files_accept_no_ext [] = {
