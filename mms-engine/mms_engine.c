@@ -24,10 +24,6 @@
 /* Generated code */
 #include "org.nemomobile.MmsEngine.h"
 
-#ifdef DEBUG
-#  define ENABLE_TEST
-#endif
-
 struct mms_engine {
     GObject parent;
     const MMSConfig* config;
@@ -49,9 +45,6 @@ struct mms_engine {
     gulong cancel_signal_id;
     gulong set_log_level_signal_id;
     gulong set_log_type_signal_id;
-#ifdef ENABLE_TEST
-    gulong test_signal_id;
-#endif
 };
 
 typedef GObjectClass MMSEngineClass;
@@ -116,21 +109,6 @@ mms_engine_start_timeout_schedule(
     engine->start_timeout_id = g_timeout_add_seconds(engine->config->idle_secs,
         mms_engine_start_timeout_callback, engine);
 }
-
-#ifdef ENABLE_TEST
-/* org.nemomobile.MmsEngine.test */
-static
-gboolean
-mms_engine_handle_test(
-    OrgNemomobileMmsEngine* proxy,
-    GDBusMethodInvocation* call,
-    MMSEngine* engine)
-{
-    MMS_DEBUG("Test");
-    org_nemomobile_mms_engine_complete_test(proxy, call);
-    return TRUE;
-}
-#endif /* ENABLE_TEST */
 
 /* org.nemomobile.MmsEngine.sendMessage */
 static
@@ -476,12 +454,6 @@ mms_engine_new(
             g_signal_connect(mms->proxy, "handle-set-log-type",
             G_CALLBACK(mms_engine_handle_set_log_type), mms);
 
-#ifdef ENABLE_TEST
-        mms->test_signal_id =
-            g_signal_connect(mms->proxy, "handle-test",
-            G_CALLBACK(mms_engine_handle_test), mms);
-#endif
-
         return mms;
     }
 
@@ -594,9 +566,6 @@ mms_engine_dispose(
     mms_engine_unregister(e);
     mms_engine_start_timeout_cancel(e);
     if (e->proxy) {
-#ifdef ENABLE_TEST
-        g_signal_handler_disconnect(e->proxy, e->test_signal_id);
-#endif
         g_signal_handler_disconnect(e->proxy, e->send_message_id);
         g_signal_handler_disconnect(e->proxy, e->push_signal_id);
         g_signal_handler_disconnect(e->proxy, e->push_notify_signal_id);

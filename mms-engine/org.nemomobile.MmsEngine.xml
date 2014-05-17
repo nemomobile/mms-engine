@@ -198,7 +198,5 @@
       <arg type="s" name="type" direction="in"/>
     </method>
 
-    <method name="test"/>
-
   </interface>
 </node>
