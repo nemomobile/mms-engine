@@ -104,6 +104,8 @@ mms_handler_dbus_message_received(
     if (msg->id && msg->id[0] && proxy) {
         const char* nothing = NULL;
         const char* subject = msg->subject ? msg->subject : "";
+        const char* from = msg->from ? msg->from : "<hidden>";
+        const char** to = msg->to ? (const char**)msg->to : &nothing;
         const char** cc = msg->cc ? (const char**)msg->cc : &nothing;
         GError* error = NULL;
         GSList* list = msg->parts;
@@ -120,11 +122,11 @@ mms_handler_dbus_message_received(
 
         parts = g_variant_ref_sink(g_variant_builder_end(&b));
         ok = org_nemomobile_mms_handler_call_message_received_sync(
-            proxy, msg->id, msg->message_id, msg->from, (const char**)msg->to,
-            cc, subject, msg->date, msg->priority,
-            msg->cls, msg->read_report_req, parts, NULL, &error);
+            proxy, msg->id, msg->message_id, from, to, cc, subject,
+            msg->date, msg->priority, msg->cls, msg->read_report_req,
+            parts, NULL, &error);
         if (!ok) {
-            MMS_ERR("Failed to nofity commhistoryd: %s", MMS_ERRMSG(error));
+            MMS_ERR("Failed to notify commhistoryd: %s", MMS_ERRMSG(error));
             g_error_free(error);
         }
 
