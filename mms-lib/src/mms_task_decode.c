@@ -211,8 +211,11 @@ mms_task_decode_process_pdu(
     if (mms_message_decode(data, len, pdu)) {
         if (pdu->type == MMS_MESSAGE_TYPE_RETRIEVE_CONF) {
             struct mms_retrieve_conf* rc = &pdu->rc;
-            if (rc->retrieve_status == 0 /* no status at all */ ||
-                rc->retrieve_status == MMS_MESSAGE_RETRIEVE_STATUS_OK) {
+            /* Message-ID must be present only if the M-Retrieve.conf PDU
+             * includes the requested MM */
+            if (rc->msgid &&
+               (rc->retrieve_status == 0 /* no status at all */ ||
+                rc->retrieve_status == MMS_MESSAGE_RETRIEVE_STATUS_OK)) {
                 MMSMessage* msg;
                 msg = mms_task_decode_retrieve_conf(task, pdu, data, len);
                 if (msg) {
