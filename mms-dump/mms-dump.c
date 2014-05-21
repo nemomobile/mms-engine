@@ -1071,6 +1071,10 @@ mms_decode_attachment(
         mms_value_decode_wsp_params(pdu + consumed, parlen);
         mms_value_verbose_dump(iter->pdu + iter->pos, total+1, flags);
         printf("\n");
+        if (flags & MMS_DUMP_FLAG_DATA) {
+            printf("Data:\n");
+            mms_decode_dump_data(iter->pdu + off, len);
+        }
         return TRUE;
     }
     return FALSE;
