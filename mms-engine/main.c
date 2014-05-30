@@ -30,6 +30,7 @@ typedef struct mms_app_options {
     int flags;
     char* dir;
     char* user_agent;
+    char* uaprof;
     MMSConfig config;
     MMSSettingsSimData settings;
 } MMSAppOptions;
@@ -192,7 +193,9 @@ mms_app_parse_options(
         { "pix-limit", 'p', 0, G_OPTION_ARG_DOUBLE,
           &megapixels, "Maximum pixel count for outgoing images", "MPIX" },
         { "user-agent", 'u', 0, G_OPTION_ARG_STRING,
-          &opt->user_agent, "User-Agent header", "STRING" },
+          &opt->user_agent, "The value of the User-Agent header", "STRING" },
+        { "x-wap-profile", 'x', 0, G_OPTION_ARG_STRING,
+          &opt->uaprof, "User agent profile", "URL" },
         { "keep-running", 'k', 0, G_OPTION_ARG_NONE, &keep_running,
           "Keep running after everything is done", NULL },
         { "keep-temp-files", 't', 0, G_OPTION_ARG_NONE,
@@ -266,6 +269,10 @@ mms_app_parse_options(
             opt->settings.user_agent = opt->user_agent;
             opt->flags |= MMS_ENGINE_FLAG_OVERRIDE_USER_AGENT;
         }
+        if (opt->uaprof) {
+            opt->settings.uaprof = opt->uaprof;
+            opt->flags |= MMS_ENGINE_FLAG_OVERRIDE_UAPROF;
+        }
         if (opt->dir) opt->config.root_dir = opt->dir;
         if (keep_running) opt->flags |= MMS_ENGINE_FLAG_KEEP_RUNNING;
         if (session_bus) {
@@ -322,6 +329,7 @@ int main(int argc, char* argv[])
     }
     g_free(opt.dir);
     g_free(opt.user_agent);
+    g_free(opt.uaprof);
     mms_lib_deinit();
     return result;
 }

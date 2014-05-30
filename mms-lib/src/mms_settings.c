@@ -41,6 +41,7 @@ mms_settings_sim_data_default(
 {
     memset(data, 0, sizeof(*data));
     data->user_agent = MMS_SETTINGS_DEFAULT_USER_AGENT;
+    data->uaprof = MMS_SETTINGS_DEFAULT_UAPROF;
     data->size_limit = MMS_SETTINGS_DEFAULT_SIZE_LIMIT;
     data->max_pixels = MMS_SETTINGS_DEFAULT_MAX_PIXELS;
     data->allow_dr = MMS_SETTINGS_DEFAULT_ALLOW_DR;
@@ -52,11 +53,14 @@ mms_settings_sim_data_copy(
     const MMSSettingsSimData* src)
 {
     g_free(dest->user_agent);
+    g_free(dest->uaprof);
     if (src) {
         dest->data = *src;
         dest->data.user_agent = dest->user_agent = g_strdup(src->user_agent);
+        dest->data.uaprof = dest->uaprof = g_strdup(src->uaprof);
     } else {
         dest->user_agent = NULL;
+        dest->uaprof = NULL;
         mms_settings_sim_data_default(&dest->data);
     }
 }

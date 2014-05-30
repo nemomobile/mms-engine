@@ -41,6 +41,7 @@ G_DEFINE_TYPE(MMSSettingsDconf, mms_settings_dconf, MMS_TYPE_SETTINGS);
 #define MMS_DCONF_PATH_PREFIX       "/"
 
 #define MMS_DCONF_KEY_USER_AGENT    "user-agent"
+#define MMS_DCONF_KEY_UAPROF        "user-agent-profile"
 #define MMS_DCONF_KEY_SIZE_LIMIT    "max-message-size"
 #define MMS_DCONF_KEY_MAX_PIXELS    "max-pixels"
 #define MMS_DCONF_KEY_ALLOW_DR      "allow-delivery-reports"
@@ -63,9 +64,26 @@ mms_settings_dconf_update_user_agent(
     } else {
         MMSSettingsSimDataCopy* copy = &dconf->imsi_data;
         g_free(copy->user_agent);
-        copy->data.user_agent =
-        copy->user_agent = value;
+        copy->data.user_agent = copy->user_agent = value;
         MMS_DEBUG("%s = %s", key, copy->data.user_agent);
+    }
+}
+
+static
+void
+mms_settings_dconf_update_uaprof(
+    MMSSettingsDconf* dconf,
+    const char* key)
+{
+    char* value = g_settings_get_string(dconf->gs, key);
+    if (dconf->settings.flags & MMS_SETTINGS_FLAG_OVERRIDE_UAPROF) {
+        MMS_DEBUG("%s = %s (ignored)", key, value);
+        g_free(value);
+    } else {
+        MMSSettingsSimDataCopy* copy = &dconf->imsi_data;
+        g_free(copy->uaprof);
+        copy->data.uaprof = copy->uaprof = value;
+        MMS_DEBUG("%s = %s", key, copy->data.uaprof);
     }
 }
 
@@ -101,7 +119,7 @@ mms_settings_dconf_update_max_pixels(
 
 static
 void
-mms_settings_dconf_update_max_allow_dr(
+mms_settings_dconf_update_allow_dr(
     MMSSettingsDconf* dconf,
     const char* key)
 {
@@ -115,10 +133,11 @@ mms_settings_dconf_update_max_allow_dr(
 }
 
 static const MMSSettingsDconfKey mms_settings_dconf_keys[] = {
-    { MMS_DCONF_KEY_USER_AGENT, mms_settings_dconf_update_user_agent   },
-    { MMS_DCONF_KEY_SIZE_LIMIT, mms_settings_dconf_update_size_limit   },
-    { MMS_DCONF_KEY_MAX_PIXELS, mms_settings_dconf_update_max_pixels   },
-    { MMS_DCONF_KEY_ALLOW_DR,   mms_settings_dconf_update_max_allow_dr },
+    { MMS_DCONF_KEY_USER_AGENT, mms_settings_dconf_update_user_agent },
+    { MMS_DCONF_KEY_UAPROF,     mms_settings_dconf_update_uaprof     },
+    { MMS_DCONF_KEY_SIZE_LIMIT, mms_settings_dconf_update_size_limit },
+    { MMS_DCONF_KEY_MAX_PIXELS, mms_settings_dconf_update_max_pixels },
+    { MMS_DCONF_KEY_ALLOW_DR,   mms_settings_dconf_update_allow_dr   },
 };
 
 static

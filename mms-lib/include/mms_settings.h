@@ -29,6 +29,7 @@ struct mms_config {
 /* Persistent mutable per-SIM settings */
 struct mms_settings_sim_data {
     const char* user_agent;     /* User agent string */
+    const char* uaprof;         /* User agent profile string */
     unsigned int size_limit;    /* Maximum size of m-Send.req PDU */
     unsigned int max_pixels;    /* Pixel limit for outbound images */
     gboolean allow_dr;          /* Allow sending delivery reports */
@@ -38,6 +39,7 @@ struct mms_settings_sim_data {
 typedef struct mms_settings_sim_data_copy {
     MMSSettingsSimData data;    /* Settings data */
     char* user_agent;           /* Allocated copy of user_agent */
+    char* uaprof;               /* Allocated copy of uaprof */
 } MMSSettingsSimDataCopy;
 
 /* Instance */
@@ -51,6 +53,7 @@ struct mms_settings {
 #define MMS_SETTINGS_FLAG_OVERRIDE_SIZE_LIMIT   (0x02)
 #define MMS_SETTINGS_FLAG_OVERRIDE_MAX_PIXELS   (0x04)
 #define MMS_SETTINGS_FLAG_OVERRIDE_ALLOW_DR     (0x08)
+#define MMS_SETTINGS_FLAG_OVERRIDE_UAPROF       (0x10)
 };
 
 /* Class */
@@ -61,11 +64,14 @@ typedef struct mms_settings_class {
         const char* imsi);
 } MMSSettingsClass;
 
-/* Default values */
-#define MMS_SETTINGS_DEFAULT_USER_AGENT     "Mozilla/5.0 (Sailfish; Jolla)"
-#define MMS_SETTINGS_DEFAULT_SIZE_LIMIT     (300*1024)
-#define MMS_SETTINGS_DEFAULT_MAX_PIXELS     (3000000)
-#define MMS_SETTINGS_DEFAULT_ALLOW_DR       TRUE
+/* Default values. If the GSettings backend is used (mms-settings-dconf)
+ * then these should match the default values defined in the GSettings
+ * schema (org.nemomobile.mms.sim.gschema.xml) */
+#define MMS_SETTINGS_DEFAULT_USER_AGENT "Mozilla/5.0 (Sailfish; Jolla)"
+#define MMS_SETTINGS_DEFAULT_UAPROF     "http://www.jolla.com/uaprof/Jolla.xml"
+#define MMS_SETTINGS_DEFAULT_SIZE_LIMIT (300*1024)
+#define MMS_SETTINGS_DEFAULT_MAX_PIXELS (3000000)
+#define MMS_SETTINGS_DEFAULT_ALLOW_DR   TRUE
 
 GType mms_settings_get_type(void);
 #define MMS_TYPE_SETTINGS (mms_settings_get_type())

@@ -405,6 +405,12 @@ mms_engine_new(
             settings->sim_defaults.data.user_agent =
             settings->sim_defaults.user_agent = g_strdup(override->user_agent);
         }
+        if (flags & MMS_ENGINE_FLAG_OVERRIDE_UAPROF) {
+            settings->flags |= MMS_SETTINGS_FLAG_OVERRIDE_UAPROF;
+            g_free(settings->sim_defaults.uaprof);
+            settings->sim_defaults.data.uaprof =
+            settings->sim_defaults.uaprof = g_strdup(override->uaprof);
+        }
         if (flags & MMS_ENGINE_FLAG_OVERRIDE_SIZE_LIMIT) {
             settings->flags |= MMS_SETTINGS_FLAG_OVERRIDE_SIZE_LIMIT;
             settings->sim_defaults.data.size_limit = override->size_limit;
