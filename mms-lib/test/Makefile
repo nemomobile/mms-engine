@@ -4,6 +4,7 @@ all:
 %:
 	@$(MAKE) -C media_type $*
 	@$(MAKE) -C mms_codec $*
+	@$(MAKE) -C mms_log $*
 	@$(MAKE) -C delivery_ind $*
 	@$(MAKE) -C read_ind $*
 	@$(MAKE) -C read_report $*
