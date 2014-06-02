@@ -57,19 +57,35 @@ MMS_LOG_MODULE_DEFINE_(mod4b, "b");
 MMS_LOG_MODULE_DEFINE_(mod4c, "c");
 MMS_LOG_MODULE_DEFINE_(mod4d, "d");
 MMS_LOG_MODULE_DEFINE_(mod4e, "e");
-MMS_LOG_MODULE_DEFINE_(mod4f, "f");
-static MMSLogModule* mods4[] = { &mod4a,&mod4b,&mod4c,&mod4d,&mod4e,&mod4f };
-static const int results4[] = { MMS_LOGLEVEL_NONE, MMS_LOGLEVEL_ERR,
-  MMS_LOGLEVEL_WARN, MMS_LOGLEVEL_INFO, MMS_LOGLEVEL_DEBUG,
-  MMS_LOGLEVEL_VERBOSE };
-static const char* opts4[] = { "a:0", "b:1", "c:2", "d:3", "e:4", "f:5" };
+static MMSLogModule* mods4[] = { &mod4a, &mod4b, &mod4c, &mod4d, &mod4e };
+static const int results4[] = { MMS_LOGLEVEL_ERR, MMS_LOGLEVEL_WARN,
+  MMS_LOGLEVEL_INFO, MMS_LOGLEVEL_DEBUG, MMS_LOGLEVEL_VERBOSE };
+static const char* opts4[] = { "0", "a:1", "b:2", "c:3", "d:4", "e:5" };
 G_STATIC_ASSERT(G_N_ELEMENTS(mods4) == G_N_ELEMENTS(results4));
 
-/* Test5: invalid number */
-MMS_LOG_MODULE_DEFINE_(mod5, "test");
-static MMSLogModule* mods5[] = { &mod5 };
-static const int results5[] = { MMS_LOGLEVEL_GLOBAL };
-static const char* opts5[] = { "test-b:66" };
+/* Test5: abbreviated log levels */
+MMS_LOG_MODULE_DEFINE_(mod5a, "a");
+MMS_LOG_MODULE_DEFINE_(mod5b, "b");
+MMS_LOG_MODULE_DEFINE_(mod5c, "c");
+MMS_LOG_MODULE_DEFINE_(mod5d, "d");
+MMS_LOG_MODULE_DEFINE_(mod5e, "e");
+static MMSLogModule* mods5[] = { &mod5a, &mod5b, &mod5c, &mod5d, &mod5e };
+static const int results5[] = { MMS_LOGLEVEL_ERR, MMS_LOGLEVEL_WARN,
+  MMS_LOGLEVEL_INFO, MMS_LOGLEVEL_DEBUG, MMS_LOGLEVEL_VERBOSE };
+static const char* opts5[] = { "n", "a:er", "b:war", "c:in", "d:d", "e:ver" };
+G_STATIC_ASSERT(G_N_ELEMENTS(mods5) == G_N_ELEMENTS(results5));
+
+/* Test6: invalid number */
+MMS_LOG_MODULE_DEFINE_(mod6, "test");
+static MMSLogModule* mods6[] = { &mod6 };
+static const int results6[] = { MMS_LOGLEVEL_GLOBAL };
+static const char* opts6[] = { "test:66" };
+
+/* Test7: invalid log level name */
+MMS_LOG_MODULE_DEFINE_(mod7, "test");
+static MMSLogModule* mods7[] = { &mod7 };
+static const int results7[] = { MMS_LOGLEVEL_GLOBAL };
+static const char* opts7[] = { "test:verbosee" };
 
 #define ARRAY(a) (a), G_N_ELEMENTS(a)
 
@@ -80,10 +96,14 @@ static const TestDesc log_tests[] = {
       (char**)ARRAY(opts2), FALSE },
     { "Test3",  ARRAY(mods3), results3, MMS_LOGLEVEL_DEFAULT,
       (char**)ARRAY(opts3), TRUE },
-    { "Test4",  ARRAY(mods4), results4, MMS_LOGLEVEL_DEFAULT,
+    { "Test4",  ARRAY(mods4), results4, MMS_LOGLEVEL_NONE,
       (char**)ARRAY(opts4), TRUE },
-    { "Test5",  ARRAY(mods5), results5, MMS_LOGLEVEL_DEFAULT,
-      (char**)ARRAY(opts5), FALSE },
+    { "Test5",  ARRAY(mods5), results5, MMS_LOGLEVEL_NONE,
+      (char**)ARRAY(opts5), TRUE },
+    { "Test6",  ARRAY(mods6), results6, MMS_LOGLEVEL_DEFAULT,
+      (char**)ARRAY(opts6), FALSE },
+    { "Test7",  ARRAY(mods7), results7, MMS_LOGLEVEL_DEFAULT,
+      (char**)ARRAY(opts7), FALSE },
 };
 
 static
