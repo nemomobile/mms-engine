@@ -53,7 +53,7 @@ static const struct _mms_log_level {
 const char MMS_LOG_TYPE_STDOUT[] = "stdout";
 const char MMS_LOG_TYPE_GLIB[]   = "glib";
 const char MMS_LOG_TYPE_CUSTOM[] = "custom";
-#ifdef MMS_LOG_SYSLOG
+#if MMS_LOG_SYSLOG
 const char MMS_LOG_TYPE_SYSLOG[] = "syslog";
 #endif
 
@@ -104,7 +104,7 @@ mms_log_stdout(
 }
 
 /* Formards output to syslog */
-#ifdef MMS_LOG_SYSLOG
+#if MMS_LOG_SYSLOG
 #include <syslog.h>
 void
 mms_log_syslog(
@@ -324,7 +324,7 @@ mms_log_set_type(
     const char* type,
     const char* default_name)
 {
-#ifdef MMS_LOG_SYSLOG
+#if MMS_LOG_SYSLOG
     if (!strcasecmp(type, MMS_LOG_TYPE_SYSLOG)) {
         if (mms_log_func != mms_log_syslog) {
             openlog(NULL, LOG_PID | LOG_CONS, LOG_USER);
@@ -352,7 +352,7 @@ const char*
 mms_log_get_type()
 {
     return (mms_log_func == mms_log_stdout) ? MMS_LOG_TYPE_STDOUT :
-#ifdef MMS_LOG_SYSLOG
+#if MMS_LOG_SYSLOG
            (mms_log_func == mms_log_syslog) ? MMS_LOG_TYPE_SYSLOG :
 #endif /* MMS_LOG_SYSLOG */
            (mms_log_func == mms_log_glib)   ? MMS_LOG_TYPE_STDOUT :

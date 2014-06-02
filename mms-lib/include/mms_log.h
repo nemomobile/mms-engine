@@ -103,11 +103,18 @@ mms_logv(
     const char* format,
     va_list va);
 
+#ifndef MMS_LOG_SYSLOG
+#  ifdef unix
+#    define MMS_LOG_SYSLOG 1
+#  else
+#    define MMS_LOG_SYSLOG 0
+#  endif
+#endif /* MMS_LOG_SYSLOG */
+
 extern const char MMS_LOG_TYPE_STDOUT[];
 extern const char MMS_LOG_TYPE_GLIB[];
 extern const char MMS_LOG_TYPE_CUSTOM[];
-#ifdef unix
-#  define MMS_LOG_SYSLOG
+#if MMS_LOG_SYSLOG
 extern const char MMS_LOG_TYPE_SYSLOG[];
 #endif
 
@@ -116,7 +123,7 @@ extern const char MMS_LOG_TYPE_SYSLOG[];
     const char* format, va_list va)
 MMS_DEFINE_LOG_FN(mms_log_stdout);
 MMS_DEFINE_LOG_FN(mms_log_glib);
-#ifdef MMS_LOG_SYSLOG
+#if MMS_LOG_SYSLOG
 MMS_DEFINE_LOG_FN(mms_log_syslog);
 #endif
 
