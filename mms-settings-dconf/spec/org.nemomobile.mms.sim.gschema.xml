@@ -7,6 +7,11 @@
       <summary>User-Agent string.</summary>
       <description>The value of User-Agent header to use when communicating with the MMS server.</description>
     </key>
+    <key type="s" name="user-agent-profile">
+      <default>'http://www.jolla.com/uaprof/Jolla.xml'</default>
+      <summary>User-Agent Profile string.</summary>
+      <description>The value of x-wap-profile header to use when communicating with the MMS server.</description>
+    </key>
     <key type="u" name="max-message-size">
       <default>307200</default>
       <summary>Maximum size of an outbound MMS message.</summary>

@@ -192,6 +192,12 @@ mms_http_transfer_new(
         soup_message_set_flags(tx->message,
             SOUP_MESSAGE_NO_REDIRECT |
             SOUP_MESSAGE_NEW_CONNECTION);
+        if (cfg->uaprof && cfg->uaprof[0]) {
+            const char* uaprof_header = "x-wap-profile";
+            MMS_VERBOSE("%s %s", uaprof_header, cfg->uaprof);
+            soup_message_headers_append(tx->message->request_headers,
+                uaprof_header, cfg->uaprof);
+        }
         /* We shouldn't need this extra reference but otherwise
          * SoupMessage gets deallocated too early. Not sure why. */
         g_object_ref(tx->message);
