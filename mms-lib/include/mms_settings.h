@@ -68,7 +68,7 @@ typedef struct mms_settings_class {
  * then these should match the default values defined in the GSettings
  * schema (org.nemomobile.mms.sim.gschema.xml) */
 #define MMS_SETTINGS_DEFAULT_USER_AGENT "Mozilla/5.0 (Sailfish; Jolla)"
-#define MMS_SETTINGS_DEFAULT_UAPROF     "http://www.jolla.com/uaprof/Jolla.xml"
+#define MMS_SETTINGS_DEFAULT_UAPROF     "http://static.jolla.com/uaprof/Jolla.xml"
 #define MMS_SETTINGS_DEFAULT_SIZE_LIMIT (300*1024)
 #define MMS_SETTINGS_DEFAULT_MAX_PIXELS (3000000)
 #define MMS_SETTINGS_DEFAULT_ALLOW_DR   TRUE

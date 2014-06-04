@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
-  <!-- Path is /IMSI/ -->
+  <!--
+    Path is /IMSI/
+    These defaults should match those defined in mms_settings.h
+  -->
   <schema id="org.nemomobile.mms.sim">
     <key type="s" name="user-agent">
       <default>'Mozilla/5.0 (Sailfish; Jolla)'</default>
@@ -8,7 +11,7 @@
       <description>The value of User-Agent header to use when communicating with the MMS server.</description>
     </key>
     <key type="s" name="user-agent-profile">
-      <default>'http://www.jolla.com/uaprof/Jolla.xml'</default>
+      <default>'http://static.jolla.com/uaprof/Jolla.xml'</default>
       <summary>User-Agent Profile string.</summary>
       <description>The value of x-wap-profile header to use when communicating with the MMS server.</description>
     </key>
