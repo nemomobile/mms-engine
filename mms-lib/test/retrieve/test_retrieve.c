@@ -56,6 +56,8 @@ typedef struct test_desc {
 #define TEST_PUSH_HANDLING_FAILURE_OK (0x01)
 #define TEST_DEFER_RECEIVE            (0x02)
 #define TEST_REJECT_RECEIVE           (0x04)
+#define TEST_CONNECTION_FAILURE       (0x08)
+#define TEST_OFFLINE                  (0x10)
 
 } TestDesc;
 
@@ -199,6 +201,30 @@ static const TestDesc retrieve_tests[] = {
         MMS_MESSAGE_TYPE_NONE,
         TEST_PARTS_NONE,
         0
+    },{
+        "Offline",
+        NULL,
+        "m-notification.ind",
+        NULL,
+        0,
+        NULL,
+        NULL,
+        MMS_RECEIVE_STATE_DOWNLOAD_ERROR,
+        MMS_MESSAGE_TYPE_NONE,
+        TEST_PARTS_NONE,
+        TEST_OFFLINE
+    },{
+        "Timeout",
+        NULL,
+        "m-notification.ind",
+        NULL,
+        0,
+        NULL,
+        NULL,
+        MMS_RECEIVE_STATE_DOWNLOAD_ERROR,
+        MMS_MESSAGE_TYPE_NONE,
+        TEST_PARTS_NONE,
+        TEST_CONNECTION_FAILURE
     },{
         "NotAllowed",
         NULL,
@@ -445,13 +471,13 @@ test_init(
     char* ni = g_strconcat(DATA_DIR, dir, "/", desc->ni_file, NULL);
     char* rc = desc->rc_file ? g_strconcat(DATA_DIR, dir, "/",
         desc->rc_file, NULL) : NULL;
+    MMS_DEBUG(">>>>>>>>>> %s <<<<<<<<<<", desc->name);
     memset(test, 0, sizeof(*test));
     test->config = config;
     test->notification_ind = g_mapped_file_new(ni, FALSE, &error);
     if (test->notification_ind) {
         if (rc) test->retrieve_conf = g_mapped_file_new(rc, FALSE, &error);
         if (test->retrieve_conf || !rc) {
-            guint port;
             MMSSettings* settings = mms_settings_default_new(config);
             g_mapped_file_ref(test->notification_ind);
             test->desc = desc;
@@ -462,10 +488,15 @@ test_init(
             test->timeout_id = g_timeout_add_seconds(10, test_timeout, test);
             test->delegate.fn_done = test_done;
             mms_dispatcher_set_delegate(test->disp, &test->delegate);
-            test->http = test_http_new(test->retrieve_conf,
-                test->desc->content_type, test->desc->status);
-            port = test_http_get_port(test->http);
-            mms_connman_test_set_port(test->cm, port, TRUE);
+            if (!(desc->flags & TEST_CONNECTION_FAILURE)) {
+                test->http = test_http_new(test->retrieve_conf,
+                    test->desc->content_type, test->desc->status);
+                mms_connman_test_set_port(test->cm,
+                    test_http_get_port(test->http), TRUE);
+            }
+            if (desc->flags & TEST_OFFLINE) {
+                mms_connman_test_set_offline(test->cm, TRUE);
+            }
             if (desc->flags & TEST_REJECT_RECEIVE) {
                 mms_handler_test_reject_receive(test->handler);
             }
@@ -593,7 +624,7 @@ int main(int argc, char* argv[])
     mms_lib_init(argv[0]);
     options = g_option_context_new("[TEST] - MMS retrieve test");
     g_option_context_add_main_entries(options, entries, NULL);
-    if (g_option_context_parse(options, &argc, &argv, &error) && argc < 3) {
+    if (g_option_context_parse(options, &argc, &argv, &error)) {
         MMSConfig config;
         const char* test_name = (argc == 2) ? argv[1] : NULL;
         char* tmpd = g_mkdtemp(g_strdup("/tmp/test_retrieve_XXXXXX"));
@@ -617,7 +648,16 @@ int main(int argc, char* argv[])
             mms_log_stdout_timestamp = FALSE;
         }
 
-        ret = test_retrieve(&config, test_name);
+        if (argc < 2) {
+            ret = test_retrieve(&config, test_name);
+        } else {
+            int i;
+            for (i=1, ret = RET_OK; i<argc; i++) {
+                int test_status =  test_retrieve(&config, argv[i]);
+                if (ret == RET_OK && test_status != RET_OK) ret = test_status;
+            }
+        }
+
         remove(tmpd);
         g_free(tmpd);
     } else {

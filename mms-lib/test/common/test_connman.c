@@ -27,6 +27,7 @@ typedef struct mms_connman_test {
     unsigned short port;
     gboolean proxy;
     char* default_imsi;
+    gboolean offline;
     mms_connman_test_connect_fn connect_fn;
     void* connect_param;
 } MMSConnManTest;
@@ -45,6 +46,14 @@ mms_connman_test_set_port(
     MMSConnManTest* test = MMS_CONNMAN_TEST(cm);
     test->port = port;
     test->proxy = proxy;
+}
+
+void
+mms_connman_test_set_offline(
+    MMSConnMan* cm,
+    gboolean offline)
+{
+    MMS_CONNMAN_TEST(cm)->offline = offline;
 }
 
 void
@@ -98,12 +107,12 @@ mms_connman_test_open_connection(
 {
     MMSConnManTest* test = MMS_CONNMAN_TEST(cm);
     mms_connman_test_close_connection(cm);
-    if (test->port) {
+    if (test->offline) {
+        return NULL;
+    } else {
         test->conn = mms_connection_test_new(imsi, test->port, test->proxy);
         if (test->connect_fn) test->connect_fn(test->connect_param);
         return mms_connection_ref(test->conn);
-    } else {
-        return NULL;
     }
 }
 

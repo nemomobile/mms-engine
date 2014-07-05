@@ -85,7 +85,7 @@ GBytes*
 test_http_get_post_data(
     TestHttp* http)
 {
-    return http->req_bytes;
+    return http ? http->req_bytes : NULL;
 }
 
 void

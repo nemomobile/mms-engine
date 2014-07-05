@@ -57,7 +57,8 @@ mms_ofono_connman_default_imsi(
 
 /**
  * Creates a new connection or returns the reference to an aready active one.
- * The caller must release the reference.
+ * The caller must release the reference. Returns NULL if the modem is offline
+ * and the network task should fail immediately.
  */
 static
 MMSConnection*
@@ -68,7 +69,11 @@ mms_ofono_connman_open_connection(
 {
     MMSOfonoConnMan* ofono = MMS_OFONO_CONNMAN(cm);
     MMSOfonoModem* modem = mms_ofono_manager_modem_for_imsi(ofono->man, imsi);
-    if (modem) {
+    if (!modem) {
+        MMS_INFO("SIM %s is not avialable", imsi);
+    } else if (!modem->online) {
+        MMS_INFO("SIM %s is offline", imsi);
+    } else {
         MMSOfonoContext* mms = modem->mms_context;
         if (mms) {
             if (!mms->connection) {
@@ -78,9 +83,9 @@ mms_ofono_connman_open_connection(
                 mms_ofono_context_set_active(mms, TRUE);
             }
             return mms_connection_ref(&mms->connection->connection);
+        } else {
+            MMS_WARN("SIM %s has no MMS context", imsi);
         }
-    } else {
-        MMS_DEBUG("SIM %s is not avialable", imsi);
     }
     return NULL;
 }

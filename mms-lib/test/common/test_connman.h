@@ -32,6 +32,11 @@ mms_connman_test_set_port(
     gboolean proxy);
 
 void
+mms_connman_test_set_offline(
+    MMSConnMan* cm,
+    gboolean offline);
+
+void
 mms_connman_test_set_default_imsi(
     MMSConnMan* cm,
     const char* imsi);

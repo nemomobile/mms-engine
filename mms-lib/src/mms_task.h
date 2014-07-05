@@ -77,7 +77,7 @@ typedef struct mms_task_class {
     /* Invoked in NEED_[USER_]CONNECTION state */
     void (*fn_transmit)(MMSTask* task, MMSConnection* conn);
     /* Invoked in NEED_[USER_]CONNECTION or TRANSMITTING state */
-    void (*fn_network_unavailable)(MMSTask* task);
+    void (*fn_network_unavailable)(MMSTask* task, gboolean can_retry);
     /* May be invoked in any state */
     void (*fn_cancel)(MMSTask* task);
 } MMSTaskClass;
@@ -115,7 +115,8 @@ mms_task_transmit(
 
 void
 mms_task_network_unavailable(
-    MMSTask* task);
+    MMSTask* task,
+    gboolean can_retry);
 
 void
 mms_task_cancel(

@@ -218,13 +218,14 @@ mms_task_transmit(
 
 void
 mms_task_network_unavailable(
-    MMSTask* task)
+    MMSTask* task,
+    gboolean can_retry)
 {
     if (task->state != MMS_TASK_STATE_DONE) {
         MMS_ASSERT(task->state == MMS_TASK_STATE_NEED_CONNECTION ||
                    task->state == MMS_TASK_STATE_NEED_USER_CONNECTION ||
                    task->state == MMS_TASK_STATE_TRANSMITTING);
-        MMS_TASK_GET_CLASS(task)->fn_network_unavailable(task);
+        MMS_TASK_GET_CLASS(task)->fn_network_unavailable(task, can_retry);
         MMS_ASSERT(task->state != MMS_TASK_STATE_NEED_CONNECTION &&
                    task->state != MMS_TASK_STATE_NEED_USER_CONNECTION &&
                    task->state != MMS_TASK_STATE_TRANSMITTING);
@@ -253,12 +254,16 @@ mms_task_set_state(
             const unsigned int secs = task_config(task)->retry_secs;
             if (!mms_task_schedule_wakeup(task, secs)) {
                 MMS_DEBUG("%s SLEEP -> DONE (no time left)", task->name);
+                MMS_TASK_GET_CLASS(task)->fn_cancel(task);
                 state = MMS_TASK_STATE_DONE;
             }
         }
-        task->state = state;
-        if (task->delegate && task->delegate->fn_task_state_changed) {
-            task->delegate->fn_task_state_changed(task->delegate, task);
+        /* Canceling the task may change the state so check it again */
+        if (task->state != state) {
+            task->state = state;
+            if (task->delegate && task->delegate->fn_task_state_changed) {
+                task->delegate->fn_task_state_changed(task->delegate, task);
+            }
         }
     }
 }
