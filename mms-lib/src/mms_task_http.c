@@ -504,10 +504,15 @@ mms_task_http_run(
 static
 void
 mms_task_http_network_unavailable(
-    MMSTask* task)
+    MMSTask* task,
+    gboolean can_retry)
 {
-    mms_task_http_finish_transfer(MMS_TASK_HTTP(task));
-    mms_task_set_state(task, MMS_TASK_STATE_SLEEP);
+    if (can_retry) {
+        mms_task_http_finish_transfer(MMS_TASK_HTTP(task));
+        mms_task_set_state(task, MMS_TASK_STATE_SLEEP);
+    } else {
+        mms_task_cancel(task);
+    }
 }
 
 static

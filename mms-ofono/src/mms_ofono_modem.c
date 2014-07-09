@@ -329,6 +329,12 @@ mms_ofono_modem_property_changed(
         GVariant* value = g_variant_get_variant(variant);
         mms_ofono_modem_scan_interfaces(modem, value);
         g_variant_unref(value);
+    } else if (!strcmp(key, OFONO_MODEM_PROPERTY_ONLINE)) {
+        GVariant* value = g_variant_get_variant(variant);
+        modem->online = g_variant_get_boolean(value);
+        MMS_DEBUG("Modem %s is %sline", modem->path,
+            modem->online? "on" : "off");
+        g_variant_unref(value);
     }
 }
 
@@ -345,6 +351,8 @@ mms_ofono_modem_new(
     if (proxy) {
         GVariant* interfaces = g_variant_lookup_value(properties,
             OFONO_MODEM_PROPERTY_INTERFACES, G_VARIANT_TYPE_STRING_ARRAY);
+        GVariant* online = g_variant_lookup_value(properties,
+            OFONO_MODEM_PROPERTY_ONLINE, G_VARIANT_TYPE_BOOLEAN);
         modem = g_new0(MMSOfonoModem, 1);
         MMS_DEBUG("Modem path '%s'", path);
         MMS_VERBOSE_("%p '%s'", modem, path);
@@ -355,6 +363,10 @@ mms_ofono_modem_new(
         /* Check what we currently have */
         mms_ofono_modem_scan_interfaces(modem, interfaces);
         g_variant_unref(interfaces);
+
+        modem->online = g_variant_get_boolean(online);
+        MMS_DEBUG("Modem %s is %sline", path, modem->online ? "on" : "off");
+        g_variant_unref(online);
 
         /* Register to receive PropertyChanged notifications */
         modem->property_change_signal_id = g_signal_connect(

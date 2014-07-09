@@ -23,6 +23,7 @@
 #define OFONO_GPRS_INTERFACE            OFONO_SERVICE ".ConnectionManager"
 #define OFONO_CONTEXT_INTERFACE         OFONO_SERVICE ".ConnectionContext"
 
+#define OFONO_MODEM_PROPERTY_ONLINE            "Online"
 #define OFONO_MODEM_PROPERTY_INTERFACES        "Interfaces"
 #define OFONO_SIM_PROPERTY_SUBSCRIBER_IDENTITY "SubscriberIdentity"
 

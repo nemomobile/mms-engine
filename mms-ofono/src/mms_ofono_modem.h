@@ -20,6 +20,7 @@
 struct mms_ofono_modem {
     GDBusConnection* bus;
     char* path;
+    gboolean online;
 
     struct _OrgOfonoModem* proxy;
     gulong property_change_signal_id;

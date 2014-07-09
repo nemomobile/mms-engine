@@ -291,7 +291,7 @@ mms_dispatcher_pick_next_task(
                     g_queue_delete_link(disp->tasks, entry);
                     return task;
                 } else {
-                    mms_task_network_unavailable(task);
+                    mms_task_network_unavailable(task, FALSE);
                 }
             }
         }
@@ -374,6 +374,11 @@ mms_dispatcher_run(
     }
 
     if (!mms_dispatcher_is_active(disp)) {
+        /* Cancel pending runs */
+        if (disp->next_run_id) {
+            g_source_remove(disp->next_run_id);
+            disp->next_run_id = 0;
+        }
         /* Report to delegate that we are done */
         if (disp->delegate && disp->delegate->fn_done) {
             disp->delegate->fn_done(disp->delegate, disp);
@@ -566,7 +571,7 @@ mms_dispatcher_delegate_connection_state_changed(
             case MMS_TASK_STATE_NEED_USER_CONNECTION:
             case MMS_TASK_STATE_TRANSMITTING:
                 if (!strcmp(conn->imsi, task->imsi)) {
-                    mms_task_network_unavailable(task);
+                    mms_task_network_unavailable(task, TRUE);
                 }
             default:
                 break;
