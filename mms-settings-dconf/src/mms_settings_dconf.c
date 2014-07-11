@@ -13,7 +13,7 @@
  */
 
 #include "mms_settings_dconf.h"
-#include <gio/gio.h>
+#include <dconf.h>
 
 /* Logging */
 #define MMS_LOG_MODULE_NAME mms_settings_log
@@ -25,8 +25,9 @@ typedef struct mms_settings_dconf {
     MMSSettings settings;
     MMSSettingsSimDataCopy imsi_data;
     char* imsi;
-    GSettings* gs;
-    gulong gs_changed_signal_id;
+    char* dir;
+    DConfClient* client;
+    gulong changed_signal_id;
 } MMSSettingsDconf;
 
 G_DEFINE_TYPE(MMSSettingsDconf, mms_settings_dconf, MMS_TYPE_SETTINGS);
@@ -36,9 +37,16 @@ G_DEFINE_TYPE(MMSSettingsDconf, mms_settings_dconf, MMS_TYPE_SETTINGS);
 #define MMS_SETTINGS_DCONF(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj), \
         MMS_TYPE_SETTINGS_DCONF, MMSSettingsDconf))
 
-#define MMS_DCONF_SCHEMA_ID         "org.nemomobile.mms.sim"
 #define MMS_DCONF_CHANGED_SIGNAL    "changed"
-#define MMS_DCONF_PATH_PREFIX       "/"
+#define MMS_DCONF_PATH_PREFIX_OLD   "/"
+#define MMS_DCONF_PATH_SUFFIX_OLD   "/"
+#define MMS_DCONF_PATH_PREFIX       "/imsi/"
+#define MMS_DCONF_PATH_SUFFIX       "/mms/"
+
+#define mms_settings_dconf_path(imsi) g_strconcat(\
+    MMS_DCONF_PATH_PREFIX, imsi, MMS_DCONF_PATH_SUFFIX, NULL)
+#define mms_settings_dconf_path_old(imsi) g_strconcat(\
+    MMS_DCONF_PATH_PREFIX_OLD, imsi, MMS_DCONF_PATH_SUFFIX_OLD, NULL)
 
 #define MMS_DCONF_KEY_USER_AGENT    "user-agent"
 #define MMS_DCONF_KEY_UAPROF        "user-agent-profile"
@@ -47,135 +55,187 @@ G_DEFINE_TYPE(MMSSettingsDconf, mms_settings_dconf, MMS_TYPE_SETTINGS);
 #define MMS_DCONF_KEY_ALLOW_DR      "allow-delivery-reports"
 
 typedef struct mms_settings_dconf_key {
-    const char* key;
-    void (*fn_update)(MMSSettingsDconf* dconf, const char* key);
+    const char* name;
+    unsigned int override_flag;
+    void (*fn_update)(MMSSettingsSimDataCopy* dest, GVariant* variant);
 } MMSSettingsDconfKey;
 
 static
 void
 mms_settings_dconf_update_user_agent(
-    MMSSettingsDconf* dconf,
-    const char* key)
+    MMSSettingsSimDataCopy* dest,
+    GVariant* variant)
 {
-    char* value = g_settings_get_string(dconf->gs, key);
-    if (dconf->settings.flags & MMS_SETTINGS_FLAG_OVERRIDE_USER_AGENT) {
-        MMS_DEBUG("%s = %s (ignored)", key, value);
-        g_free(value);
-    } else {
-        MMSSettingsSimDataCopy* copy = &dconf->imsi_data;
-        g_free(copy->user_agent);
-        copy->data.user_agent = copy->user_agent = value;
-        MMS_DEBUG("%s = %s", key, copy->data.user_agent);
-    }
+    const char* value = g_variant_get_string(variant, NULL);
+    MMS_DEBUG(MMS_DCONF_KEY_USER_AGENT " = %s", value);
+    g_free(dest->user_agent);
+    dest->data.user_agent = dest->user_agent = g_strdup(value);
 }
 
 static
 void
 mms_settings_dconf_update_uaprof(
-    MMSSettingsDconf* dconf,
-    const char* key)
+    MMSSettingsSimDataCopy* dest,
+    GVariant* variant)
 {
-    char* value = g_settings_get_string(dconf->gs, key);
-    if (dconf->settings.flags & MMS_SETTINGS_FLAG_OVERRIDE_UAPROF) {
-        MMS_DEBUG("%s = %s (ignored)", key, value);
-        g_free(value);
-    } else {
-        MMSSettingsSimDataCopy* copy = &dconf->imsi_data;
-        g_free(copy->uaprof);
-        copy->data.uaprof = copy->uaprof = value;
-        MMS_DEBUG("%s = %s", key, copy->data.uaprof);
-    }
+    const char* value = g_variant_get_string(variant, NULL);
+    MMS_DEBUG(MMS_DCONF_KEY_UAPROF " = %s", value);
+    g_free(dest->uaprof);
+    dest->data.uaprof = dest->uaprof = g_strdup(value);
 }
 
 static
 void
 mms_settings_dconf_update_size_limit(
-    MMSSettingsDconf* dconf,
-    const char* key)
+    MMSSettingsSimDataCopy* dest,
+    GVariant* variant)
 {
-    const guint value = g_settings_get_uint(dconf->gs, key);
-    if (dconf->settings.flags & MMS_SETTINGS_FLAG_OVERRIDE_SIZE_LIMIT) {
-        MMS_DEBUG("%s = %u (ignored)", key, value);
-    } else {
-        MMS_DEBUG("%s = %u", key, value);
-        dconf->imsi_data.data.size_limit = value;
-    }
+    unsigned int value = g_variant_get_uint32(variant);
+    MMS_DEBUG(MMS_DCONF_KEY_SIZE_LIMIT " = %u", value);
+    dest->data.size_limit = value;
 }
 
 static
 void
 mms_settings_dconf_update_max_pixels(
-    MMSSettingsDconf* dconf,
-    const char* key)
+    MMSSettingsSimDataCopy* dest,
+    GVariant* variant)
 {
-    const guint value = g_settings_get_uint(dconf->gs, key);
-    if (dconf->settings.flags & MMS_SETTINGS_FLAG_OVERRIDE_MAX_PIXELS) {
-        MMS_DEBUG("%s = %u (ignored)", key, value);
-    } else {
-        MMS_DEBUG("%s = %u", key, value);
-        dconf->imsi_data.data.max_pixels = value;
-    }
+    unsigned int value = g_variant_get_uint32(variant);
+    MMS_DEBUG(MMS_DCONF_KEY_MAX_PIXELS " = %u", value);
+    dest->data.max_pixels = value;
 }
 
 static
 void
 mms_settings_dconf_update_allow_dr(
-    MMSSettingsDconf* dconf,
-    const char* key)
+    MMSSettingsSimDataCopy* dest,
+    GVariant* variant)
 {
-    const gboolean value = g_settings_get_boolean(dconf->gs, key);
-    if (dconf->settings.flags & MMS_SETTINGS_FLAG_OVERRIDE_ALLOW_DR) {
-        MMS_DEBUG("%s = %s (ignored)", key, value ? "true" : "false");
-    } else {
-        MMS_DEBUG("%s = %s", key, value ? "true" : "false");
-        dconf->imsi_data.data.allow_dr = value;
-    }
+    const gboolean value = g_variant_get_boolean(variant);
+    MMS_DEBUG(MMS_DCONF_KEY_ALLOW_DR " = %s", value ? "true" : "false");
+    dest->data.allow_dr = value;
 }
 
 static const MMSSettingsDconfKey mms_settings_dconf_keys[] = {
-    { MMS_DCONF_KEY_USER_AGENT, mms_settings_dconf_update_user_agent },
-    { MMS_DCONF_KEY_UAPROF,     mms_settings_dconf_update_uaprof     },
-    { MMS_DCONF_KEY_SIZE_LIMIT, mms_settings_dconf_update_size_limit },
-    { MMS_DCONF_KEY_MAX_PIXELS, mms_settings_dconf_update_max_pixels },
-    { MMS_DCONF_KEY_ALLOW_DR,   mms_settings_dconf_update_allow_dr   },
+    {
+        MMS_DCONF_KEY_USER_AGENT,
+        MMS_SETTINGS_FLAG_OVERRIDE_USER_AGENT,
+        mms_settings_dconf_update_user_agent
+    },{
+        MMS_DCONF_KEY_UAPROF,
+        MMS_SETTINGS_FLAG_OVERRIDE_UAPROF,
+        mms_settings_dconf_update_uaprof
+    }, {
+        MMS_DCONF_KEY_SIZE_LIMIT,
+        MMS_SETTINGS_FLAG_OVERRIDE_SIZE_LIMIT,
+        mms_settings_dconf_update_size_limit
+    }, {
+        MMS_DCONF_KEY_MAX_PIXELS,
+        MMS_SETTINGS_FLAG_OVERRIDE_MAX_PIXELS,
+        mms_settings_dconf_update_max_pixels
+    },{
+        MMS_DCONF_KEY_ALLOW_DR,
+        MMS_SETTINGS_FLAG_OVERRIDE_ALLOW_DR,
+        mms_settings_dconf_update_allow_dr
+    }
 };
+
+static
+const MMSSettingsDconfKey*
+mms_settings_dconf_key(
+    const char* name)
+{
+    unsigned int i;
+    for (i=0; i<G_N_ELEMENTS(mms_settings_dconf_keys); i++) {
+        if (!strcmp(name, mms_settings_dconf_keys[i].name)) {
+            return mms_settings_dconf_keys + i;
+        }
+    }
+    return NULL;
+}
+
+static
+void
+mms_settings_dconf_key_changed(
+    MMSSettingsDconf* dconf,
+    const char* name)
+{
+    const MMSSettingsDconfKey* key = mms_settings_dconf_key(name);
+    if (key) {
+        unsigned int override = key->override_flag;
+        if (override && (dconf->settings.flags & override) == override) {
+            /* Value is fixed from the command line */
+            MMS_DEBUG("%s changed (ignored)", name);
+        } else {
+            /* Query and parse the value */
+            char* path = g_strconcat(dconf->dir, name, NULL);
+            GVariant* value = dconf_client_read(dconf->client, path);
+            MMS_ASSERT(value);
+            if (value) {
+                key->fn_update(&dconf->imsi_data, value);
+                g_variant_unref(value);
+            }
+            g_free(path);
+        }
+    } else {
+        MMS_DEBUG("Key %s/%s changed - ignoring", dconf->dir, name);
+    }
+}
 
 static
 void
 mms_settings_dconf_changed(
-    GSettings* gs,
-    const gchar* key,
-    gpointer user_data)
+    DConfClient* client,
+    const char* prefix,
+    GStrv changes,
+    const char* tag,
+    MMSSettingsDconf* dconf)
 {
-    unsigned int i;
-    MMSSettingsDconf* dconf = user_data;
-    MMS_ASSERT(dconf->gs == gs);
-    for (i=0; i<G_N_ELEMENTS(mms_settings_dconf_keys); i++) {
-        if (!strcmp(key, mms_settings_dconf_keys[i].key)) {
-            mms_settings_dconf_keys[i].fn_update(dconf, key);
-            return;
+    MMS_ASSERT(dconf->client == client);
+    if (dconf->dir) {
+        if (*changes && **changes) {
+            /* Multiple values have changed */
+            if (!strcmp(dconf->dir, prefix)) {
+                while (*changes) {
+                    mms_settings_dconf_key_changed(dconf, *changes);
+                    changes++;
+                }
+                return;
+            }
+        } else {
+            /* Single value has changed */
+            const size_t dlen = strlen(dconf->dir);
+            const size_t plen = strlen(prefix);
+            if (plen > dlen && strncmp(prefix, dconf->dir, dlen) == 0) {
+                mms_settings_dconf_key_changed(dconf, prefix + dlen);
+                return;
+            }
         }
     }
-    MMS_DEBUG("%s changed", key);
+    MMS_DEBUG("Path %s has changed - ignoring", prefix);
 }
 
 static
 void
-mms_settings_dconf_disconnect(
+mms_settings_dconf_unwatch(
     MMSSettingsDconf* dconf)
 {
+    if (dconf->dir) {
+        unsigned int i;
+        MMS_DEBUG("Detaching from %s", dconf->dir);
+        for (i=0; i<G_N_ELEMENTS(mms_settings_dconf_keys); i++) {
+            const MMSSettingsDconfKey* key = mms_settings_dconf_keys + i;
+            char* path = g_strconcat(dconf->dir, key->name, NULL);
+            dconf_client_unwatch_sync(dconf->client, path);
+            g_free(path);
+        }
+        g_free(dconf->dir);
+        dconf->dir = NULL;
+    }
     if (dconf->imsi) {
         g_free(dconf->imsi);
         dconf->imsi = NULL;
-    }
-    if (dconf->gs) {
-        if (dconf->gs_changed_signal_id) {
-            g_signal_handler_disconnect(dconf->gs,
-                dconf->gs_changed_signal_id);
-            dconf->gs_changed_signal_id = 0;
-        }
-        g_object_unref(dconf->gs);
-        dconf->gs = NULL;
     }
 }
 
@@ -186,31 +246,66 @@ mms_settings_dconf_get_sim_data(
     const char* imsi)
 {
     MMSSettingsDconf* dconf = MMS_SETTINGS_DCONF(settings);
-    if (imsi) {
+    if (imsi && imsi[0] && dconf->client) {
         if (!dconf->imsi || strcmp(dconf->imsi, imsi)) {
-            char* path = g_strconcat(MMS_DCONF_PATH_PREFIX, imsi, "/", NULL);
-            mms_settings_dconf_disconnect(dconf);
+            char* dir = mms_settings_dconf_path(imsi);
+            char* dir_old = mms_settings_dconf_path_old(imsi);
+            gchar** names;
+            gint j, n = 0;
+            unsigned int i;
+
+            mms_settings_dconf_unwatch(dconf);
             mms_settings_sim_data_copy(&dconf->imsi_data,
                 &settings->sim_defaults.data);
 
-            /* Attach to the new path */
-            dconf->gs = g_settings_new_with_path(MMS_DCONF_SCHEMA_ID, path);
-            if (dconf->gs) {
-                unsigned int i;
-                dconf->imsi = g_strdup(imsi);
+            MMS_DEBUG("Attaching to %s", dir);
 
-                /* Query current settings */
-                for (i=0; i<G_N_ELEMENTS(mms_settings_dconf_keys); i++) {
-                    mms_settings_dconf_keys[i].fn_update(dconf,
-                    mms_settings_dconf_keys[i].key);
+            /* Migrate settings from old to the new location. */
+            names = dconf_client_list(dconf->client, dir_old, &n);
+            for (j=0; j<n; j++) {
+                const char* name = names[j];
+                const MMSSettingsDconfKey* key = mms_settings_dconf_key(name);
+                if (key) {
+                    /* Known key found - migrate it */
+                    char* from = g_strconcat(dir_old, name, NULL);
+                    char* to = g_strconcat(dir, name, NULL);
+                    GVariant* value = dconf_client_read(dconf->client, from);
+                    MMS_DEBUG("Migrating %s -> %s", from, to);
+                    MMS_ASSERT(value);
+                    if (value) {
+                        GError* error = NULL;
+                        if (!dconf_client_write_sync(dconf->client,
+                            to, value, NULL, NULL, &error) ||
+                            !dconf_client_write_sync(dconf->client,
+                            from, NULL, NULL, NULL, &error)) {
+                            MMS_ERR("%s", MMS_ERRMSG(error));
+                            g_error_free(error);
+                        }
+                        g_variant_unref(value);
+                    }
+                    g_free(from);
+                    g_free(to);
                 }
-
-                /* And register for change notifications */
-                dconf->gs_changed_signal_id = g_signal_connect(
-                    dconf->gs, MMS_DCONF_CHANGED_SIGNAL,
-                    G_CALLBACK(mms_settings_dconf_changed), dconf);
             }
-            g_free(path);
+
+            g_free(names);
+            g_free(dir_old);
+
+            dconf->imsi = g_strdup(imsi);
+            dconf->dir = dir;
+
+            /* Attach to the new path and query current settings */
+            for (i=0; i<G_N_ELEMENTS(mms_settings_dconf_keys); i++) {
+                const MMSSettingsDconfKey* key = mms_settings_dconf_keys + i;
+                char* path = g_strconcat(dir, key->name, NULL);
+                GVariant* value = dconf_client_read(dconf->client, path);
+                dconf_client_watch_sync(dconf->client, path);
+                if (value) {
+                    key->fn_update(&dconf->imsi_data, value);
+                    g_variant_unref(value);
+                }
+                g_free(path);
+            }
         }
         return &dconf->imsi_data.data;
     } else {
@@ -223,7 +318,12 @@ void
 mms_settings_dconf_dispose(
     GObject* object)
 {
-    mms_settings_dconf_disconnect(MMS_SETTINGS_DCONF(object));
+    MMSSettingsDconf* dconf = MMS_SETTINGS_DCONF(object);
+    mms_settings_dconf_unwatch(dconf);
+    if (dconf->changed_signal_id) {
+        g_signal_handler_disconnect(dconf->client, dconf->changed_signal_id);
+        dconf->changed_signal_id = 0;
+    }
     G_OBJECT_CLASS(mms_settings_dconf_parent_class)->dispose(object);
 }
 
@@ -233,7 +333,7 @@ mms_settings_dconf_finalize(
     GObject* object)
 {
     MMSSettingsDconf* dconf = MMS_SETTINGS_DCONF(object);
-    mms_settings_dconf_disconnect(dconf);
+    if (dconf->client) g_object_unref(dconf->client);
     mms_settings_sim_data_reset(&dconf->imsi_data);
     G_OBJECT_CLASS(mms_settings_dconf_parent_class)->finalize(object);
 }
@@ -259,6 +359,12 @@ void
 mms_settings_dconf_init(
     MMSSettingsDconf* dconf)
 {
+    dconf->client = dconf_client_new();
+    if (dconf->client) {
+        dconf->changed_signal_id = g_signal_connect(dconf->client,
+            MMS_DCONF_CHANGED_SIGNAL, G_CALLBACK(mms_settings_dconf_changed),
+            dconf);
+    }
 }
 
 /**

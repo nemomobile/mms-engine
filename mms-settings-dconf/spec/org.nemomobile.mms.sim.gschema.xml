@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
   <!--
-    Path is /IMSI/
+    Path is /imsi/IMSI/mms/
     These defaults should match those defined in mms_settings.h
   -->
   <schema id="org.nemomobile.mms.sim">
