@@ -12,9 +12,10 @@ Requires: ofono
 
 BuildRequires: python
 BuildRequires: file-devel
-BuildRequires: libpng-devel
-BuildRequires: libexif-devel
 BuildRequires: libjpeg-turbo-devel
+BuildRequires: pkgconfig(dconf)
+BuildRequires: pkgconfig(libpng)
+BuildRequires: pkgconfig(libexif)
 BuildRequires: pkgconfig(glib-2.0) >= 2.32
 BuildRequires: pkgconfig(libsoup-2.4) >= 2.38
 BuildRequires: pkgconfig(libwspcodec) >= 2.2

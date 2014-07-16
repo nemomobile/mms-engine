@@ -3,7 +3,7 @@
 .PHONY: clean all debug release
 
 # Required packages
-PKGS = gio-2.0
+PKGS = dconf
 
 #
 # Default target
