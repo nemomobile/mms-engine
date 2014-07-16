@@ -45,6 +45,7 @@ struct mms_engine {
     gulong cancel_signal_id;
     gulong set_log_level_signal_id;
     gulong set_log_type_signal_id;
+    gulong get_version_signal_id;
 };
 
 typedef GObjectClass MMSEngineClass;
@@ -385,6 +386,32 @@ mms_engine_handle_set_log_type(
     return TRUE;
 }
 
+/* org.nemomobile.MmsEngine.getVersion */
+static
+gboolean
+mms_engine_handle_get_version(
+    OrgNemomobileMmsEngine* proxy,
+    GDBusMethodInvocation* call,
+    MMSEngine* engine)
+{
+#ifdef MMS_VERSION_STRING
+    int v1 = 0, v2 = 0, v3 = 0;
+    char* s = g_malloc(strlen(MMS_VERSION_STRING)+1);
+    s[0] = 0;
+    if (sscanf(MMS_VERSION_STRING, "%d.%d.%d%s", &v1, &v2, &v3, s) < 3) {
+        MMS_WARN_("unable to parse version %s", MMS_VERSION_STRING);
+    } else {
+        MMS_DEBUG_("version %d.%d.%d%s", v1, v2, v3, s);
+    }
+    org_nemomobile_mms_engine_complete_get_version(proxy, call, v1, v2, v3, s);
+    g_free(s);
+#else
+    MMS_DEBUG_("oops");
+    org_nemomobile_mms_engine_complete_get_version(proxy, call, 0, 0, 0, "");
+#endif
+    return TRUE;
+}
+
 MMSEngine*
 mms_engine_new(
     const MMSConfig* config,
@@ -459,6 +486,9 @@ mms_engine_new(
         mms->set_log_type_signal_id =
             g_signal_connect(mms->proxy, "handle-set-log-type",
             G_CALLBACK(mms_engine_handle_set_log_type), mms);
+        mms->get_version_signal_id =
+            g_signal_connect(mms->proxy, "handle-get-version",
+            G_CALLBACK(mms_engine_handle_get_version), mms);
 
         return mms;
     }
@@ -580,6 +610,7 @@ mms_engine_dispose(
         g_signal_handler_disconnect(e->proxy, e->cancel_signal_id);
         g_signal_handler_disconnect(e->proxy, e->set_log_level_signal_id);
         g_signal_handler_disconnect(e->proxy, e->set_log_type_signal_id);
+        g_signal_handler_disconnect(e->proxy, e->get_version_signal_id);
         g_object_unref(e->proxy);
         e->proxy = NULL;
     }
