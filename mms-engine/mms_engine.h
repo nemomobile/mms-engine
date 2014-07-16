@@ -18,6 +18,12 @@
 #include <gio/gio.h>
 #include "mms_settings.h"
 
+#ifdef MMS_ENGINE_VERSION
+#  define MMS_STRING__(x) #x
+#  define MMS_STRING_(x) MMS_STRING__(x)
+#  define MMS_VERSION_STRING MMS_STRING_(MMS_ENGINE_VERSION)
+#endif
+
 #define MMS_APP_LOG_PREFIX  "mms-engine"
 
 #define MMS_ENGINE_SERVICE  "org.nemomobile.MmsEngine"

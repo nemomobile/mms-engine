@@ -198,5 +198,13 @@
       <arg type="s" name="type" direction="in"/>
     </method>
 
+    <!-- Since 1.0.22 -->
+    <method name="getVersion">
+      <arg type="i" name="major" direction="out"/>
+      <arg type="i" name="minor" direction="out"/>
+      <arg type="i" name="micro" direction="out"/>
+      <arg type="s" name="suffix" direction="out"/>
+    </method>
+
   </interface>
 </node>

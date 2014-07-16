@@ -160,7 +160,7 @@ mms_app_parse_options(
     gboolean ok;
     GError* error = NULL;
     gboolean session_bus = FALSE;
-#ifdef MMS_ENGINE_VERSION
+#ifdef MMS_VERSION_STRING
     gboolean print_version = FALSE;
 #endif
     gboolean log_modules = FALSE;
@@ -213,7 +213,7 @@ mms_app_parse_options(
           "Set log level (repeatable)", "[MODULE:]LEVEL" },
         { "log-modules", 0, 0, G_OPTION_ARG_NONE, &log_modules,
           "List available log modules", NULL },
-#ifdef MMS_ENGINE_VERSION
+#ifdef MMS_VERSION_STRING
         { "version", 0, 0, G_OPTION_ARG_NONE, &print_version,
           "Print program version and exit", NULL },
 #endif
@@ -242,18 +242,15 @@ mms_app_parse_options(
         }
         *result = RET_OK;
         return FALSE;
-#ifdef MMS_ENGINE_VERSION
-#  define MMS_STRING__(x) #x
-#  define MMS_STRING_(x) MMS_STRING__(x)
-#  define MMS_VERVION_STRING MMS_STRING_(MMS_ENGINE_VERSION)
+#ifdef MMS_VERSION_STRING
     } else if (print_version) {
-        printf("MMS engine %s\n", MMS_VERVION_STRING);
+        printf("MMS engine %s\n", MMS_VERSION_STRING);
         *result = RET_OK;
         return FALSE;
 #endif
     } else {
-#ifdef MMS_ENGINE_VERSION
-        MMS_INFO("Version %s starting", MMS_VERVION_STRING);
+#ifdef MMS_VERSION_STRING
+        MMS_INFO("Version %s starting", MMS_VERSION_STRING);
 #else
         MMS_INFO("Starting");
 #endif
