@@ -206,5 +206,10 @@
       <arg type="s" name="suffix" direction="out"/>
     </method>
 
+    <!-- Since 1.0.22 -->
+    <method name="migrateSettings">
+      <arg type="s" name="imsi" direction="in"/>
+    </method>
+
   </interface>
 </node>
