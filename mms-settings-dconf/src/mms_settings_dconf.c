@@ -61,6 +61,60 @@ typedef struct mms_settings_dconf_key {
 } MMSSettingsDconfKey;
 
 static
+gboolean
+mms_settings_dconf_get_uint32(
+    GVariant* variant,
+    unsigned int* value)
+{
+    if (variant) {
+        GVariantClass klass = g_variant_classify(variant);
+        if (klass == G_VARIANT_CLASS_UINT32) {
+            /* Normal, most common use case */
+            *value = g_variant_get_uint32(variant);
+            return TRUE;
+        } else if (klass == G_VARIANT_CLASS_INT32) {
+            /* Typical result of updating dconf value from command line */
+            gint32 i32 = g_variant_get_int32(variant);
+            MMS_ASSERT(i32 >= 0);
+            if (i32 >= 0) {
+                *value = i32;
+                return TRUE;
+            }
+            /* The rest is not so typical */
+        } else if (klass == G_VARIANT_CLASS_INT16) {
+            gint16 i16 = g_variant_get_int16(variant);
+            MMS_ASSERT(i16 >= 0);
+            if (i16 >= 0) {
+                *value = i16;
+                return TRUE;
+            }
+        } else if (klass == G_VARIANT_CLASS_INT64) {
+            gint64 i64 = g_variant_get_int64(variant);
+            MMS_ASSERT(i64 >= 0 && i64 <= (gint64)UINT_MAX);
+            if (i64 >= 0 && i64 <= (gint64)UINT_MAX) {
+                *value = (unsigned int)i64;
+                return TRUE;
+            }
+        } else if (klass == G_VARIANT_CLASS_BYTE) {
+            *value = g_variant_get_byte(variant);
+            return TRUE;
+        } else if (klass == G_VARIANT_CLASS_UINT16) {
+            *value = g_variant_get_uint16(variant);
+            return TRUE;
+        } else if (klass == G_VARIANT_CLASS_UINT64) {
+            guint64 u64 = g_variant_get_uint64(variant);
+            if (u64 <= UINT_MAX) {
+                *value = (guint32)u64;
+                return TRUE;
+            }
+        } else {
+            MMS_ERR("Unexpected variant type \'%c\'", (char)klass);
+        }
+    }
+    return FALSE;
+}
+
+static
 void
 mms_settings_dconf_update_user_agent(
     MMSSettingsSimDataCopy* dest,
@@ -90,9 +144,11 @@ mms_settings_dconf_update_size_limit(
     MMSSettingsSimDataCopy* dest,
     GVariant* variant)
 {
-    unsigned int value = g_variant_get_uint32(variant);
-    MMS_DEBUG(MMS_DCONF_KEY_SIZE_LIMIT " = %u", value);
-    dest->data.size_limit = value;
+    if (mms_settings_dconf_get_uint32(variant, &dest->data.size_limit)) {
+        MMS_DEBUG(MMS_DCONF_KEY_SIZE_LIMIT " = %u", dest->data.size_limit);
+    } else {
+        MMS_WARN("Unable to decode " MMS_DCONF_KEY_SIZE_LIMIT " value");
+    }
 }
 
 static
@@ -101,9 +157,11 @@ mms_settings_dconf_update_max_pixels(
     MMSSettingsSimDataCopy* dest,
     GVariant* variant)
 {
-    unsigned int value = g_variant_get_uint32(variant);
-    MMS_DEBUG(MMS_DCONF_KEY_MAX_PIXELS " = %u", value);
-    dest->data.max_pixels = value;
+    if (mms_settings_dconf_get_uint32(variant, &dest->data.max_pixels)) {
+        MMS_DEBUG(MMS_DCONF_KEY_MAX_PIXELS " = %u", dest->data.max_pixels);
+    } else {
+        MMS_WARN("Unable to decode " MMS_DCONF_KEY_MAX_PIXELS " value");
+    }
 }
 
 static
