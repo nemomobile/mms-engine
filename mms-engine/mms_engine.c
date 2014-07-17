@@ -27,6 +27,8 @@
 struct mms_engine {
     GObject parent;
     const MMSConfig* config;
+    MMSConnMan* cm;
+    MMSSettings* settings;
     MMSDispatcher* dispatcher;
     MMSDispatcherDelegate dispatcher_delegate;
     MMSLogModule** log_modules;
@@ -46,6 +48,7 @@ struct mms_engine {
     gulong set_log_level_signal_id;
     gulong set_log_type_signal_id;
     gulong get_version_signal_id;
+    gulong migrate_settings_signal_id;
 };
 
 typedef GObjectClass MMSEngineClass;
@@ -412,6 +415,30 @@ mms_engine_handle_get_version(
     return TRUE;
 }
 
+/* org.nemomobile.MmsEngine.migrateSettings */
+static
+gboolean
+mms_engine_handle_migrate_settings(
+    OrgNemomobileMmsEngine* proxy,
+    GDBusMethodInvocation* call,
+    const char* imsi,
+    MMSEngine* engine)
+{
+    char* tmp = NULL;
+    /* Querying settings will migrate per-SIM settings after upgrading
+     * from 1.0.21 or older version of mme-engine */
+    MMS_DEBUG_("%s", imsi);
+    if (!imsi || !imsi[0]) {
+        imsi = tmp = mms_connman_default_imsi(engine->cm);
+    }
+    if (imsi) {
+        mms_settings_get_sim_data(engine->settings, imsi);
+    }
+    org_nemomobile_mms_engine_complete_migrate_settings(proxy, call);
+    g_free(tmp);
+    return TRUE;
+}
+
 MMSEngine*
 mms_engine_new(
     const MMSConfig* config,
@@ -448,8 +475,6 @@ mms_engine_new(
         }
 
         mms->dispatcher = mms_dispatcher_new(settings, cm, handler);
-        mms_settings_unref(settings);
-        mms_connman_unref(cm);
         mms_handler_unref(handler);
         mms_dispatcher_set_delegate(mms->dispatcher,
             &mms->dispatcher_delegate);
@@ -458,7 +483,9 @@ mms_engine_new(
             mms->keep_running = TRUE;
         }
 
+        mms->cm = cm;
         mms->config = config;
+        mms->settings = settings;
         mms->log_modules = log_modules;
         mms->log_count = log_count;
         mms->proxy = org_nemomobile_mms_engine_skeleton_new();
@@ -489,6 +516,9 @@ mms_engine_new(
         mms->get_version_signal_id =
             g_signal_connect(mms->proxy, "handle-get-version",
             G_CALLBACK(mms_engine_handle_get_version), mms);
+        mms->migrate_settings_signal_id =
+            g_signal_connect(mms->proxy, "handle-migrate-settings",
+            G_CALLBACK(mms_engine_handle_migrate_settings), mms);
 
         return mms;
     }
@@ -611,6 +641,7 @@ mms_engine_dispose(
         g_signal_handler_disconnect(e->proxy, e->set_log_level_signal_id);
         g_signal_handler_disconnect(e->proxy, e->set_log_type_signal_id);
         g_signal_handler_disconnect(e->proxy, e->get_version_signal_id);
+        g_signal_handler_disconnect(e->proxy, e->migrate_settings_signal_id);
         g_object_unref(e->proxy);
         e->proxy = NULL;
     }
@@ -618,6 +649,14 @@ mms_engine_dispose(
         mms_dispatcher_set_delegate(e->dispatcher, NULL);
         mms_dispatcher_unref(e->dispatcher);
         e->dispatcher = NULL;
+    }
+    if (e->settings) {
+        mms_settings_unref(e->settings);
+        e->settings = NULL;
+    }
+    if (e->cm) {
+        mms_connman_unref(e->cm);
+        e->cm = NULL;
     }
     G_OBJECT_CLASS(mms_engine_parent_class)->dispose(object);
 }
