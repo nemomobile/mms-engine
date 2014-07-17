@@ -346,7 +346,7 @@ mms_settings_dconf_get_sim_data(
                 }
             }
 
-            g_free(names);
+            g_strfreev(names);
             g_free(dir_old);
 
             dconf->imsi = g_strdup(imsi);
