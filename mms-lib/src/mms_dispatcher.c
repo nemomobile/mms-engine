@@ -43,6 +43,7 @@ struct mms_dispatcher {
     GQueue* tasks;
     guint next_run_id;
     guint network_idle_id;
+    gboolean started;
 };
 
 typedef void (*MMSDispatcherIdleCallbackProc)(MMSDispatcher* disp);
@@ -64,6 +65,48 @@ mms_dispatcher_run(
     MMSDispatcher* disp);
 
 /**
+ * Checks if we are done and notifies the delegate if necessary
+ */
+static
+void
+mms_dispatcher_check_if_done(
+    MMSDispatcher* disp)
+{
+    if (!mms_dispatcher_is_active(disp)) {
+        /* Cancel pending runs */
+        if (disp->next_run_id) {
+            g_source_remove(disp->next_run_id);
+            disp->next_run_id = 0;
+        }
+        /* Notify the delegate that we are done */
+        if (disp->delegate && disp->delegate->fn_done && disp->started) {
+            disp->started = FALSE;
+            disp->delegate->fn_done(disp->delegate, disp);
+        }
+    }
+}
+
+/**
+ * Drops the reference to the network connection
+ */
+static
+void
+mms_dispatcher_drop_connection(
+    MMSDispatcher* disp)
+{
+    if (disp->connection) {
+        MMS_ASSERT(!mms_connection_is_active(disp->connection));
+        mms_connection_unref(disp->connection);
+        disp->connection->delegate = NULL;
+        disp->connection = NULL;
+        if (disp->network_idle_id) {
+            g_source_remove(disp->network_idle_id);
+            disp->network_idle_id = 0;
+        }
+    }
+}
+
+/**
  * Close the network connection
  */
 static
@@ -72,21 +115,13 @@ mms_dispatcher_close_connection(
     MMSDispatcher* disp)
 {
     if (disp->connection) {
-        disp->connection->delegate = NULL;
         mms_connection_close(disp->connection);
-        mms_connection_unref(disp->connection);
-        disp->connection = NULL;
-
-        if (!mms_dispatcher_is_active(disp)) {
-            /* Report to delegate that we are done */
-            if (disp->delegate && disp->delegate->fn_done) {
-                disp->delegate->fn_done(disp->delegate, disp);
-            }
+        /* Assert that connection state changes are asynchronous */
+        MMS_ASSERT(disp->connection);
+        if (!mms_connection_is_active(disp->connection)) {
+            mms_dispatcher_drop_connection(disp);
         }
-    }
-    if (disp->network_idle_id) {
-        g_source_remove(disp->network_idle_id);
-        disp->network_idle_id = 0;
+        mms_dispatcher_check_if_done(disp);
     }
 }
 
@@ -225,8 +260,8 @@ gboolean
 mms_dispatcher_is_active(
     MMSDispatcher* disp)
 {
-    return disp && (disp->connection || disp->active_task ||
-        !g_queue_is_empty(disp->tasks));
+    return disp && (mms_connection_is_active(disp->connection) ||
+        disp->active_task || !g_queue_is_empty(disp->tasks));
 }
 
 /**
@@ -373,17 +408,7 @@ mms_dispatcher_run(
         }
     }
 
-    if (!mms_dispatcher_is_active(disp)) {
-        /* Cancel pending runs */
-        if (disp->next_run_id) {
-            g_source_remove(disp->next_run_id);
-            disp->next_run_id = 0;
-        }
-        /* Report to delegate that we are done */
-        if (disp->delegate && disp->delegate->fn_done) {
-            disp->delegate->fn_done(disp->delegate, disp);
-        }
-    }
+    mms_dispatcher_check_if_done(disp);
 }
 
 /**
@@ -397,6 +422,7 @@ mms_dispatcher_start(
     int err = g_mkdir_with_parents(root_dir, MMS_DIR_PERM);
     if (!err || errno == EEXIST) {
         if (!g_queue_is_empty(disp->tasks)) {
+            disp->started = TRUE;
             mms_dispatcher_next_run_schedule(disp);
             return TRUE;
         }
@@ -577,6 +603,8 @@ mms_dispatcher_delegate_connection_state_changed(
                 break;
             }
         }
+        mms_dispatcher_drop_connection(disp);
+        mms_dispatcher_check_if_done(disp);
     }
     if (!disp->active_task) {
         mms_dispatcher_next_run_schedule(disp);
@@ -648,7 +676,7 @@ mms_dispatcher_finalize(
     const char* root_dir = disp->settings->config->root_dir;
     char* msg_dir = g_strconcat(root_dir, "/" MMS_MESSAGE_DIR "/", NULL);
     MMS_VERBOSE_("");
-    mms_dispatcher_close_connection(disp);
+    mms_dispatcher_drop_connection(disp);
     while ((task = g_queue_pop_head(disp->tasks)) != NULL) {
         task->delegate = NULL;
         mms_task_cancel(task);

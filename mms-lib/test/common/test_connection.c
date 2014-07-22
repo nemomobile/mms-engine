@@ -27,32 +27,45 @@ G_DEFINE_TYPE(MMSConnectionTest, mms_connection_test, MMS_TYPE_CONNECTION);
 #define MMS_CONNECTION_TEST(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj),\
    MMS_TYPE_CONNECTION_TEST, MMSConnectionTest))
 
+typedef struct test_connection_state_change {
+    MMSConnectionTest* test;
+    MMS_CONNECTION_STATE state;
+} MMSConnectionStateChange;
+
+static
+gboolean
+test_connection_test_state_change_cb(
+    void* param)
+{
+    MMSConnectionStateChange* change = param;
+    MMSConnectionTest* test = change->test;
+    if (test->state != MMS_CONNECTION_STATE_CLOSED &&
+        test->state != MMS_CONNECTION_STATE_FAILED &&
+        test->state != change->state) {
+        test->state = change->state;
+        if (test->delegate &&
+            test->delegate->fn_connection_state_changed) {
+            test->delegate->fn_connection_state_changed(test->delegate, test);
+        }
+    }
+    mms_connection_unref(change->test);
+    g_free(change);
+    return FALSE;
+}
+
 static
 gboolean
 mms_connection_test_set_state(
     MMSConnection* test,
     MMS_CONNECTION_STATE state)
 {
-    if (test->state != state && test->state != MMS_CONNECTION_STATE_CLOSED) {
-        test->state = state;
-        if (test->delegate &&
-            test->delegate->fn_connection_state_changed) {
-            test->delegate->fn_connection_state_changed(test->delegate, test);
-        }
+    if (test->state != MMS_CONNECTION_STATE_CLOSED) {
+        MMSConnectionStateChange* change = g_new0(MMSConnectionStateChange,1);
+        change->state = state;
+        change->test = mms_connection_ref(test);
+        g_idle_add(test_connection_test_state_change_cb, change);
     }
     return TRUE;
-}
-
-static
-gboolean
-test_connection_test_open(
-    void* param)
-{
-    MMSConnectionTest* test = param;
-    mms_connection_test_set_state(test, test->netif ?
-        MMS_CONNECTION_STATE_OPEN : MMS_CONNECTION_STATE_FAILED);
-    mms_connection_unref(test);
-    return FALSE;
 }
 
 MMSConnection*
@@ -73,7 +86,8 @@ mms_connection_test_new(
         }
     }
     test->state = MMS_CONNECTION_STATE_OPENING;
-    g_idle_add(test_connection_test_open, mms_connection_ref(test));
+    mms_connection_test_set_state(test, test->netif ?
+        MMS_CONNECTION_STATE_OPEN : MMS_CONNECTION_STATE_FAILED);
     return test;
 }
 

@@ -82,6 +82,9 @@ mms_connection_close(
 
 #define mms_connection_is_open(connection) \
     (mms_connection_state(connection) == MMS_CONNECTION_STATE_OPEN)
+#define mms_connection_is_active(connection) ((connection) && \
+    ((connection)->state == MMS_CONNECTION_STATE_OPEN || \
+     (connection)->state == MMS_CONNECTION_STATE_OPENING))
 
 #endif /* JOLLA_MMS_CONNECTION_H */
 
