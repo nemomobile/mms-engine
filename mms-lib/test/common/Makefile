@@ -25,8 +25,8 @@ include ../../Config.mak
 # Required packages
 #
 
-LIB_PKGS += libwspcodec libsoup-2.4 glib-2.0 $(RESIZE_PKG)
-PKGS += $(LIB_PKGS)
+PKGS += glib-2.0 libsoup-2.4
+LIB_PKGS += $(PKGS) libwspcodec $(RESIZE_PKG)
 
 #
 # Default target
