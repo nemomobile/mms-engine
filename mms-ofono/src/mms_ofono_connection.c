@@ -237,6 +237,7 @@ mms_ofono_connection_dispose(
 {
     MMSOfonoConnection* ofono = MMS_OFONO_CONNECTION(object);
     MMS_VERBOSE_("%p", ofono);
+    MMS_ASSERT(!mms_connection_is_active(&ofono->connection));
     if (ofono->property_change_signal_id) {
         g_signal_handler_disconnect(ofono->proxy,
             ofono->property_change_signal_id);

@@ -27,6 +27,23 @@ MMS_LOG_MODULE_DEFINE("mms-ofono-context");
 
 static
 void
+mms_ofono_context_drop_connection(
+    MMSOfonoContext* context,
+    MMS_CONNECTION_STATE state)
+{
+    MMSOfonoConnection* ofono = context->connection;
+    if (ofono) {
+        context->connection = NULL;
+        ofono->context = NULL;
+        if (state != MMS_CONNECTION_STATE_INVALID) {
+            mms_ofono_connection_set_state(ofono, state);
+        }
+        mms_ofono_connection_unref(ofono);
+    }
+}
+
+static
+void
 mms_ofono_context_property_changed(
     OrgOfonoConnectionContext* proxy,
     const char* key,
@@ -43,17 +60,15 @@ mms_ofono_context_property_changed(
             if (context->connection && !mms_ofono_connection_set_state(
                 context->connection, MMS_CONNECTION_STATE_OPEN)) {
                 /* Connection is in a wrong state? */
-                context->connection->context = NULL;
-                mms_ofono_connection_unref(context->connection);
-                context->connection = NULL;
+                mms_ofono_context_drop_connection(context,
+                    MMS_CONNECTION_STATE_INVALID);
             }
             if (!context->connection) {
                 context->connection = mms_ofono_connection_new(context, FALSE);
             }
         } else if (context->connection) {
-            context->connection->context = NULL;
-            mms_ofono_connection_unref(context->connection);
-            context->connection = NULL;
+            mms_ofono_context_drop_connection(context,
+                MMS_CONNECTION_STATE_CLOSED);
         }
     } else {
         MMS_VERBOSE_("%s %s", context->path, key);
@@ -63,7 +78,7 @@ mms_ofono_context_property_changed(
 
 static
 void
-mms_ofono_context_set_active_done(
+mms_ofono_context_activate_done(
     GObject* proxy,
     GAsyncResult* result,
     gpointer user_data)
@@ -75,20 +90,41 @@ mms_ofono_context_set_active_done(
 
     if (!ok) {
         MMSOfonoConnection* ofono = context->connection;
-        if (ofono && ofono->connection.state == MMS_CONNECTION_STATE_OPENING) {
-            /* Connection failed to open, fire state change event and drop
-             * our reference to it */
-            context->connection = NULL;
-            ofono->context = NULL;
+        if (ofono) {
             MMS_ERR("Connection %s failed: %s", ofono->connection.imsi,
                 MMS_ERRMSG(error));
-
-            mms_ofono_connection_set_state(ofono, MMS_CONNECTION_STATE_FAILED);
-            mms_ofono_connection_unref(ofono);
+            if (ofono->connection.state == MMS_CONNECTION_STATE_OPENING) {
+                mms_ofono_context_drop_connection(context,
+                    MMS_CONNECTION_STATE_FAILED);
+            }
         }
+        g_error_free(error);
+    }
+}
+
+static
+void
+mms_ofono_context_deactivate_done(
+    GObject* proxy,
+    GAsyncResult* result,
+    gpointer user_data)
+{
+    GError* error = NULL;
+    MMSOfonoContext* context = user_data;
+    gboolean ok = org_ofono_connection_context_call_set_property_finish(
+        ORG_OFONO_CONNECTION_CONTEXT(proxy), result, &error);
+
+    if (!ok) {
+        if (context->connection) {
+            MMS_DEBUG("Connection %s failed tp deactivate: %s",
+                context->connection->connection.imsi, MMS_ERRMSG(error));
+        }
+        g_error_free(error);
     }
 
-    if (error) g_error_free(error);
+    /* Regardless of whether or nor deactivation has succeeded, we mark this
+     * connection as closed. */
+    mms_ofono_context_drop_connection(context, MMS_CONNECTION_STATE_CLOSED);
 }
 
 void
@@ -96,34 +132,18 @@ mms_ofono_context_set_active(
     MMSOfonoContext* context,
     gboolean active)
 {
-    GCancellable* cancel;
-    GAsyncReadyCallback cb;
-    gpointer data;
-    if (active) {
-        MMS_DEBUG("Opening connection %s", context->modem->imsi);
-        if (context->set_active_cancel) {
-            g_cancellable_cancel(context->set_active_cancel);
-            g_object_unref(context->set_active_cancel);
-        }
-        cancel = context->set_active_cancel = g_cancellable_new();
-        cb = mms_ofono_context_set_active_done;
-        data = context;
-    } else {
-        MMS_DEBUG("Closing connection %s", context->modem->imsi);
-        cancel = NULL;
-        cb = NULL;
-        data = NULL;
-        if (context->connection) {
-            MMSOfonoConnection* ofono = context->connection;
-            context->connection = NULL;
-            ofono->context = NULL;
-            mms_ofono_connection_set_state(ofono,MMS_CONNECTION_STATE_CLOSED);
-            mms_ofono_connection_unref(ofono);
-        }
+    MMS_DEBUG("%s connection %s", active ? "Opening":"Closing",
+        context->modem->imsi);
+    if (context->set_active_cancel) {
+        g_cancellable_cancel(context->set_active_cancel);
+        g_object_unref(context->set_active_cancel);
     }
+    context->set_active_cancel = g_cancellable_new();
     org_ofono_connection_context_call_set_property(context->proxy,
         OFONO_CONTEXT_PROPERTY_ACTIVE, g_variant_new_variant(
-        g_variant_new_boolean(active)), cancel, cb, data);
+        g_variant_new_boolean(active)), context->set_active_cancel,
+        active ? mms_ofono_context_activate_done :
+        mms_ofono_context_deactivate_done, context);
 }
 
 MMSOfonoContext*
