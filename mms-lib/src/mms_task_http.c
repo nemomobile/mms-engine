@@ -198,9 +198,6 @@ mms_http_transfer_new(
             soup_message_headers_append(tx->message->request_headers,
                 uaprof_header, cfg->uaprof);
         }
-        /* We shouldn't need this extra reference but otherwise
-         * SoupMessage gets deallocated too early. Not sure why. */
-        g_object_ref(tx->message);
         return tx;
     }
     return NULL;
@@ -469,8 +466,14 @@ mms_task_http_start(
 #endif /* MMS_LOG_DEBUG */
 
             mms_task_http_set_state(http, MMS_HTTP_ACTIVE, 0);
+
+            /* Soup message queue will unref the message when it's finished
+             * with it, so we need to add one more reference if we need to
+             * keep the message pointer too. */
+            g_object_ref(msg);
             soup_session_queue_message(priv->tx->session, msg,
                 mms_task_http_finished, http);
+
             return TRUE;
         }
     } else {
