@@ -75,9 +75,8 @@ typedef enum mms_read_status {
 } MMSReadStatus;
 
 /* Convenience macros */
-#define MMS_CAST(address,type,field) ((type *)( \
-                                      (char*)(address) - \
-                                      (char*)(&((type *)0)->field)))
+#define MMS_CAST(address,type,field) \
+    ((type *)((guint8*)(address) - G_STRUCT_OFFSET(type,field)))
 
 #endif /* JOLLA_MMS_LIB_TYPES_H */
 
