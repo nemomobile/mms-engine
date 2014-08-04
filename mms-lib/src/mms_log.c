@@ -60,6 +60,53 @@ const char MMS_LOG_TYPE_SYSLOG[] = "syslog";
 G_STATIC_ASSERT(G_N_ELEMENTS(mms_log_levels) > MMS_LOGLEVEL_MAX);
 G_STATIC_ASSERT(G_N_ELEMENTS(mms_log_levels) > MMS_LOGLEVEL_DEFAULT);
 
+/**
+ * Formats the string into the given buffer (most commonly allocated
+ * on caller's stack). If formatted string fits into the provided buffer,
+ * returns pointer to the given buffer. If formatted string is too long
+ * to fit into the provided buffer, allocates a new one and returns pointer
+ * to it.
+ */
+static
+char*
+fsio_log_format(
+    char* buf,
+    int bufsize,
+    const char* format,
+    va_list va)
+{
+    int size, nchars = -1;
+    char* buffer;
+    if (buf) {
+        size = bufsize;
+        buffer = buf;
+    } else {
+        size = MAX(100,bufsize);
+        buffer = g_malloc(size);
+    }
+    while (buffer) {
+
+        /* Try to print in the allocated space. */
+        va_list va2;
+        va_copy(va2, va);
+        nchars = vsnprintf(buffer, size, format, va2);
+        va_end(va2);
+
+        /* Return the string or try again with more space. */
+        if (nchars >= 0) {
+            if (nchars < size) break;
+            size = nchars+1;  /* Precisely what is needed */
+        } else {
+            size *= 2;        /* Twice the old size */
+        }
+
+        if (buffer != buf) g_free(buffer);
+        buffer = g_malloc(size);
+    }
+
+    return buffer;
+}
+
 /* Forwards output to stdout */
 void
 mms_log_stdout(
@@ -71,6 +118,7 @@ mms_log_stdout(
     char t[32];
     char buf[512];
     const char* prefix = "";
+    char* msg;
     if (mms_log_stdout_timestamp) {
         time_t now;
         time(&now);
@@ -83,24 +131,24 @@ mms_log_stdout(
     case MMS_LOGLEVEL_ERR:  prefix = "ERROR: ";   break;
     default:                break;
     }
-    vsnprintf(buf, sizeof(buf), format, va);
-    buf[sizeof(buf)-1] = 0;
+    msg = fsio_log_format(buf, sizeof(buf), format, va);
 #if defined(DEBUG) && defined(_WIN32)
     {
         char s[1023];
         if (name) {
-            snprintf(s, sizeof(s), "%s[%s] %s%s\n", t, name, prefix, buf);
+            snprintf(s, sizeof(s), "%s[%s] %s%s\n", t, name, prefix, msg);
         } else {
-            snprintf(s, sizeof(s), "%s%s%s\n", t, prefix, buf);
+            snprintf(s, sizeof(s), "%s%s%s\n", t, prefix, msg);
         }
         OutputDebugString(s);
     }
 #endif
     if (name) {
-        printf("%s[%s] %s%s\n", t, name, prefix, buf);
+        printf("%s[%s] %s%s\n", t, name, prefix, msg);
     } else {
-        printf("%s%s%s\n", t, prefix, buf);
+        printf("%s%s%s\n", t, prefix, msg);
     }
+    if (msg != buf) g_free(msg);
 }
 
 /* Formards output to syslog */
