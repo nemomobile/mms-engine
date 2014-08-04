@@ -88,7 +88,7 @@ fsio_log_format(
 
         /* Try to print in the allocated space. */
         va_list va2;
-        va_copy(va2, va);
+        G_VA_COPY(va2, va);
         nchars = vsnprintf(buffer, size, format, va2);
         va_end(va2);
 
