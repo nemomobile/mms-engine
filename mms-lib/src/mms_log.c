@@ -13,17 +13,9 @@
  */
 
 #include "mms_log.h"
-#include <string.h>
-#include <stdio.h>
 
-#ifdef _WIN32
-#  ifdef DEBUG
-#    include <windows.h>
-#  endif
-#  define vsnprintf     _vsnprintf
-#  define snprintf      _snprintf
-#  define strcasecmp    _stricmp
-#  define strncasecmp   _strnicmp
+#if defined(DEBUG) && defined(_WIN32)
+#  include <windows.h>
 #endif
 
 /* Allows timestamps in stdout log */
@@ -89,7 +81,7 @@ fsio_log_format(
         /* Try to print in the allocated space. */
         va_list va2;
         G_VA_COPY(va2, va);
-        nchars = vsnprintf(buffer, size, format, va2);
+        nchars = g_vsnprintf(buffer, size, format, va2);
         va_end(va2);
 
         /* Return the string or try again with more space. */
@@ -136,9 +128,9 @@ mms_log_stdout(
     {
         char s[1023];
         if (name) {
-            snprintf(s, sizeof(s), "%s[%s] %s%s\n", t, name, prefix, msg);
+            g_snprintf(s, sizeof(s), "%s[%s] %s%s\n", t, name, prefix, msg);
         } else {
-            snprintf(s, sizeof(s), "%s%s%s\n", t, prefix, msg);
+            g_snprintf(s, sizeof(s), "%s%s%s\n", t, prefix, msg);
         }
         OutputDebugString(s);
     }
@@ -185,7 +177,7 @@ mms_log_syslog(
     }
     if (name || prefix) {
         char buf[512];
-        vsnprintf(buf, sizeof(buf), format, va);
+        g_vsnprintf(buf, sizeof(buf), format, va);
         if (!prefix) prefix = "";
         if (name) {
             syslog(priority, "[%s] %s%s", name, prefix, buf);
@@ -320,7 +312,7 @@ mms_log_parse_option(
             int i;
             const size_t namelen = sep - opt;
             for (i=0; i<count; i++) {
-                if (!strncasecmp(modules[i]->name, opt, namelen)) {
+                if (!g_ascii_strncasecmp(modules[i]->name, opt, namelen)) {
                     MMS_ASSERT(modules[i]->max_level >= modlevel);
                     modules[i]->level = modlevel;
                     return TRUE;
@@ -373,7 +365,7 @@ mms_log_set_type(
     const char* default_name)
 {
 #if MMS_LOG_SYSLOG
-    if (!strcasecmp(type, MMS_LOG_TYPE_SYSLOG)) {
+    if (!g_ascii_strcasecmp(type, MMS_LOG_TYPE_SYSLOG)) {
         if (mms_log_func != mms_log_syslog) {
             openlog(NULL, LOG_PID | LOG_CONS, LOG_USER);
         }
@@ -386,10 +378,10 @@ mms_log_set_type(
     }
 #endif /* MMS_LOG_SYSLOG */
     mms_log_default.name = default_name;
-    if (!strcasecmp(type, MMS_LOG_TYPE_STDOUT)) {
+    if (!g_ascii_strcasecmp(type, MMS_LOG_TYPE_STDOUT)) {
         mms_log_func = mms_log_stdout;
         return TRUE;
-    } else if (!strcasecmp(type, MMS_LOG_TYPE_GLIB)) {
+    } else if (!g_ascii_strcasecmp(type, MMS_LOG_TYPE_GLIB)) {
         mms_log_func = mms_log_glib;
         return TRUE;
     }
