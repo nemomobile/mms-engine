@@ -104,12 +104,20 @@ mms_settings_dconf_get_uint32(
         } else if (klass == G_VARIANT_CLASS_UINT64) {
             guint64 u64 = g_variant_get_uint64(variant);
             if (u64 <= UINT_MAX) {
-                *value = (guint32)u64;
+                *value = (unsigned int)u64;
+                return TRUE;
+            }
+        } else if (klass == G_VARIANT_CLASS_DOUBLE) {
+            gdouble d = g_variant_get_double(variant);
+            if (d >= 0.0 && d <= (double)UINT_MAX) {
+                *value = (unsigned int)d;
                 return TRUE;
             }
         } else {
             MMS_ERR("Unexpected variant type \'%c\'", (char)klass);
+            return FALSE;
         }
+        MMS_ERR("Unable to convert variant type \'%c\'", (char)klass);
     }
     return FALSE;
 }
