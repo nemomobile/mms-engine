@@ -27,10 +27,12 @@ typedef struct mms_handler_test {
     unsigned int last_id;
     GHashTable* recs;
     MMSDispatcher* dispatcher;
-    int flags;
-
-#define MMS_HANDLER_TEST_FLAG_REJECT_NOTIFY (0x01)
-
+    mms_handler_test_prenotify_fn prenotify_fn;
+    mms_handler_test_postnotify_fn postnotify_fn;
+    mms_handler_test_msgreceived_fn msgreceived_fn;
+    void* prenotify_data;
+    void* postnotify_data;
+    void* msgreceived_data;
 } MMSHandlerTest;
 
 typedef enum mms_handler_record_type {
@@ -59,7 +61,25 @@ typedef struct mms_handler_record_receive {
     MMSMessage* msg;
     GBytes* data;
     guint defer_id;
+    MMSHandlerMessageNotifyCall* notify;
 } MMSHandlerRecordReceive;
+
+struct mms_handler_message_notify_call {
+    guint defer_id;
+    MMSHandlerTest* test;
+    MMSHandlerRecordReceive* recv;
+    char* id;
+    mms_handler_message_notify_complete_fn cb;
+    void* param;
+};
+
+struct mms_handler_message_received_call {
+    guint defer_id;
+    MMSHandler* handler;
+    MMSMessage* msg;
+    mms_handler_message_received_complete_fn cb;
+    void* param;
+};
 
 G_DEFINE_TYPE(MMSHandlerTest, mms_handler_test, MMS_TYPE_HANDLER);
 #define MMS_TYPE_HANDLER_TEST (mms_handler_test_get_type())
@@ -193,6 +213,44 @@ mms_handler_test_receive_state(
     return recv ? recv->state : MMS_RECEIVE_STATE_INVALID;
 }
 
+typedef struct mms_handler_test_foreach_received_message_data {
+    mms_handler_test_get_received_message_fn cb;
+    void* user_data;
+    int count;
+} MMSHandlerForeachReceiveMessageData;
+
+static
+void 
+mms_handler_test_foreach_received_message_hash_cb(
+    gpointer key,
+    gpointer value,
+    gpointer user_data)
+{
+    MMSHandlerRecord* rec = value;
+    if (rec->type == MMS_HANDLER_RECORD_RECEIVE) {
+        MMSHandlerForeachReceiveMessageData* data = user_data;
+        MMSHandlerRecordReceive* recv = mms_handler_test_record_receive(rec);
+        if (data->cb) data->cb(rec->id, recv->msg, recv->data, data->user_data);
+        data->count++;
+    }
+}
+
+int
+mms_handler_test_foreach_received_message(
+    MMSHandler* handler,
+    mms_handler_test_get_received_message_fn cb,
+    void* user_data)
+{
+    MMSHandlerTest* test = MMS_HANDLER_TEST(handler);
+    MMSHandlerForeachReceiveMessageData data;
+    data.cb = cb;
+    data.user_data = user_data;
+    data.count = 0;
+    g_hash_table_foreach(test->recs,
+        mms_handler_test_foreach_received_message_hash_cb, &data);
+    return data.count;
+}
+
 MMSMessage*
 mms_handler_test_get_received_message(
     MMSHandler* handler,
@@ -278,6 +336,13 @@ mms_handler_test_hash_remove_record(
     g_free(rec->id);
     if (rec->type == MMS_HANDLER_RECORD_RECEIVE) {
         MMSHandlerRecordReceive* recv = mms_handler_test_record_receive(rec);
+        if (recv->notify) {
+            MMS_ASSERT(recv->notify->defer_id);
+            MMS_ASSERT(recv->notify->recv == recv);
+            g_source_remove(recv->notify->defer_id);
+            recv->notify->defer_id = 0;
+            recv->notify->recv = NULL;
+        }
         if (recv->defer_id) {
             g_source_remove(recv->defer_id);
             recv->defer_id = 0;
@@ -313,19 +378,71 @@ mms_handler_test_receive(
 }
 
 static
-char*
+void
+mms_handler_test_notify_delete(
+    MMSHandlerMessageNotifyCall* notify)
+{
+    mms_handler_busy_dec(&notify->test->handler);
+    mms_handler_unref(&notify->test->handler);
+    if (notify->recv) {
+        MMS_ASSERT(!notify->recv->notify || notify->recv->notify == notify);
+        notify->recv->notify = NULL;
+    }
+    g_free(notify->id);
+    g_free(notify);
+}
+
+static
+void
+mms_handler_test_message_notify_cancel(
+    MMSHandler* handler,
+    MMSHandlerMessageNotifyCall* call)
+{
+    if (call) {
+        if (call->defer_id) g_source_remove(call->defer_id);
+        mms_handler_test_notify_delete(call);
+    }
+}
+
+static
+gboolean
+mms_handler_test_notify(
+    gpointer data)
+{
+    MMSHandlerMessageNotifyCall* notify = data;
+    MMSHandlerTest* test = notify->test;
+    if (notify->cb) {
+        notify->cb(notify, notify->id, notify->param);
+    }
+    if (test->postnotify_fn) {
+        test->postnotify_fn(&test->handler, notify->id, test->postnotify_data);
+    }
+    mms_handler_test_notify_delete(notify);
+    return FALSE;
+}
+
+static
+MMSHandlerMessageNotifyCall*
 mms_handler_test_message_notify(
     MMSHandler* handler,
     const char* imsi,
     const char* from,
     const char* subj,
     time_t expiry,
-    GBytes* data)
+    GBytes* data,
+    mms_handler_message_notify_complete_fn cb,
+    void* param)
 {
     MMSHandlerTest* test = MMS_HANDLER_TEST(handler);
-    if (test->flags & MMS_HANDLER_TEST_FLAG_REJECT_NOTIFY) {
+    MMSHandlerMessageNotifyCall* notify = g_new0(MMSHandlerMessageNotifyCall,1);
+    mms_handler_ref(handler);
+    mms_handler_busy_inc(handler);
+    notify->test = test;
+    notify->cb = cb;
+    notify->param = param;
+    if (test->prenotify_fn && !test->prenotify_fn(handler, imsi, from, subj,
+        expiry, data, test->prenotify_data)) {
         MMS_DEBUG("Rejecting push imsi=%s from=%s subj=%s", imsi, from, subj);
-        return NULL;
     } else {
         MMSHandlerRecordReceive* recv = g_new0(MMSHandlerRecordReceive, 1);
         char* id = g_strdup_printf("%u", (++test->last_id));
@@ -336,34 +453,88 @@ mms_handler_test_message_notify(
         recv->data = g_bytes_ref(data);
         MMS_DEBUG("Push %s imsi=%s from=%s subj=%s", id, imsi, from, subj);
         g_hash_table_replace(test->recs, id, &recv->rec);
+        recv->notify = notify;
+        notify->recv = recv;
         if (test->dispatcher) {
             MMS_DEBUG("Deferring push");
             recv->defer_id = g_idle_add(mms_handler_test_receive, recv);
             recv->dispatcher = mms_dispatcher_ref(test->dispatcher);
-            return g_strdup("");
+            notify->id = g_strdup("");
         } else {
-            return g_strdup(id);
+            notify->id = g_strdup(id);
         }
+    }
+    notify->defer_id = g_idle_add(mms_handler_test_notify, notify);
+    return notify;
+}
+
+static
+void
+mms_handler_test_received_call_delete(
+    MMSHandlerMessageReceivedCall* call)
+{
+    mms_handler_busy_dec(call->handler);
+    mms_handler_unref(call->handler);
+    mms_message_unref(call->msg);
+    g_free(call);
+}
+
+static
+void
+mms_handler_test_message_received_cancel(
+    MMSHandler* handler,
+    MMSHandlerMessageReceivedCall* call)
+{
+    if (call) {
+        if (call->defer_id) g_source_remove(call->defer_id);
+        mms_handler_test_received_call_delete(call);
     }
 }
 
 static
 gboolean
-mms_handler_test_message_received(
-    MMSHandler* h,
-    MMSMessage* msg)
+mms_handler_test_received_done(
+    gpointer data)
 {
+    MMSHandlerMessageReceivedCall* call = data;
+    if (call->cb) call->cb(call, call->msg, TRUE, call->param);
+    mms_handler_test_received_call_delete(call);
+    return FALSE;
+}
+
+static
+MMSHandlerMessageReceivedCall*
+mms_handler_test_message_received(
+    MMSHandler* handler,
+    MMSMessage* msg,
+    mms_handler_message_received_complete_fn cb,
+    void* param)
+{
+    MMSHandlerTest* test = MMS_HANDLER_TEST(handler);
     MMSHandlerRecordReceive* recv =
-    mms_handler_test_get_receive_record(MMS_HANDLER_TEST(h), msg->id);
+    mms_handler_test_get_receive_record(test, msg->id);
     MMS_DEBUG("Message %s from=%s subj=%s", msg->id, msg->from, msg->subject);
     MMS_ASSERT(recv);
-    if (recv) {
+    if (recv) { 
+        MMSHandlerMessageReceivedCall* call =
+        g_new0(MMSHandlerMessageReceivedCall,1);
         MMS_ASSERT(!recv->msg);
         mms_message_unref(recv->msg);
         recv->msg = mms_message_ref(msg);
-        return TRUE;
+        mms_handler_busy_inc(handler);
+
+        if (test->msgreceived_fn) {
+            test->msgreceived_fn(handler, msg, test->msgreceived_data);
+        }
+
+        call->handler = mms_handler_ref(handler);
+        call->msg = mms_message_ref(msg);
+        call->cb = cb;
+        call->param = param;
+        call->defer_id = g_idle_add(mms_handler_test_received_done, call);
+        return call;
     } else {
-        return FALSE;
+        return NULL;
     }
 }
 
@@ -513,10 +684,13 @@ mms_handler_test_class_init(
 {
     G_OBJECT_CLASS(klass)->finalize = mms_handler_test_finalize;
     klass->fn_message_notify = mms_handler_test_message_notify;
+    klass->fn_message_notify_cancel = mms_handler_test_message_notify_cancel;
+    klass->fn_message_received = mms_handler_test_message_received;
+    klass->fn_message_received_cancel =
+        mms_handler_test_message_received_cancel;
     klass->fn_message_sent = mms_handler_test_message_sent;
     klass->fn_message_send_state_changed =
         mms_handler_test_message_send_state_changed;
-    klass->fn_message_received = mms_handler_test_message_received;
     klass->fn_message_receive_state_changed =
         mms_handler_test_message_receive_state_changed;
     klass->fn_delivery_report =  mms_handler_test_delivery_report;
@@ -549,11 +723,39 @@ mms_handler_test_defer_receive(
 }
 
 void
-mms_handler_test_reject_receive(
-    MMSHandler* handler)
+mms_handler_test_set_prenotify_fn(
+    MMSHandler* handler,
+    mms_handler_test_prenotify_fn cb,
+    void* user_data)
 {
     MMSHandlerTest* test = MMS_HANDLER_TEST(handler);
-    test->flags |= MMS_HANDLER_TEST_FLAG_REJECT_NOTIFY;
+    MMS_ASSERT(!test->prenotify_fn);
+    test->prenotify_fn = cb;
+    test->prenotify_data = user_data;
+}
+
+void
+mms_handler_test_set_postnotify_fn(
+    MMSHandler* handler,
+    mms_handler_test_postnotify_fn cb,
+    void* user_data)
+{
+    MMSHandlerTest* test = MMS_HANDLER_TEST(handler);
+    MMS_ASSERT(!test->postnotify_fn);
+    test->postnotify_fn = cb;
+    test->postnotify_data = user_data;
+}
+
+void
+mms_handler_test_set_msgreceived_fn(
+    MMSHandler* handler,
+    mms_handler_test_msgreceived_fn cb,
+    void* user_data)
+{
+    MMSHandlerTest* test = MMS_HANDLER_TEST(handler);
+    MMS_ASSERT(!test->msgreceived_fn);
+    test->msgreceived_fn = cb;
+    test->msgreceived_data = user_data;
 }
 
 void
@@ -564,7 +766,12 @@ mms_handler_test_reset(
     g_hash_table_remove_all(test->recs);
     mms_dispatcher_unref(test->dispatcher);
     test->dispatcher = NULL;
-    test->flags = 0;
+    test->prenotify_fn = NULL;
+    test->prenotify_data = NULL;
+    test->postnotify_fn = NULL;
+    test->postnotify_data = NULL;
+    test->msgreceived_fn = NULL;
+    test->msgreceived_data = NULL;
 }
 
 /*

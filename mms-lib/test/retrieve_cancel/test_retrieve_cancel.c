@@ -28,11 +28,9 @@ typedef struct test_desc {
     const char* name;
     const guint8* pdu;
     gsize pdusize;
-    int flags;
-
-#define TEST_ASYNC_CANCEL (0x01)
-#define TEST_ACCEPT_MSG   (0x02)
-
+    int retry_secs;
+    mms_handler_test_prenotify_fn prenotify_fn;
+    mms_handler_test_postnotify_fn postnotify_fn;
 } TestDesc;
 
 typedef struct test {
@@ -78,11 +76,12 @@ static
 void
 test_init(
     Test* test,
-    const MMSConfig* config,
+    MMSConfig* config,
     const TestDesc* desc)
 {
     MMSSettings* settings = mms_settings_default_new(config);
     memset(test, 0, sizeof(*test));
+    config->retry_secs = desc->retry_secs;
     test->desc = desc;
     test->cm = mms_connman_test_new();
     test->handler = mms_handler_test_new();
@@ -93,6 +92,14 @@ test_init(
     mms_dispatcher_set_delegate(test->disp, &test->delegate);
     test->timeout_id = g_timeout_add_seconds(10, test_timeout, test);
     mms_settings_unref(settings);
+    if (desc->prenotify_fn) {
+        mms_handler_test_set_prenotify_fn(test->handler,
+            desc->prenotify_fn, test);
+    }
+    if (desc->postnotify_fn) {
+        mms_handler_test_set_postnotify_fn(test->handler,
+            desc->postnotify_fn, test);
+    }
     test->ret = RET_ERR;
 }
 
@@ -114,67 +121,76 @@ test_finalize(
 }
 
 static
-char*
-test_msg_id(
-    MMSHandler* handler,
-    void* param)
-{
-    Test* test = param;
-    MMS_ASSERT(!test->id);
-    if (test->id) {
-        test->ret = RET_ERR;
-        g_main_loop_quit(test->loop);
-        return NULL;
-    } else if (test->desc->flags & TEST_ACCEPT_MSG) {
-        return g_strdup(test->id = g_strdup("21285"));
-    } else {
-        return NULL;
-    }
-}
-
-static
 gboolean
 test_cancel(
     void* param)
 {
     Test* test = param;
     test->cancel_id = 0;
-    MMS_DEBUG("Asynchronous cancel %s", test->id);
+    MMS_DEBUG("Asynchronous cancel %s", test->id ? test->id : "all");
     mms_dispatcher_cancel(test->disp, test->id);
     return FALSE;
 }
 
 static
 void
-test_connect(
-    MMSConnMan* cm,
+test_postnotify_cancel_async(
+    MMSHandler* handler,
+    const char* id,
     void* param)
 {
     Test* test = param;
-    if (test->desc->flags & TEST_ASYNC_CANCEL) {
-        if (!test->cancel_id) {
-            test->cancel_id = g_idle_add_full(G_PRIORITY_HIGH,
-                test_cancel, test, NULL);
-        }
-    } else {
-        MMS_DEBUG("Synchronous cancel %s", test->id ? test->id : "all");
-        mms_dispatcher_cancel(test->disp, test->id);
-    }
+    MMS_ASSERT(!test->id);
+    MMS_ASSERT(!test->cancel_id);
+    MMS_DEBUG("Scheduling asynchronous cancel for %s", id);
+    test->id = g_strdup(id);
+    test->cancel_id = g_idle_add_full(G_PRIORITY_HIGH, test_cancel, test, NULL);
+}
+
+static
+void
+test_postnotify_cancel(
+    MMSHandler* handler,
+    const char* id,
+    void* param)
+{
+    Test* test = param;
+    MMS_DEBUG("Cancel all");
+    mms_dispatcher_cancel(test->disp, NULL);
+}
+
+static
+gboolean
+test_prenotify_cancel_async(
+    MMSHandler* handler,
+    const char* imsi,
+    const char* from,
+    const char* subject,
+    time_t expiry,
+    GBytes* data,
+    void* param)
+{
+    Test* test = param;
+    MMS_ASSERT(!test->cancel_id);
+    /* High priority item gets executed before notification is completed */
+    MMS_DEBUG("Scheduling asynchronous cancel");
+    test->cancel_id = g_idle_add_full(G_PRIORITY_HIGH, test_cancel, test, NULL);
+    return TRUE;
 }
 
 static
 int
 test_once(
-    const MMSConfig* config,
     const TestDesc* desc)
 {
     Test test;
+    MMSConfig config;
     GError* error = NULL;
     MMS_VERBOSE(">>>>>>>>>>>>>> %s <<<<<<<<<<<<<<", desc->name);
-    test_init(&test, config, desc);
+    mms_lib_default_config(&config);
+    config.root_dir = "."; /* Dispatcher will attempt to create it */
+    test_init(&test, &config, desc);
     if (mms_dispatcher_handle_push(test.disp, "IMSI", test.pdu, &error)) {
-        mms_connman_set_connection_requested_cb(test.cm, test_connect, &test);
-        mms_handler_set_message_id_cb(test.handler, test_msg_id, &test);
         if (mms_dispatcher_start(test.disp)) {
             test.ret = RET_OK;
             g_main_loop_run(test.loop);
@@ -188,8 +204,7 @@ test_once(
 
 static
 int
-test(
-    const MMSConfig* config)
+test_run()
 {
     /*
      * WSP header:
@@ -244,19 +259,22 @@ test(
 
     static const TestDesc tests[] = {
         {
-            "AsyncCancel", plus_259199_sec, sizeof(plus_259199_sec),
-            TEST_ASYNC_CANCEL | TEST_ACCEPT_MSG
+            "SyncCancel", plus_259199_sec, sizeof(plus_259199_sec), 0,
+            NULL, test_postnotify_cancel
         },{
-            "SyncCancel", plus_259199_sec, sizeof(plus_259199_sec),
-            TEST_ACCEPT_MSG
+            "AsyncCancelBefore", plus_259199_sec, sizeof(plus_259199_sec), 0,
+            test_prenotify_cancel_async, NULL
         },{
-            "NoHandler", plus_1_sec, sizeof(plus_1_sec), 0
+            "AsyncCancelAfter", plus_259199_sec, sizeof(plus_259199_sec), 0,
+            NULL, test_postnotify_cancel_async
+        },{
+            "Reject", plus_1_sec, sizeof(plus_1_sec), 1, NULL, NULL
         }
     };
 
     int i, ret = RET_OK;
     for (i=0; i<G_N_ELEMENTS(tests); i++) {
-        int test_status = test_once(config, tests + i);
+        int test_status = test_once(tests + i);
         if (ret == RET_OK && test_status != RET_OK) ret = test_status;
     }
     return ret;
@@ -265,11 +283,7 @@ test(
 int main(int argc, char* argv[])
 {
     int ret;
-    MMSConfig config;
     mms_lib_init(argv[0]);
-    mms_lib_default_config(&config);
-    config.retry_secs = 0;
-    config.root_dir = "."; /* Dispatcher will attempt to create it */
     mms_log_default.name = "test_retrieve_cancel";
     if (argc > 1 && !strcmp(argv[1], "-v")) {
         mms_log_stdout_timestamp = TRUE;
@@ -278,7 +292,7 @@ int main(int argc, char* argv[])
         mms_log_stdout_timestamp = FALSE;
         mms_log_default.level = MMS_LOGLEVEL_INFO;
     }
-    ret = test(&config);
+    ret = test_run();
     mms_lib_deinit();
     return ret;
 }

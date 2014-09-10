@@ -56,35 +56,76 @@ typedef enum _mmm_delivery_status {
 /* Read status */
 typedef MMSReadStatus MMS_READ_STATUS;
 
+/* Handler event callback */
+typedef void
+(*mms_handler_event_fn)(
+    MMSHandler* handler,
+    void* param);
+
+/* Asynchronous incoming message notification. Non-empty message id means
+ * that we start download the message immediately, empty string means that
+ * download is postponed, NULL id means that an error has occured. */
+typedef struct mms_handler_message_notify_call MMSHandlerMessageNotifyCall;
+typedef void
+(*mms_handler_message_notify_complete_fn)(
+    MMSHandlerMessageNotifyCall* call,
+    const char* id,
+    void* param);
+
+/* Asynchronous message received notification. Note that the files associated
+ * with MMSMessage must not be deleted until after the call completes. The
+ * call context is carrying a reference to MMSMessage with it, that should
+ * take care of it even if the caller drops its reference immediately after
+ * submitting the call. */
+typedef struct mms_handler_message_received_call MMSHandlerMessageReceivedCall;
+typedef void
+(*mms_handler_message_received_complete_fn)(
+    MMSHandlerMessageReceivedCall* call,
+    MMSMessage* msg,
+    gboolean ok,
+    void* param);
+
 /* Instance */
 struct mms_handler {
     GObject object;
+    int busy;
 };
 
 /* Class */
 typedef struct mms_handler_class {
     GObjectClass parent;
 
-    /* New incoming message notification. Returns the handler message id
-     * to start download immediately, NULL or empty string to postpone it. */
-    char* (*fn_message_notify)(
+    /* New incoming message notification (cancellable) */
+    MMSHandlerMessageNotifyCall* (*fn_message_notify)(
         MMSHandler* handler,        /* Handler instance */
         const char* imsi,           /* Subscriber identity */
         const char* from,           /* Sender's phone number */
         const char* subject,        /* Subject (optional) */
         time_t expiry,              /* Message expiry time */
-        GBytes* push);              /* Raw push message */
+        GBytes* push,               /* Raw push message */
+        mms_handler_message_notify_complete_fn cb,
+        void* param);
+
+    void (*fn_message_notify_cancel)(
+        MMSHandler* handler,
+        MMSHandlerMessageNotifyCall* call);
+
+    /* Message has been successfully received (cancellable) */
+    MMSHandlerMessageReceivedCall* (*fn_message_received)(
+        MMSHandler* handler,        /* Handler instance */
+        MMSMessage* msg,            /* Decoded message  */
+        mms_handler_message_received_complete_fn cb,
+        void* param);
+
+    void (*fn_message_received_cancel)(
+        MMSHandler* handler,
+        MMSHandlerMessageReceivedCall* call);
 
     /* Sets the receive state */
     gboolean (*fn_message_receive_state_changed)(
         MMSHandler* handler,        /* Handler instance */
         const char* id,             /* Handler record id */
         MMS_RECEIVE_STATE state);   /* Receive state */
-
-    /* Message has been successfully received */
-    gboolean (*fn_message_received)(
-        MMSHandler* handler,        /* Handler instance */
-        MMSMessage* msg);           /* Decoded message  */
 
     /* Sets the send state */
     gboolean (*fn_message_send_state_changed)(
@@ -127,25 +168,39 @@ void
 mms_handler_unref(
     MMSHandler* handler);
 
-char*
+MMSHandlerMessageNotifyCall*
 mms_handler_message_notify(
     MMSHandler* handler,            /* Handler instance */
     const char* imsi,               /* Subscriber identity */
     const char* from,               /* Sender's phone number */
     const char* subject,            /* Subject (optional) */
     time_t expiry,                  /* Message expiry time */
-    GBytes* push);                  /* Raw push message */
+    GBytes* push,                   /* Raw push message */
+    mms_handler_message_notify_complete_fn cb,
+    void* param);
+
+void
+mms_handler_message_notify_cancel(
+    MMSHandler* handler,
+    MMSHandlerMessageNotifyCall* call);
+
+MMSHandlerMessageReceivedCall*
+mms_handler_message_received(
+    MMSHandler* handler,            /* Handler instance */
+    MMSMessage* msg,                /* Decoded message  */
+    mms_handler_message_received_complete_fn cb,
+    void* param);
+
+void
+mms_handler_message_received_cancel(
+    MMSHandler* handler,
+    MMSHandlerMessageReceivedCall* call);
 
 gboolean
 mms_handler_message_receive_state_changed(
     MMSHandler* handler,            /* Handler instance */
     const char* id,                 /* Handler record id */
     MMS_RECEIVE_STATE state);       /* Receive state */
-
-gboolean
-mms_handler_message_received(
-    MMSHandler* handler,            /* Handler instance */
-    MMSMessage* msg);               /* Decoded message  */
 
 gboolean
 mms_handler_message_send_state_changed(
@@ -174,6 +229,26 @@ mms_handler_read_report(
     const char* msgid,              /* Message id assigned by operator */
     const char* recipient,          /* Recipient's phone number */
     MMS_READ_STATUS rs);            /* Read status */
+
+void
+mms_handler_busy_update(
+    MMSHandler* handler,            /* Handler instance */
+    int change);                    /* Normally +1 or -1 */
+
+gulong
+mms_handler_add_done_callback(
+    MMSHandler* handler,            /* Handler instance */
+    mms_handler_event_fn fn,        /* Callback function */
+    void* param);                   /* Callback parameter */
+
+void
+mms_handler_remove_callback(
+    MMSHandler* handler,            /* Handler instance */
+    gulong handler_id);             /* Idenfies the callback to remove */
+
+#define mms_handler_busy(handler) ((handler) && ((handler)->busy > 0))
+#define mms_handler_busy_inc(handler) mms_handler_busy_update(handler,1)
+#define mms_handler_busy_dec(handler) mms_handler_busy_update(handler,-1)
 
 #endif /* JOLLA_MMS_HANDLER_H */
 

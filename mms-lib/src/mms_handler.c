@@ -27,12 +27,22 @@ G_DEFINE_TYPE(MMSHandler, mms_handler, G_TYPE_OBJECT);
 #define MMS_HANDLER_GET_CLASS(obj)  \
     (G_TYPE_INSTANCE_GET_CLASS((obj), MMS_TYPE_HANDLER, MMSHandlerClass))
 
+enum {
+    MMS_HANDLER_SIGNAL_DONE,
+    MMS_HANDLER_SIGNAL_COUNT
+};
+
+#define MMS_HANDLER_SIGNAL_DONE_NAME "done"
+
+static guint mms_handler_signals[MMS_HANDLER_SIGNAL_COUNT] = { 0 };
+
 static
 void
 mms_handler_finalize(
     GObject* object)
 {
     MMS_VERBOSE_("%p", object);
+    MMS_ASSERT(!MMS_HANDLER(object)->busy);
     G_OBJECT_CLASS(mms_handler_parent_class)->finalize(object);
 }
 
@@ -41,7 +51,12 @@ void
 mms_handler_class_init(
     MMSHandlerClass* klass)
 {
-    G_OBJECT_CLASS(klass)->finalize = mms_handler_finalize;
+    GObjectClass* object_class = G_OBJECT_CLASS(klass);
+    mms_handler_signals[MMS_HANDLER_SIGNAL_DONE] =
+        g_signal_new(MMS_HANDLER_SIGNAL_DONE_NAME,
+            G_OBJECT_CLASS_TYPE(klass), G_SIGNAL_RUN_FIRST,
+            0, NULL, NULL, NULL, G_TYPE_NONE, 0);
+    object_class->finalize = mms_handler_finalize;
 }
 
 static
@@ -73,25 +88,94 @@ mms_handler_unref(
     }
 }
 
-char*
+gulong
+mms_handler_add_done_callback(
+    MMSHandler* h,
+    mms_handler_event_fn fn,
+    void* param)
+{
+    if (h && fn) {
+        return g_signal_connect_data(h, MMS_HANDLER_SIGNAL_DONE_NAME,
+            G_CALLBACK(fn), param, NULL, 0);
+    }
+    return 0;
+}
+
+void
+mms_handler_remove_callback(
+    MMSHandler* h,
+    gulong handler_id)
+{
+    if (h && handler_id) g_signal_handler_disconnect(h, handler_id);
+}
+
+MMSHandlerMessageNotifyCall*
 mms_handler_message_notify(
     MMSHandler* h,
     const char* imsi,
     const char* from,
-    const char* subj,
-    time_t exp,
-    GBytes* push)
+    const char* subject,
+    time_t expiry,
+    GBytes* push,
+    mms_handler_message_notify_complete_fn cb,
+    void* param)
 {
     if (h) {
         MMSHandlerClass* klass = MMS_HANDLER_GET_CLASS(h);
         if (klass->fn_message_notify) {
             if (!from) from = "";
-            if (!subj) subj = "";
-            return klass->fn_message_notify(h, imsi, from, subj, exp, push);
+            if (!subject) subject = "";
+            return klass->fn_message_notify(h, imsi, from, subject, expiry,
+                push, cb, param);
         }
         MMS_ERR("mms_handler_message_notify not implemented");
     }
     return NULL;
+}
+
+void
+mms_handler_message_notify_cancel(
+    MMSHandler* h,
+    MMSHandlerMessageNotifyCall* call)
+{
+    if (h && call) {
+        MMSHandlerClass* klass = MMS_HANDLER_GET_CLASS(h);
+        if (klass->fn_message_notify_cancel) {
+            return klass->fn_message_notify_cancel(h, call);
+        }
+        MMS_ERR("mms_handler_message_notify_cancel not implemented");
+    }
+}
+
+MMSHandlerMessageReceivedCall*
+mms_handler_message_received(
+    MMSHandler* h,
+    MMSMessage* msg,
+    mms_handler_message_received_complete_fn cb,
+    void* param)
+{
+    if (h) {
+        MMSHandlerClass* klass = MMS_HANDLER_GET_CLASS(h);
+        if (klass->fn_message_received) {
+            return klass->fn_message_received(h, msg, cb, param);
+        }
+        MMS_ERR("mms_handler_message_received not implemented");
+    }
+    return FALSE;
+}
+
+void
+mms_handler_message_received_cancel(
+    MMSHandler* h,
+    MMSHandlerMessageReceivedCall* call)
+{
+    if (h && call) {
+        MMSHandlerClass* klass = MMS_HANDLER_GET_CLASS(h);
+        if (klass->fn_message_received_cancel) {
+            return klass->fn_message_received_cancel(h, call);
+        }
+        MMS_ERR("mms_handler_message_notify_cancel not implemented");
+    }
 }
 
 gboolean
@@ -106,21 +190,6 @@ mms_handler_message_receive_state_changed(
             return klass->fn_message_receive_state_changed(h, id, state);
         }
         MMS_ERR("mms_handler_message_receive_state_changed not implemented");
-    }
-    return FALSE;
-}
-
-gboolean
-mms_handler_message_received(
-    MMSHandler* h,
-    MMSMessage* msg)
-{
-    if (h) {
-        MMSHandlerClass* klass = MMS_HANDLER_GET_CLASS(h);
-        if (klass->fn_message_received) {
-            return klass->fn_message_received(h, msg);
-        }
-        MMS_ERR("mms_handler_message_received not implemented");
     }
     return FALSE;
 }
@@ -191,6 +260,21 @@ mms_handler_read_report(
         MMS_ERR("mms_handler_read_report not implemented");
     }
     return FALSE;
+}
+
+void
+mms_handler_busy_update(
+    MMSHandler* h,
+    int change)
+{
+    MMS_ASSERT(change);
+    if (h && change) {
+        h->busy += change;
+        MMS_ASSERT(h->busy >= 0);
+        if (h->busy < 1) {
+            g_signal_emit(h, mms_handler_signals[MMS_HANDLER_SIGNAL_DONE], 0);
+        }
+    }
 }
 
 /*

@@ -43,6 +43,7 @@ struct mms_dispatcher {
     GQueue* tasks;
     guint next_run_id;
     guint network_idle_id;
+    gulong handler_done_id;
     gboolean started;
 };
 
@@ -261,7 +262,8 @@ mms_dispatcher_is_active(
     MMSDispatcher* disp)
 {
     return disp && (mms_connection_is_active(disp->connection) ||
-        disp->active_task || !g_queue_is_empty(disp->tasks));
+        mms_handler_busy(disp->handler) || disp->active_task ||
+        !g_queue_is_empty(disp->tasks));
 }
 
 /**
@@ -640,6 +642,20 @@ mms_dispatcher_delegate_task_state_changed(
 }
 
 /**
+ * Handler state callback
+ */
+static
+void
+mms_dispatcher_handler_done(
+    MMSHandler* handler,
+    void* param)
+{
+    MMSDispatcher* disp = param;
+    MMS_VERBOSE("Handler has nothing to do");
+    mms_dispatcher_next_run_schedule(disp);
+}
+
+/**
  * Creates the dispatcher object. Caller must clal mms_dispatcher_unref
  * when it no longer needs it.
  */
@@ -661,6 +677,8 @@ mms_dispatcher_new(
         mms_dispatcher_delegate_task_state_changed;
     disp->connection_delegate.fn_connection_state_changed =
         mms_dispatcher_delegate_connection_state_changed;
+    disp->handler_done_id = mms_handler_add_done_callback(handler,
+        mms_dispatcher_handler_done, disp);
     return disp;
 }
 
@@ -676,6 +694,7 @@ mms_dispatcher_finalize(
     const char* root_dir = disp->settings->config->root_dir;
     char* msg_dir = g_strconcat(root_dir, "/" MMS_MESSAGE_DIR "/", NULL);
     MMS_VERBOSE_("");
+    mms_handler_remove_callback(disp->handler, disp->handler_done_id);
     mms_dispatcher_drop_connection(disp);
     while ((task = g_queue_pop_head(disp->tasks)) != NULL) {
         task->delegate = NULL;
