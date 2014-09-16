@@ -271,7 +271,8 @@ mms_task_set_state(
 /* Utilities */
 
 static const char* mms_task_names[] = {"READY", "NEED_CONNECTION",
-    "NEED_USER_CONNECTION", "TRANSMITTING", "WORKING", "SLEEP", "DONE"
+    "NEED_USER_CONNECTION", "TRANSMITTING", "WORKING", "PENDING",
+    "SLEEP", "DONE"
 };
 G_STATIC_ASSERT(G_N_ELEMENTS(mms_task_names) == MMS_TASK_STATE_COUNT);
 

@@ -30,7 +30,8 @@ typedef enum _MMS_TASK_STATE {
     MMS_TASK_STATE_NEED_USER_CONNECTION, /* Connection requested by user */
     MMS_TASK_STATE_TRANSMITTING,         /* Sending or receiving the data */
     MMS_TASK_STATE_WORKING,              /* Active but not using network */
-    MMS_TASK_STATE_SLEEP,                /* Will change state later */
+    MMS_TASK_STATE_PENDING,              /* Waiting for something */
+    MMS_TASK_STATE_SLEEP,                /* Sleeping, will wake up */
     MMS_TASK_STATE_DONE,                 /* Nothing left to do */
     MMS_TASK_STATE_COUNT                 /* Number of valid states */
 } MMS_TASK_STATE;

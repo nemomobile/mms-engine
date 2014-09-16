@@ -30,6 +30,7 @@ typedef struct mms_task_notification {
     MMSTask task;
     MMSPdu* pdu;
     GBytes* push;
+    MMSHandlerMessageNotifyCall* notify;
 } MMSTaskNotification;
 
 G_DEFINE_TYPE(MMSTaskNotification, mms_task_notification, MMS_TYPE_TASK);
@@ -56,6 +57,66 @@ mms_task_notification_write_file(
 }
 
 /**
+ * Rejects the notification
+ */
+static
+void
+mms_task_notification_reject(
+    MMSTaskNotification* ind)
+{
+    mms_task_make_id(&ind->task);
+    mms_task_queue_and_unref(ind->task.delegate,
+        mms_task_notifyresp_new(&ind->task, ind->pdu->transaction_id,
+            MMS_MESSAGE_NOTIFY_STATUS_REJECTED));
+}
+
+/**
+ * Handles response from the MMS handler. Non-empty message id means
+ * that we start download the message immediately, empty string means that
+ * download is postponed, NULL id means that an error has occured.
+ */
+static
+void
+mms_task_notification_done(
+    MMSHandlerMessageNotifyCall* notify,
+    const char* id,
+    void* param)
+{
+    MMSTaskNotification* ind = MMS_TASK_NOTIFICATION(param);
+    MMSTask* task = &ind->task;
+    MMS_ASSERT(ind->notify == notify);
+    ind->notify = NULL;
+    if (id) {
+        if (id[0]) {
+            MMS_DEBUG("  Database id: %s", id);
+            if (task->id) {
+                /* Remove temporary directory and files */
+                char* dir = mms_task_dir(task);
+                char* file = mms_task_file(task, MMS_NOTIFICATION_IND_FILE);
+                remove(file);
+                remove(dir);
+                g_free(file);
+                g_free(dir);
+                g_free(task->id);
+            }
+            task->id = g_strdup(id);
+
+            /* Schedule the download task */
+            if (!mms_task_queue_and_unref(task->delegate,
+                 mms_task_retrieve_new(task->settings, task->handler,
+                 task->id, task->imsi, ind->pdu, NULL))) {
+                mms_handler_message_receive_state_changed(task->handler, id,
+                    MMS_RECEIVE_STATE_DOWNLOAD_ERROR);
+            }
+        }
+        mms_task_set_state(task, MMS_TASK_STATE_DONE);
+    } else if (!mms_task_retry(task)) {
+        mms_task_notification_reject(ind);
+    }
+    mms_task_unref(task);
+}
+
+/**
  * Handles M-Notification.ind PDU
  */
 static
@@ -65,7 +126,6 @@ mms_task_notification_ind(
 {
     MMSTask* task = &ind->task;
     const struct mms_notification_ind* ni = &ind->pdu->ni;
-    char* id;
 
 #if MMS_LOG_DEBUG
     char expiry[128];
@@ -85,38 +145,17 @@ mms_task_notification_ind(
         task->deadline = ni->expiry;
     }
 
-    id = mms_handler_message_notify(task->handler, task->imsi,
-        mms_strip_address_type(ni->from), ni->subject, ni->expiry, ind->push);
-    if (id) {
-        if (id[0]) {
-            MMS_DEBUG("  Database id: %s", id);
-            if (task->id) {
-                /* Remove temporary directory and files */
-                char* dir = mms_task_dir(task);
-                char* file = mms_task_file(task, MMS_NOTIFICATION_IND_FILE);
-                remove(file);
-                remove(dir);
-                g_free(file);
-                g_free(dir);
-                g_free(task->id);
-            }
-            task->id = id;
+    MMS_ASSERT(!ind->notify);
+    mms_task_ref(task);
+    ind->notify = mms_handler_message_notify(task->handler, task->imsi,
+        mms_strip_address_type(ni->from), ni->subject, ni->expiry,
+        ind->push, mms_task_notification_done, ind);
 
-            /* Schedule the download task */
-            if (!mms_task_queue_and_unref(task->delegate,
-                 mms_task_retrieve_new(task->settings, task->handler,
-                 task->id, task->imsi, ind->pdu, NULL))) {
-                mms_handler_message_receive_state_changed(task->handler, id,
-                    MMS_RECEIVE_STATE_DOWNLOAD_ERROR);
-            }
-        } else {
-            g_free(id);
-        }
-    } else if (!mms_task_retry(task)) {
-        mms_task_make_id(task);
-        mms_task_queue_and_unref(task->delegate,
-            mms_task_notifyresp_new(task, ind->pdu->transaction_id,
-                MMS_MESSAGE_NOTIFY_STATUS_REJECTED));
+    if (ind->notify) {
+        mms_task_set_state(task, MMS_TASK_STATE_PENDING);
+    } else {
+        mms_task_unref(task);
+        if (!mms_task_retry(task)) mms_task_notification_reject(ind);
     }
 
     if (task_config(task)->keep_temp_files) {
@@ -256,26 +295,54 @@ mms_task_notification_run(
     }
 }
 
+/**
+ * Cancels the task
+ */
+static
+void
+mms_task_notification_cancel(
+    MMSTask* task)
+{
+    MMSTaskNotification* ind = MMS_TASK_NOTIFICATION(task);
+    if (ind->notify) {
+        mms_handler_message_notify_cancel(task->handler, ind->notify);
+        ind->notify = NULL;
+        mms_task_unref(task);
+    }
+    MMS_TASK_CLASS(mms_task_notification_parent_class)->fn_cancel(task);
+}
+
+/**
+ * Final stage of deinitialization
+ */
 static
 void
 mms_task_notification_finalize(
     GObject* object)
 {
     MMSTaskNotification* ind = MMS_TASK_NOTIFICATION(object);
+    MMS_ASSERT(!ind->notify);
     g_bytes_unref(ind->push);
     mms_message_free(ind->pdu);
     G_OBJECT_CLASS(mms_task_notification_parent_class)->finalize(object);
 }
 
+/**
+ * Per class initializer
+ */
 static
 void
 mms_task_notification_class_init(
     MMSTaskNotificationClass* klass)
 {
     klass->fn_run = mms_task_notification_run;
+    klass->fn_cancel = mms_task_notification_cancel;
     G_OBJECT_CLASS(klass)->finalize = mms_task_notification_finalize;
 }
 
+/**
+ * Per instance initializer
+ */
 static
 void
 mms_task_notification_init(

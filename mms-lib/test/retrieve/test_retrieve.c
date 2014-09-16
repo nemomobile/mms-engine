@@ -58,6 +58,7 @@ typedef struct test_desc {
 #define TEST_REJECT_RECEIVE           (0x04)
 #define TEST_CONNECTION_FAILURE       (0x08)
 #define TEST_OFFLINE                  (0x10)
+#define TEST_CANCEL_RECEIVED          (0x20)
 
 } TestDesc;
 
@@ -165,6 +166,18 @@ static const TestDesc retrieve_tests[] = {
         MMS_MESSAGE_TYPE_ACKNOWLEDGE_IND,
         TEST_PARTS(retrieve_success1_parts),
         TEST_DEFER_RECEIVE
+    },{
+        "CancelReceive",
+        "Success1",
+        "m-notification.ind",
+        "m-retrieve.conf",
+        SOUP_STATUS_OK,
+        MMS_CONTENT_TYPE,
+        NULL,
+        MMS_RECEIVE_STATE_DECODING,
+        MMS_MESSAGE_TYPE_ACKNOWLEDGE_IND,
+        TEST_PARTS(retrieve_success1_parts),
+        TEST_DEFER_RECEIVE | TEST_CANCEL_RECEIVED
      },{
         "Expired1",
         NULL,
@@ -460,6 +473,56 @@ test_timeout(
 
 static
 gboolean
+test_notify(
+    MMSHandler* handler,
+    const char* imsi,
+    const char* from,
+    const char* subject,
+    time_t expiry,
+    GBytes* data,
+    void* param)
+{
+    Test* test = param;
+    return !(test->desc->flags & TEST_REJECT_RECEIVE);
+}
+
+typedef struct test_cancel_msg {
+    MMSDispatcher* disp;
+    MMSMessage* msg;
+} TestCancelMsg;
+
+static
+gboolean
+test_cancel_msg_proc(
+    void* param)
+{
+   TestCancelMsg* cancel = param;
+   MMS_VERBOSE("Cancelling message %s", cancel->msg->id);
+   mms_dispatcher_cancel(cancel->disp, cancel->msg->id);
+   mms_dispatcher_unref(cancel->disp);
+   mms_message_unref(cancel->msg);
+   g_free(cancel);
+   return FALSE;
+}
+
+static
+void
+test_msgreceived(
+    MMSHandler* handler,
+    MMSMessage* msg,
+    void* param)
+{
+    Test* test = param;
+    if (test->desc->flags & TEST_CANCEL_RECEIVED) {
+        TestCancelMsg* cancel = g_new(TestCancelMsg,1);
+        cancel->disp = mms_dispatcher_ref(test->disp);
+        cancel->msg = mms_message_ref(msg);
+        g_idle_add_full(G_PRIORITY_HIGH, test_cancel_msg_proc, cancel, NULL);
+    }
+}
+
+static
+gboolean
 test_init(
     Test* test,
     const MMSConfig* config,
@@ -497,12 +560,12 @@ test_init(
             if (desc->flags & TEST_OFFLINE) {
                 mms_connman_test_set_offline(test->cm, TRUE);
             }
-            if (desc->flags & TEST_REJECT_RECEIVE) {
-                mms_handler_test_reject_receive(test->handler);
-            }
             if (desc->flags & TEST_DEFER_RECEIVE) {
                 mms_handler_test_defer_receive(test->handler, test->disp);
             }
+            mms_handler_test_set_prenotify_fn(test->handler, test_notify, test);
+            mms_handler_test_set_msgreceived_fn(test->handler,
+                test_msgreceived, test);
             mms_settings_unref(settings);
             test->ret = RET_ERR;
             ok = TRUE;

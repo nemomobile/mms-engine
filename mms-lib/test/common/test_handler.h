@@ -40,6 +40,19 @@ mms_handler_test_receive_state(
     MMSHandler* handler,
     const char* id);
 
+typedef void
+(*mms_handler_test_get_received_message_fn)(
+    const char* id,
+    MMSMessage* msg,
+    GBytes* data,
+    void* user_data);
+
+int
+mms_handler_test_foreach_received_message(
+    MMSHandler* handler,
+    mms_handler_test_get_received_message_fn cb,
+    void* user_data);
+
 MMSMessage*
 mms_handler_test_get_received_message(
     MMSHandler* handler,
@@ -65,9 +78,45 @@ mms_handler_test_defer_receive(
     MMSHandler* handler,
     MMSDispatcher* dispatcher);
 
+typedef gboolean
+(*mms_handler_test_prenotify_fn)(
+    MMSHandler* handler,
+    const char* imsi,
+    const char* from,
+    const char* subject,
+    time_t expiry,
+    GBytes* data,
+    void* user_data);
+
+typedef void
+(*mms_handler_test_postnotify_fn)(
+    MMSHandler* handler,
+    const char* id,
+    void* user_data);
+
+typedef void
+(*mms_handler_test_msgreceived_fn)(
+    MMSHandler* handler,
+    MMSMessage* msg,
+    void* user_data);
+
 void
-mms_handler_test_reject_receive(
-    MMSHandler* handler);
+mms_handler_test_set_prenotify_fn(
+    MMSHandler* handler,
+    mms_handler_test_prenotify_fn cb,
+    void* user_data);
+
+void
+mms_handler_test_set_postnotify_fn(
+    MMSHandler* handler,
+    mms_handler_test_postnotify_fn cb,
+    void* user_data);
+
+void
+mms_handler_test_set_msgreceived_fn(
+    MMSHandler* handler,
+    mms_handler_test_msgreceived_fn cb,
+    void* user_data);
 
 void
 mms_handler_test_reset(

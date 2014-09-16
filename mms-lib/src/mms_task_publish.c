@@ -25,6 +25,7 @@ typedef MMSTaskClass MMSTaskPublishClass;
 typedef struct mms_task_publish {
     MMSTask task;
     MMSMessage* msg;
+    MMSHandlerMessageReceivedCall* call;
 } MMSTaskPublish;
 
 G_DEFINE_TYPE(MMSTaskPublish, mms_task_publish, MMS_TYPE_TASK);
@@ -34,15 +35,54 @@ G_DEFINE_TYPE(MMSTaskPublish, mms_task_publish, MMS_TYPE_TASK);
 
 static
 void
+mms_task_publish_done(
+    MMSHandlerMessageReceivedCall* call,
+    MMSMessage* msg,
+    gboolean ok,
+    void* param)
+{
+    MMSTaskPublish* pub = MMS_TASK_PUBLISH(param);
+    if (ok) {
+        MMS_DEBUG("Done");
+        mms_task_set_state(&pub->task, MMS_TASK_STATE_DONE);
+    } else if (mms_task_retry(&pub->task)) {
+        MMS_ERR("Failed to publish the message, will retry later...");
+    } else {
+        MMS_ERR("Failed to publish the message");
+    }
+    mms_task_unref(&pub->task);
+}
+
+static
+void
 mms_task_publish_run(
     MMSTask* task)
 {
     MMSTaskPublish* pub = MMS_TASK_PUBLISH(task);
-    if (mms_handler_message_received(task->handler, pub->msg)) {
-        mms_task_set_state(task, MMS_TASK_STATE_DONE);
+    MMS_ASSERT(!pub->call);
+    mms_task_ref(task);
+    pub->call = mms_handler_message_received(task->handler, pub->msg,
+        mms_task_publish_done, pub);
+    if (pub->call) {
+        mms_task_set_state(task, MMS_TASK_STATE_PENDING);
     } else {
-        mms_task_set_state(task, MMS_TASK_STATE_SLEEP);
+        mms_task_unref(task);
+        mms_task_retry(task);
     }
+}
+
+static
+void
+mms_task_publish_cancel(
+    MMSTask* task)
+{
+    MMSTaskPublish* pub = MMS_TASK_PUBLISH(task);
+    if (pub->call) {
+        mms_handler_message_received_cancel(task->handler, pub->call);
+        pub->call = NULL;
+        mms_task_unref(task);
+    }
+    MMS_TASK_CLASS(mms_task_publish_parent_class)->fn_cancel(task);
 }
 
 static
@@ -61,6 +101,7 @@ mms_task_publish_class_init(
     MMSTaskPublishClass* klass)
 {
     klass->fn_run = mms_task_publish_run;
+    klass->fn_cancel = mms_task_publish_cancel;
     G_OBJECT_CLASS(klass)->finalize = mms_task_publish_finalize;
 }
 
