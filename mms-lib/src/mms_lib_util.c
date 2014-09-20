@@ -13,10 +13,7 @@
  */
 
 #include "mms_lib_util.h"
-#include "mms_file_util.h"
-#include "mms_message.h"
-#include "mms_task.h"
-#include "mms_log.h"
+#include "mms_settings.h"
 
 #ifdef MMS_RESIZE_IMAGEMAGICK
 #  include <magick/api.h>
