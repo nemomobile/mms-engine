@@ -1846,25 +1846,6 @@ static gboolean encode_utf8_string(struct file_buffer *fb,
 	return TRUE;
 }
 
-static gboolean encode_quoted_string(struct file_buffer *fb,
-				enum mms_header header, void *user)
-{
-	char *ptr;
-	char **text = user;
-
-	if (!*text)
-		return TRUE;
-
-	ptr = fb_request_field(fb, header, strlen(*text) + 2);
-	if (ptr == NULL)
-		return FALSE;
-
-	ptr[0] = '"';
-	strcpy(ptr + 1, *text);
-
-	return TRUE;
-}
-
 static gboolean encode_content_id(struct file_buffer *fb,
 				enum mms_header header, void *user)
 {
@@ -2130,8 +2111,10 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 			len += cs_len;
 
 		} else if (g_ascii_strcasecmp("name", key) == 0) {
+			/* text-string */
 			name = parsed[i+1];
-			len += 2 + strlen(name) + 1;
+			len += 2 + strlen(name);
+			if (name[0] & 0x80) len++;
 		}
 	}
 
@@ -2202,7 +2185,7 @@ static gboolean mms_encode_send_req_part_header(struct mms_attachment *part,
 
 	/* Encode "name" param */
 	if (name) {
-		if (encode_quoted_string(fb, WSP_PARAMETER_TYPE_NAME_DEFUNCT,
+		if (encode_text(fb, WSP_PARAMETER_TYPE_NAME_DEFUNCT,
 						&name) == FALSE)
 			goto done;
 	}
