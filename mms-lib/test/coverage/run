@@ -3,7 +3,9 @@
 # This script requires lcov to be installed
 #
 
-TESTS="media_type mms_codec mms_log delivery_ind read_ind read_report resize retrieve retrieve_cancel retrieve_no_proxy send"
+TESTS="test_media_type test_mms_codec test_mms_log test_delivery_ind \
+test_read_ind test_read_report test_resize test_retrieve \
+test_retrieve_cancel test_retrieve_no_proxy test_send"
 FLAVOR="release"
 
 pushd `dirname $0` > /dev/null
@@ -26,7 +28,7 @@ done
 
 for t in $TESTS ; do
     pushd "$TEST_DIR/$t"
-    build/$FLAVOR/test_$t || exit 1
+    build/$FLAVOR/$t || exit 1
     popd
 done
 
