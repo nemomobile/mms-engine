@@ -15,8 +15,8 @@
 #ifndef JOLLA_MMS_OFONO_TYPES_H
 #define JOLLA_MMS_OFONO_TYPES_H
 
+#include "mms_lib_types.h"
 #include <gio/gio.h>
-#include "mms_lib_util.h"
 
 typedef struct mms_ofono_manager MMSOfonoManager;
 typedef struct mms_ofono_modem MMSOfonoModem;
