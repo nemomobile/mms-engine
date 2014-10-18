@@ -18,6 +18,7 @@
 #include "mms_ofono_types.h"
 
 struct mms_ofono_context {
+    gint ref_count;
     MMSOfonoModem* modem;
     char* path;
     gboolean active;
@@ -38,8 +39,12 @@ mms_ofono_context_set_active(
     MMSOfonoContext* context,
     gboolean active);
 
+MMSOfonoContext*
+mms_ofono_context_ref(
+    MMSOfonoContext* context);
+
 void
-mms_ofono_context_free(
+mms_ofono_context_unref(
     MMSOfonoContext* context);
 
 #endif /* JOLLA_MMS_OFONO_CONTEXT_H */
