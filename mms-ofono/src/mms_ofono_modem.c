@@ -152,7 +152,7 @@ mms_ofono_modem_gprs_context_removed(
     MMS_ASSERT(proxy == modem->gprs_proxy);
     if (modem->mms_context && !g_strcmp0(modem->mms_context->path, path)) {
         MMS_DEBUG("MMS context %s removed", path);
-        mms_ofono_context_free(modem->mms_context);
+        mms_ofono_context_unref(modem->mms_context);
         modem->mms_context = NULL;
     }
 }
@@ -214,8 +214,8 @@ mms_ofono_modem_scan_interfaces(
         GVariantIter iter;
         GVariant* child;
         for (g_variant_iter_init(&iter, ifs);
-             (child = g_variant_iter_next_value(&iter)) &&
-             (!sim_interface || !gprs_interface);
+             (!sim_interface || !gprs_interface) &&
+             (child = g_variant_iter_next_value(&iter));
              g_variant_unref(child)) {
             const char* ifname = NULL;
             g_variant_get(child, "&s", &ifname);
@@ -286,7 +286,7 @@ mms_ofono_modem_scan_interfaces(
         if (context_info) {
             if (m->mms_context &&
                 !g_strcmp0(context_info->path, m->mms_context->path)) {
-                mms_ofono_context_free(m->mms_context);
+                mms_ofono_context_unref(m->mms_context);
                 m->mms_context = NULL;
             }
             if (!m->mms_context) {
@@ -301,7 +301,7 @@ mms_ofono_modem_scan_interfaces(
         } else {
             MMS_DEBUG("No MMS context");
             if (m->mms_context) {
-                mms_ofono_context_free(m->mms_context);
+                mms_ofono_context_unref(m->mms_context);
                 m->mms_context = NULL;
             }
         }
@@ -309,7 +309,7 @@ mms_ofono_modem_scan_interfaces(
         mms_ofono_modem_disconnect_gprs_proxy(m);
         if (m->mms_context) {
             MMS_DEBUG("No MMS context");
-            mms_ofono_context_free(m->mms_context);
+            mms_ofono_context_unref(m->mms_context);
             m->mms_context = NULL;
         }
     }
@@ -388,7 +388,7 @@ mms_ofono_modem_free(
         MMS_VERBOSE_("%p '%s'", modem, modem->path);
         mms_ofono_modem_disconnect_sim_proxy(modem);
         mms_ofono_modem_disconnect_gprs_proxy(modem);
-        mms_ofono_context_free(modem->mms_context);
+        mms_ofono_context_unref(modem->mms_context);
         if (modem->proxy) {
             g_signal_handler_disconnect(modem->proxy,
                 modem->property_change_signal_id);

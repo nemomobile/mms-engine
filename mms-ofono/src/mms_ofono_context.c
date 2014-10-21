@@ -100,6 +100,9 @@ mms_ofono_context_activate_done(
         }
         g_error_free(error);
     }
+
+    /* Release the reference we have been holding during the call */
+    mms_ofono_context_unref(context);
 }
 
 static
@@ -125,6 +128,9 @@ mms_ofono_context_deactivate_done(
     /* Regardless of whether or nor deactivation has succeeded, we mark this
      * connection as closed. */
     mms_ofono_context_drop_connection(context, MMS_CONNECTION_STATE_CLOSED);
+
+    /* Release the reference we have been holding during the call */
+    mms_ofono_context_unref(context);
 }
 
 void
@@ -132,7 +138,7 @@ mms_ofono_context_set_active(
     MMSOfonoContext* context,
     gboolean active)
 {
-    MMS_DEBUG("%s connection %s", active ? "Opening":"Closing",
+    MMS_DEBUG("%s connection %s", active ? "Opening" : "Closing",
         context->modem->imsi);
     if (context->set_active_cancel) {
         g_cancellable_cancel(context->set_active_cancel);
@@ -141,9 +147,9 @@ mms_ofono_context_set_active(
     context->set_active_cancel = g_cancellable_new();
     org_ofono_connection_context_call_set_property(context->proxy,
         OFONO_CONTEXT_PROPERTY_ACTIVE, g_variant_new_variant(
-        g_variant_new_boolean(active)), context->set_active_cancel,
-        active ? mms_ofono_context_activate_done :
-        mms_ofono_context_deactivate_done, context);
+        g_variant_new_boolean(active)), context->set_active_cancel, active ?
+        mms_ofono_context_activate_done : mms_ofono_context_deactivate_done,
+        mms_ofono_context_ref(context));
 }
 
 MMSOfonoContext*
@@ -165,6 +171,8 @@ mms_ofono_context_new(
             context->active = g_variant_get_boolean(value);
             g_variant_unref(value);
         }
+
+        context->ref_count = 1;
         context->path = g_strdup(path);
         context->proxy = proxy;
         context->modem = modem;
@@ -183,27 +191,46 @@ mms_ofono_context_new(
     }
 }
 
+static
 void
-mms_ofono_context_free(
+mms_ofono_context_finalize(
+    MMSOfonoContext* context)
+{
+    if (context->connection) {
+        context->connection->context = NULL;
+        mms_ofono_connection_cancel(context->connection);
+        mms_ofono_connection_unref(context->connection);
+    }
+    if (context->set_active_cancel) {
+        g_object_unref(context->set_active_cancel);
+    }
+    g_signal_handler_disconnect(context->proxy,
+        context->property_change_signal_id);
+    g_object_unref(context->proxy);
+    g_free(context->path);
+}
+
+MMSOfonoContext*
+mms_ofono_context_ref(
     MMSOfonoContext* context)
 {
     if (context) {
-        if (context->connection) {
-            context->connection->context = NULL;
-            mms_ofono_connection_cancel(context->connection);
-            mms_ofono_connection_unref(context->connection);
+        MMS_ASSERT(context->ref_count > 0);
+        g_atomic_int_inc(&context->ref_count);
+    }
+    return context;
+}
+
+void
+mms_ofono_context_unref(
+    MMSOfonoContext* context)
+{
+    if (context) {
+        MMS_ASSERT(context->ref_count > 0);
+        if (g_atomic_int_dec_and_test(&context->ref_count)) {
+            mms_ofono_context_finalize(context);
+            g_free(context);
         }
-        if (context->set_active_cancel) {
-            g_cancellable_cancel(context->set_active_cancel);
-            g_object_unref(context->set_active_cancel);
-        }
-        if (context->proxy) {
-            g_signal_handler_disconnect(context->proxy,
-                context->property_change_signal_id);
-            g_object_unref(context->proxy);
-        }
-        g_free(context->path);
-        g_free(context);
     }
 }
 
