@@ -90,16 +90,32 @@ mms_task_notification_done(
         if (id[0]) {
             MMS_DEBUG("  Database id: %s", id);
             if (task->id) {
-                /* Remove temporary directory and files */
-                char* dir = mms_task_dir(task);
-                char* file = mms_task_file(task, MMS_NOTIFICATION_IND_FILE);
-                remove(file);
-                remove(dir);
-                g_free(file);
-                g_free(dir);
+                char* olddir = mms_task_dir(task);
+                char* file = g_strconcat(olddir, "/"
+                    MMS_NOTIFICATION_IND_FILE, NULL);
+                /* Replace fake id with the real one */
                 g_free(task->id);
+                task->id = g_strdup(id);
+                if (task_config(task)->keep_temp_files) {
+                    /* Move file to the new place */
+                    char* newdir = mms_task_dir(task);
+                    if (rename(olddir, newdir) == 0) {
+                        MMS_VERBOSE("Moved %s to %s", file, newdir);
+                    } else {
+                        MMS_ERR("Failed to rename %s to %s: %s", olddir,
+                            newdir, strerror(errno));
+                    }
+                    g_free(newdir);
+                } else {
+                    /* Remove temporary directory and file */
+                    remove(file);
+                    remove(olddir);
+                }
+                g_free(file);
+                g_free(olddir);
+            } else {
+                task->id = g_strdup(id);
             }
-            task->id = g_strdup(id);
 
             /* Schedule the download task */
             if (!mms_task_queue_and_unref(task->delegate,
