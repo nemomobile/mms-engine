@@ -301,20 +301,22 @@ mms_task_decode_new(
     const char* transaction_id,
     const char* file)
 {
-    MMSTaskDecode* dec = mms_task_alloc(MMS_TYPE_TASK_DECODE,
-        parent->settings, parent->handler, "Decode", parent->id,
-        parent->imsi);
-    GError* error = NULL;
-    dec->map = g_mapped_file_new(file, FALSE, &error);
-    if (dec->map) {
-        dec->transaction_id = g_strdup(transaction_id);
-        dec->file = g_strdup(file);
-        return &dec->task;
-    } else {
-        MMS_ERR("%s", MMS_ERRMSG(error));
-        g_error_free(error);
-        return NULL;
+    if (file) {
+        MMSTaskDecode* dec = mms_task_alloc(MMS_TYPE_TASK_DECODE,
+            parent->settings, parent->handler, "Decode", parent->id,
+            parent->imsi);
+        GError* error = NULL;
+        dec->map = g_mapped_file_new(file, FALSE, &error);
+        if (dec->map) {
+            dec->transaction_id = g_strdup(transaction_id);
+            dec->file = g_strdup(file);
+            return &dec->task;
+        } else if (error) {
+            MMS_ERR("%s", MMS_ERRMSG(error));
+            g_error_free(error);
+        }
     }
+    return NULL;
 }
 
 /*

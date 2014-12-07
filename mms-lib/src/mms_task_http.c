@@ -413,7 +413,8 @@ mms_task_http_start(
     }
 
     if ((!priv->send_path || send_fd >= 0) &&
-        (!priv->receive_path || receive_fd >= 0)) {
+        (!priv->receive_path || receive_fd >= 0) &&
+        (send_fd >= 0 || receive_fd >= 0)) {
 
         /* Set up the transfer */
         const char* uri = priv->uri ? priv->uri : connection->mmsc;
@@ -476,10 +477,9 @@ mms_task_http_start(
 
             return TRUE;
         }
-    } else {
-        if (receive_fd >= 0) close(receive_fd);
-        if (send_fd >= 0) close(send_fd);
     }
+    if (receive_fd >= 0) close(receive_fd);
+    if (send_fd >= 0) close(send_fd);
     return FALSE;
 }
 
@@ -490,9 +490,16 @@ mms_task_http_transmit(
     MMSConnection* conn)
 {
     if (task->state != MMS_TASK_STATE_TRANSMITTING) {
-        mms_task_set_state(task,
-            mms_task_http_start(MMS_TASK_HTTP(task), conn) ?
-            MMS_TASK_STATE_TRANSMITTING : MMS_TASK_STATE_DONE);
+        MMSTaskHttp* http = MMS_TASK_HTTP(task);
+        if (mms_task_http_start(http, conn)) {
+            mms_task_set_state(task, MMS_TASK_STATE_TRANSMITTING);
+        } else {
+            MMSTaskHttpClass* klass = MMS_TASK_HTTP_GET_CLASS(task);
+            if (klass->fn_done) {
+                klass->fn_done(http, NULL, SOUP_STATUS_IO_ERROR);
+            }
+            mms_task_set_state(task, MMS_TASK_STATE_DONE);
+        }
     }
 }
 
