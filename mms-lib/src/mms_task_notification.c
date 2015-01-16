@@ -1,5 +1,7 @@
 /*
- * Copyright (C) 2013-2014 Jolla Ltd.
+ * Copyright (C) 2013-2015 Jolla Ltd.
+ * Contact: Slava Monich <slava.monich@jolla.com>
+ * All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -191,7 +193,7 @@ mms_task_delivery_ind(
     MMSTask* task = &ind->task;
     const struct mms_delivery_ind* di = &ind->pdu->di;
     const char* to = mms_strip_address_type(di->to);
-    MMS_DEBUG("Processing M-Delivery.ind PDU");
+    MMS_DEBUG("Processing M-Delivery.ind");
     MMS_DEBUG("  MMS message id: %s", di->msgid);
     MMS_DEBUG("  Recipient: %s", to);
     switch (di->dr_status) {
