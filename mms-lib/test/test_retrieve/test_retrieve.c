@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013-2014 Jolla Ltd.
+ * Copyright (C) 2013-2015 Jolla Ltd.
+ * Contact: Slava Monich <slava.monich@jolla.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -97,6 +98,12 @@ static const TestPartDesc retrieve_success3_parts [] = {
     { "text/plain;charset=utf-8", "<2>", "text_001.txt" }
 };
 
+static const TestPartDesc retrieve_transfer_encoding_parts [] = {
+    { "application/smil;charset=utf-8", "<smil>", "smil" },
+    { "image/jpeg", "<1.jpg>", "1.jpg" },
+    { "text/plain;charset=utf-8", "<2.txt>", "2.txt" }
+};
+
 static const TestPartDesc retrieve_invalid_subject [] = {
     { "application/smil;charset=us-ascii", "<start>", "smil.smi" },
     { "image/jpeg", "<1>", "1" }
@@ -141,6 +148,30 @@ static const TestDesc retrieve_tests[] = {
         MMS_RECEIVE_STATE_DECODING,
         MMS_MESSAGE_TYPE_ACKNOWLEDGE_IND,
         TEST_PARTS(retrieve_success3_parts),
+        0
+    },{
+        "QuotedPrintable", /* quoted-printable transfer encoding for text */
+        NULL,
+        "m-notification.ind",
+        "m-retrieve.conf",
+        SOUP_STATUS_OK,
+        MMS_CONTENT_TYPE,
+        NULL,
+        MMS_RECEIVE_STATE_DECODING,
+        MMS_MESSAGE_TYPE_ACKNOWLEDGE_IND,
+        TEST_PARTS(retrieve_transfer_encoding_parts),
+        0
+    },{
+        "Base64", /* Base64 transfer encoding for text */
+        NULL,
+        "m-notification.ind",
+        "m-retrieve.conf",
+        SOUP_STATUS_OK,
+        MMS_CONTENT_TYPE,
+        NULL,
+        MMS_RECEIVE_STATE_DECODING,
+        MMS_MESSAGE_TYPE_ACKNOWLEDGE_IND,
+        TEST_PARTS(retrieve_transfer_encoding_parts),
         0
     },{
         "InvalidSubject",
@@ -314,6 +345,36 @@ static const TestDesc retrieve_tests[] = {
 };
 
 static
+gboolean
+test_files_equal(
+    const char* path1,
+    const char* path2)
+{
+    gboolean equal = FALSE;
+    if (path1 && path2) {
+        GError* error = NULL;
+        GMappedFile* f1 = g_mapped_file_new(path1, FALSE, &error);
+        if (f1) {
+            GMappedFile* f2 = g_mapped_file_new(path2, FALSE, &error);
+            if (f2) {
+                const gsize size = g_mapped_file_get_length(f1);
+                if (g_mapped_file_get_length(f2) == size) {
+                    const void* data1 = g_mapped_file_get_contents(f1);
+                    const void* data2 = g_mapped_file_get_contents(f2);
+                    equal = !memcmp(data1, data2, size);
+                }
+                g_mapped_file_unref(f2);
+            }
+            g_mapped_file_unref(f1);
+        }
+    }
+    if (!equal) {
+        MMS_ERR("%s is not identical to %s", path1, path2);
+    }
+    return equal;
+}
+
+static
 int
 test_validate_parts(
     Test* test)
@@ -323,16 +384,28 @@ test_validate_parts(
     if (!desc->nparts && (!msg || !g_slist_length(msg->parts))) {
         return RET_OK;
     } else {
+        const char* dir = desc->dir ? desc->dir : desc->name;
         const unsigned int nparts = g_slist_length(msg->parts);
         if (desc->nparts == nparts) {
             const TestPartDesc* expect = test->desc->parts;
             GSList* list = msg->parts;
             while (list) {
                 const MMSMessagePart* part = list->data;
+                char* sample = g_strconcat(DATA_DIR, dir, "/parts/",
+                    expect->file_name, NULL);
+                const gboolean match = test_files_equal(part->file, sample);
                 const char* fname;
+
                 G_GNUC_BEGIN_IGNORE_DEPRECATIONS;
                 fname = g_basename(part->file);
                 G_GNUC_END_IGNORE_DEPRECATIONS;
+
+                g_free(sample);
+                if (!match) {
+                    /* Message message is printed by test_files_equal */
+                    return RET_ERR;
+                }
+                
                 if (strcmp(expect->content_type, part->content_type)) {
                     MMS_ERR("Content type mismatch: expected %s, got %s",
                         expect->content_type, part->content_type);
@@ -352,7 +425,7 @@ test_validate_parts(
                         expect->content_id, part->content_id);
                     return RET_ERR;
                 }
-                list = list->next;
+               list = list->next;
                 expect++;
             }
             return RET_OK;
@@ -408,33 +481,17 @@ test_finish(
         }
     }
     if (test->ret == RET_OK && desc->attic_file) {
-        gboolean ok = FALSE;
         const char* dir = desc->dir ? desc->dir : desc->name;
         char* f1 = g_strconcat(DATA_DIR, dir, "/", desc->ni_file, NULL);
         char* f2 = g_strconcat(test->config->root_dir, "/" MMS_ATTIC_DIR "/",
             desc->attic_file, NULL);
-        GMappedFile* m1 = g_mapped_file_new(f1, FALSE, NULL);
-        if (m1) {
-            GMappedFile* m2 = g_mapped_file_new(f2, FALSE, NULL);
-            if (m2) {
-                const gsize len = g_mapped_file_get_length(m1);
-                if (len == g_mapped_file_get_length(m2)) {
-                    const void* ptr1 = g_mapped_file_get_contents(m1);
-                    const void* ptr2 = g_mapped_file_get_contents(m2);
-                    ok = !memcmp(ptr1, ptr2, len);
-                }
-                g_mapped_file_unref(m2);
-            }
-            g_mapped_file_unref(m1);
-        }
-        if (ok) {
+        if (test_files_equal(f1, f2)) {
             char* dir = g_path_get_dirname(f2);
             remove(f2);
             rmdir(dir);
             g_free(dir);
         } else {
             test->ret = RET_ERR;
-            MMS_ERR("%s is not identical to %s", f2, f1);
         }
         g_free(f1);
         g_free(f2);
@@ -691,6 +748,7 @@ int main(int argc, char* argv[])
         MMSConfig config;
         const char* test_name = (argc == 2) ? argv[1] : NULL;
         char* tmpd = g_mkdtemp(g_strdup("/tmp/test_retrieve_XXXXXX"));
+        char* msgdir = g_strconcat(tmpd, "/msg", NULL);
         MMS_VERBOSE("Temporary directory %s", tmpd);
  
         mms_lib_default_config(&config);
@@ -721,7 +779,9 @@ int main(int argc, char* argv[])
             }
         }
 
-        remove(tmpd);
+        rmdir(msgdir);
+        rmdir(tmpd);
+        g_free(msgdir);
         g_free(tmpd);
     } else {
         fprintf(stderr, "%s\n", MMS_ERRMSG(error));

@@ -1,7 +1,7 @@
 TEMPLATE = lib
 CONFIG += staticlib
 CONFIG += link_pkgconfig
-PKGCONFIG += glib-2.0 libsoup-2.4 libwspcodec
+PKGCONFIG += gmime-2.6 glib-2.0 libsoup-2.4 libwspcodec
 INCLUDEPATH += include
 QMAKE_CFLAGS += -Wno-unused
 

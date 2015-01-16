@@ -1,0 +1,15 @@
+<!DOCTYPE smil PUBLIC "-//W3C//DTD SMIL 1.0//EN" "http://www.w3.org/TR/REC-smil/SMIL10.dtd">
+<smil>
+ <head>
+  <layout>
+   <root-layout height="160" width="120"/>
+    <region fit="scroll" height="100%" left="0" top="0" width="100%" id="Text"/>
+    <region fit="meet" height="100%" left="0" top="0" width="100%" id="Media"/>
+  </layout>
+ </head>
+ <body>
+  <par dur="5000ms">
+   <img src="1" region="Media"/>
+  </par>
+ </body>
+</smil>

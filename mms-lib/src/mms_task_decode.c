@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013-2014 Jolla Ltd.
+ * Copyright (C) 2013-2015 Jolla Ltd.
+ * Contact: Slava Monich <slava.monich@jolla.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -54,7 +55,7 @@ mms_task_decode_array_contains_string(
 }
 
 static
-char*
+const char*
 mms_task_decode_add_file_name(
     GPtrArray* names,
     const char* proposed)
@@ -98,6 +99,42 @@ mms_task_decode_make_content_id(
     }
     g_ptr_array_add(ids, id);
     return id;
+}
+
+static
+void
+mms_task_decode_part(
+    MMSMessagePart* part,
+    GMimeContentEncoding enc,
+    const char* dir,
+    GPtrArray* part_files)
+{
+    char* default_name;
+    const char* orig_file;
+    const char* part_file;
+    G_GNUC_BEGIN_IGNORE_DEPRECATIONS;
+    part_file = g_basename(part->file);
+    G_GNUC_END_IGNORE_DEPRECATIONS;
+
+    default_name = g_strconcat(part_file, ".orig", NULL);
+    orig_file = mms_task_decode_add_file_name(part_files, default_name);
+    g_free(default_name);
+
+    part->orig = g_strconcat(dir, "/", orig_file, NULL);
+    if (rename(part->file, part->orig) == 0) {
+        GError* error = NULL;
+        if (!mms_file_decode(part->orig, part->file, enc, &error)) {
+            unlink(part->file);
+            rename(part->orig, part->file);
+            g_free(part->orig);
+            part->orig = NULL;
+            MMS_ERR("%s", MMS_ERRMSG(error));
+            g_error_free(error);
+        }
+    } else {
+        MMS_ERR("Failed to rename %s to %s: %s", part->file, part->orig,
+            strerror(errno));
+    }
 }
 
 static
@@ -169,7 +206,7 @@ mms_task_decode_retrieve_conf(
         const char* name =  attach->content_location ?
             attach->content_location : attach->content_id;
         char* path = NULL;
-        char* file;
+        const char* file;
         if (name && name[0]) {
             file = mms_task_decode_add_file_name(part_files, name);
         } else {
@@ -188,6 +225,16 @@ mms_task_decode_retrieve_conf(
             part->content_type = g_strdup(attach->content_type);
             part->content_id = mms_task_decode_make_content_id(part_ids, id);
             part->file = path;
+            if (attach->transfer_encoding) {
+                GMimeContentEncoding enc =
+                    g_mime_content_encoding_from_string(
+                        attach->transfer_encoding);
+                if (enc > GMIME_CONTENT_ENCODING_BINARY) {
+                    /* The part actually needs some decoding */
+                    MMS_DEBUG("Decoding %s", attach->transfer_encoding);
+                    mms_task_decode_part(part,enc,msg->parts_dir,part_files);
+                }
+            }
             msg->parts = g_slist_append(msg->parts, part);
             if (tmp && tmp != part->content_id) g_free(tmp);
         }
