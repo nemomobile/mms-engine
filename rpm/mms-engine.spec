@@ -1,6 +1,6 @@
 Name:     mms-engine
 Summary:  MMS engine
-Version:  1.0.30
+Version:  1.0.31
 Release:  1
 Group:    Communications/Telephony and IM
 License:  GPLv2
