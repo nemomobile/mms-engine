@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013-2014 Jolla Ltd.
+ * Copyright (C) 2013-2015 Jolla Ltd.
+ * Contact: Slava Monich <slava.monich@jolla.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -32,6 +33,10 @@ mms_message_part_free(
     if (part->file) {
         if (!(msg->flags & MMS_MESSAGE_FLAG_KEEP_FILES)) remove(part->file);
         g_free(part->file);
+    }
+    if (part->orig) {
+        if (!(msg->flags & MMS_MESSAGE_FLAG_KEEP_FILES)) remove(part->orig);
+        g_free(part->orig);
     }
     g_free(part);
 }

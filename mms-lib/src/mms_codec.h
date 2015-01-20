@@ -3,6 +3,7 @@
  *  Multimedia Messaging Service
  *
  *  Copyright (C) 2010-2011  Intel Corporation. All rights reserved.
+ *  Copyright (C) 2013-2015  Jolla Ltd.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as
@@ -185,6 +186,7 @@ struct mms_attachment {
 	char *content_type;
 	char *content_id;
 	char *content_location;
+	char *transfer_encoding;
 };
 
 struct mms_message {

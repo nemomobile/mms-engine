@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013-2014 Jolla Ltd.
+ * Copyright (C) 2013-2015 Jolla Ltd.
+ * Contact: Slava Monich <slava.monich@jolla.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -48,6 +49,7 @@ typedef struct _mms_message_part {
     char* content_type;                     /* Content-Type */
     char* content_id;                       /* Content-ID */
     char* file;                             /* File name */
+    char* orig;                             /* File prior to decoding */
 } MMSMessagePart;
 
 MMSMessage*

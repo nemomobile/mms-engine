@@ -17,7 +17,7 @@ include ../mms-lib/Config.mak
 #
 
 PKGS = gio-unix-2.0 gio-2.0
-LIB_PKGS = libwspcodec libsoup-2.4 dconf $(RESIZE_PKG) $(PKGS)
+LIB_PKGS = libwspcodec gmime-2.6 libsoup-2.4 dconf $(RESIZE_PKG) $(PKGS)
 
 #
 # Default target

@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013-2014 Jolla Ltd.
+ * Copyright (C) 2013-2015 Jolla Ltd.
+ * Contact: Slava Monich <slava.monich@jolla.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -218,6 +219,123 @@ mms_file_copy(
     } else {
         MMS_ERROR(error, MMS_LIB_ERROR_IO,
             "Failed to create file %s: %s", dest, strerror(errno));
+    }
+    return ok;
+}
+
+/*
+ * MIME decoding
+ */
+typedef struct mms_mime_decode {
+    int out;
+    const char* dest;
+    size_t outbytes;
+    size_t outbuflen;
+    void* outbuf;
+    GMimeEncoding state;
+} MMSMimeDecode;
+
+static
+gboolean
+mms_file_decode_init(
+    MMSMimeDecode* dec,
+    const char* dest,
+    GMimeContentEncoding enc,
+    GError** error)
+{
+    memset(dec, 0, sizeof(*dec));
+    dec->out = open(dest, O_CREAT|O_WRONLY|O_TRUNC|O_BINARY, MMS_FILE_PERM);
+    if (dec->out >= 0) {
+        dec->dest = dest;
+        g_mime_encoding_init_decode(&dec->state, enc);
+        return TRUE;
+    } else {
+        MMS_ERROR(error, MMS_LIB_ERROR_IO, "Failed to create file %s: %s",
+            dest, strerror(errno));
+        return FALSE;
+    }
+}
+
+static
+void
+mms_file_decode_deinit(
+    MMSMimeDecode* dec)
+{
+    g_free(dec->outbuf);
+    close(dec->out);
+}
+
+gboolean
+mms_file_decode_step(
+    MMSMimeDecode* dec,
+    const void* inbuf,
+    size_t inlen,
+    size_t (*step)(GMimeEncoding*, const char*, size_t, char*),
+    GError** error)
+{
+    ssize_t nbytes;
+    size_t need = g_mime_encoding_outlen(&dec->state, inlen);
+    if (need > dec->outbuflen) {
+        g_free(dec->outbuf);
+        dec->outbuf = g_malloc(need);
+        dec->outbuflen = need;
+    }
+    nbytes = step(&dec->state, inbuf, inlen, dec->outbuf);
+    if (write(dec->out, dec->outbuf, nbytes) == nbytes) {
+        dec->outbytes += nbytes;
+        return TRUE;
+    } else {
+        MMS_ERROR(error, MMS_LIB_ERROR_IO, "Failed to write %s: %s",
+            dec->dest, strerror(errno));
+        return FALSE;
+    }
+}
+
+gboolean
+mms_file_decode(
+    const char* src,
+    const char* dest,
+    GMimeContentEncoding enc,
+    GError** error)
+{
+    gboolean ok = FALSE;
+    int in = open(src, O_RDONLY | O_BINARY);
+    if (in >= 0) {
+        MMSMimeDecode dec;
+        if (mms_file_decode_init(&dec, dest, enc, error)) {
+            int nbytes;
+            size_t inbytes = 0;
+            const size_t buflen = 1024;
+            void* inbuf = g_malloc(buflen);
+            ok = TRUE;
+            while ((nbytes = read(in, inbuf, buflen)) > 0) {
+                inbytes += nbytes;
+                if (!mms_file_decode_step(&dec, inbuf, nbytes,
+                    g_mime_encoding_step, error)) {
+                    ok = FALSE;
+                    break;
+                }
+            }
+            if (nbytes < 0) {
+                ok = FALSE;
+                MMS_ERROR(error, MMS_LIB_ERROR_IO,
+                    "Failed to read %s: %s", src, strerror(errno));
+            } else if (ok) {
+                if (mms_file_decode_step(&dec, NULL, 0,
+                    g_mime_encoding_flush, error)) {
+                    MMS_DEBUG("Decoded %s (%d bytes) -> %s (%d bytes)",
+                        src, (int)inbytes, dest, (int)dec.outbytes);
+                } else {
+                    ok = FALSE;
+                }
+            }
+            mms_file_decode_deinit(&dec);
+            g_free(inbuf);
+        }
+        close(in);
+    } else {
+        MMS_ERROR(error, MMS_LIB_ERROR_IO,
+            "Failed to open file %s: %s", src, strerror(errno));
     }
     return ok;
 }

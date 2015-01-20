@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013-2014 Jolla Ltd.
+ * Copyright (C) 2013-2015 Jolla Ltd.
+ * Contact: Slava Monich <slava.monich@jolla.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +17,8 @@
 #define JOLLA_MMS_FILE_UTIL_H
 
 #include "mms_lib_types.h"
+
+#include <gmime/gmime-encodings.h>
 
 /* Permissions for MMS files and directories */
 #define MMS_DIR_PERM                    (0755)
@@ -73,6 +76,13 @@ gboolean
 mms_file_copy(
     const char* src,
     const char* dest,
+    GError** error);
+
+gboolean
+mms_file_decode(
+    const char* src,
+    const char* dest,
+    GMimeContentEncoding enc,
     GError** error);
 
 #define mms_message_dir(config,id) \

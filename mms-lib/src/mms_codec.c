@@ -3,7 +3,7 @@
  *  Multimedia Messaging Service
  *
  *  Copyright (C) 2010-2011  Intel Corporation. All rights reserved.
- *  Copyright (C) 2013-2014  Jolla Ltd.
+ *  Copyright (C) 2013-2015  Jolla Ltd.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as
@@ -501,6 +501,7 @@ static gboolean extract_text(struct wsp_header_iter *iter, void *user)
 	if (text == NULL)
 		return FALSE;
 
+	g_free(*out);
 	*out = g_strdup(text);
 
 	return TRUE;
@@ -1261,24 +1262,29 @@ static gboolean attachment_parse_headers(struct wsp_header_iter *iter,
 {
 	while (wsp_header_iter_next(iter)) {
 		const unsigned char *hdr = wsp_header_iter_get_hdr(iter);
-		unsigned char h;
 
-		/* Skip application headers */
-		if (wsp_header_iter_get_hdr_type(iter) !=
-				WSP_HEADER_TYPE_WELL_KNOWN)
-			continue;
-
-		h = hdr[0] & 0x7f;
-
-		switch (h) {
-		case MMS_PART_HEADER_CONTENT_ID:
-			if (!extract_quoted_string(iter, &part->content_id))
-				return FALSE;
-			break;
-		case MMS_PART_HEADER_CONTENT_LOCATION:
-			if (!extract_text(iter, &part->content_location))
-				return FALSE;
-			break;
+		if (wsp_header_iter_get_hdr_type(iter) ==
+					WSP_HEADER_TYPE_WELL_KNOWN) {
+			switch (hdr[0] & 0x7f) {
+			case MMS_PART_HEADER_CONTENT_ID:
+				if (!extract_quoted_string(iter,
+						&part->content_id))
+					return FALSE;
+				break;
+			case MMS_PART_HEADER_CONTENT_LOCATION:
+				if (!extract_text(iter,
+						&part->content_location))
+					return FALSE;
+				break;
+			}
+		} else {
+			/* Application (textual) header */
+			if (g_ascii_strcasecmp((char*)hdr,
+					"content-transfer-encoding") == 0) {
+				if (!extract_text(iter,
+						&part->transfer_encoding))
+					return FALSE;
+			}
 		}
 	}
 
@@ -1292,6 +1298,7 @@ static void free_attachment(gpointer data, gpointer user_data)
 	g_free(attach->content_type);
 	g_free(attach->content_id);
 	g_free(attach->content_location);
+	g_free(attach->transfer_encoding);
 
 	g_free(attach);
 }
