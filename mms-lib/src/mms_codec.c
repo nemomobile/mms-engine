@@ -126,7 +126,7 @@ static const struct {
 	{ 13,   "ISO-8859-10"       },
 	{ 17,   "Shift_JIS"         },
 	{ 18,   "EUC-JP"            },
-	{ 36,   "KS_C_5601-1987"    },
+	{ 36,   "CP949"             },
 	{ 37,   "ISO-2022-KR"       },
 	{ 38,   "EUC-KR"            },
 	{ 39,   "ISO-2022-JP"       },
@@ -517,6 +517,8 @@ static char *decode_encoded_string_with_mib_enum(const unsigned char *p,
 	const char *to_codeset = "UTF-8";
 	gsize bytes_read;
 	gsize bytes_written;
+	char* converted;
+	GError *error = NULL;
 
 	if (wsp_decode_integer(p, l, &mib_enum, &consumed) == FALSE)
 		return NULL;
@@ -533,9 +535,16 @@ static char *decode_encoded_string_with_mib_enum(const unsigned char *p,
 	if (from_codeset == NULL)
 		return NULL;
 
-	return g_convert((const char *) p + consumed, l - consumed,
+	converted = g_convert((const char *) p + consumed, l - consumed,
 			to_codeset, from_codeset,
-			&bytes_read, &bytes_written, NULL);
+			&bytes_read, &bytes_written, &error);
+
+	if (!converted) {
+		MMS_ERR("%s", MMS_ERRMSG(error));
+		g_error_free(error);
+	}
+
+	return converted;
 }
 
 static char* decode_encoded_text(enum wsp_value_type t,
