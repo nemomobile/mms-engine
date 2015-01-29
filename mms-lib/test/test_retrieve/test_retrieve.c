@@ -34,6 +34,8 @@
 
 #define DATA_DIR "data/"
 
+#define TEST_TIMEOUT (10) /* seconds */
+
 typedef struct test_part_desc {
     const char* content_type;
     const char* content_id;
@@ -583,7 +585,8 @@ gboolean
 test_init(
     Test* test,
     const MMSConfig* config,
-    const TestDesc* desc)
+    const TestDesc* desc,
+    gboolean debug)
 {
     gboolean ok = FALSE;
     GError* error = NULL;
@@ -605,7 +608,10 @@ test_init(
             test->handler = mms_handler_test_new();
             test->disp = mms_dispatcher_new(settings, test->cm, test->handler);
             test->loop = g_main_loop_new(NULL, FALSE);
-            test->timeout_id = g_timeout_add_seconds(10, test_timeout, test);
+            if (!debug) {
+                test->timeout_id = g_timeout_add_seconds(TEST_TIMEOUT,
+                    test_timeout, test);
+            }
             test->delegate.fn_done = test_done;
             mms_dispatcher_set_delegate(test->disp, &test->delegate);
             if (!(desc->flags & TEST_CONNECTION_FAILURE)) {
@@ -666,10 +672,11 @@ static
 int
 test_retrieve_once(
     const MMSConfig* config,
-    const TestDesc* desc)
+    const TestDesc* desc,
+    gboolean debug)
 {
     Test test;
-    if (test_init(&test, config, desc)) {
+    if (test_init(&test, config, desc, debug)) {
         GError* error = NULL;
         GBytes* push = g_bytes_new_static(
             g_mapped_file_get_contents(test.notification_ind),
@@ -703,7 +710,8 @@ static
 int
 test_retrieve(
     const MMSConfig* config,
-    const char* name)
+    const char* name,
+    gboolean debug)
 {
     int i, ret;
     if (name) {
@@ -711,7 +719,7 @@ test_retrieve(
         for (i=0, ret = RET_ERR; i<G_N_ELEMENTS(retrieve_tests); i++) {
             const TestDesc* test = retrieve_tests + i;
             if (!strcmp(test->name, name)) {
-                ret = test_retrieve_once(config, test);
+                ret = test_retrieve_once(config, test, debug);
                 found = test;
                 break;
             }
@@ -719,8 +727,8 @@ test_retrieve(
         if (!found) MMS_ERR("No such test: %s", name);
     } else {
         for (i=0, ret = RET_OK; i<G_N_ELEMENTS(retrieve_tests); i++) {
-            int test_status = test_retrieve_once(config, retrieve_tests + i);
-            if (ret == RET_OK && test_status != RET_OK) ret = test_status;
+            int status = test_retrieve_once(config, retrieve_tests + i, debug);
+            if (ret == RET_OK && status != RET_OK) ret = status;
         }
     }
     return ret;
@@ -731,6 +739,7 @@ int main(int argc, char* argv[])
     int ret = RET_ERR;
     gboolean keep_temp = FALSE;
     gboolean verbose = FALSE;
+    gboolean debug = FALSE;
     GError* error = NULL;
     GOptionContext* options;
     GOptionEntry entries[] = {
@@ -738,6 +747,8 @@ int main(int argc, char* argv[])
           "Enable verbose output", NULL },
         { "keep", 'k', 0, G_OPTION_ARG_NONE, &keep_temp,
           "Keep temporary files", NULL },
+        { "debug", 'd', 0, G_OPTION_ARG_NONE, &debug,
+          "Disable timeout for debugging", NULL },
         { NULL }
     };
 
@@ -770,11 +781,11 @@ int main(int argc, char* argv[])
         }
 
         if (argc < 2) {
-            ret = test_retrieve(&config, test_name);
+            ret = test_retrieve(&config, test_name, debug);
         } else {
             int i;
             for (i=1, ret = RET_OK; i<argc; i++) {
-                int test_status =  test_retrieve(&config, argv[i]);
+                int test_status =  test_retrieve(&config, argv[i], debug);
                 if (ret == RET_OK && test_status != RET_OK) ret = test_status;
             }
         }
