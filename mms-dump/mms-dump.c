@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013-2014 Jolla Ltd.
+ * Copyright (C) 2013-2015 Jolla Ltd.
+ * Contact: Slava Monich <slava.monich@jolla.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -516,7 +517,7 @@ mms_value_decode_encoded_text(
         { "ISO-8859-10",     13},
         { "Shift_JIS",       17},
         { "EUC-JP",          18},
-        { "KS_C_5601-1987",  36},
+        { "CP949",           36},
         { "ISO-2022-KR",     37},
         { "EUC-KR",          38},
         { "ISO-2022-JP",     39},

@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013-2014 Jolla Ltd.
+ * Copyright (C) 2013-2015 Jolla Ltd.
+ * Contact: Slava Monich <slava.monich@jolla.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -67,6 +68,7 @@ int main(int argc, char* argv[])
         "m-retrieve_7.conf",
         "m-retrieve_8.conf",
         "m-retrieve_9.conf",
+        "m-retrieve_10.conf",
         "m-notifyresp.ind",
         "m-read-rec.ind",
         "m-send_1.req",
