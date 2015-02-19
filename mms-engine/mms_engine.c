@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013-2014 Jolla Ltd.
+ * Copyright (C) 2013-2015 Jolla Ltd.
+ * Contact: Slava Monich <slava.monich@jolla.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -242,7 +243,7 @@ gboolean
 mms_engine_handle_send_read_report(
     OrgNemomobileMmsEngine* proxy,
     GDBusMethodInvocation* call,
-    const char* id,
+    int database_id,
     const char* imsi,
     const char* message_id,
     const char* to,
@@ -250,6 +251,7 @@ mms_engine_handle_send_read_report(
     MMSEngine* engine)
 {
     GError* error = NULL;
+    char* id = g_strdup_printf("%d", database_id);
     MMS_DEBUG_("%s %s %s %s %d", id, imsi, message_id, to, read_status);
     if (mms_dispatcher_send_read_report(engine->dispatcher, id, imsi,
         message_id, to, (read_status == 1) ? MMS_READ_STATUS_DELETED :
@@ -263,6 +265,7 @@ mms_engine_handle_send_read_report(
             G_DBUS_ERROR_FAILED, "%s", MMS_ERRMSG(error));
         g_error_free(error);
     }
+    g_free(id);
     return TRUE;
 }
 
