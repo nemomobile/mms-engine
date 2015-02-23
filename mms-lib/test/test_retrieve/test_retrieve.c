@@ -752,16 +752,14 @@ int main(int argc, char* argv[])
         { NULL }
     };
 
-    mms_lib_init(argv[0]);
     options = g_option_context_new("[TEST] - MMS retrieve test");
     g_option_context_add_main_entries(options, entries, NULL);
     if (g_option_context_parse(options, &argc, &argv, &error)) {
         MMSConfig config;
-        const char* test_name = (argc == 2) ? argv[1] : NULL;
         char* tmpd = g_mkdtemp(g_strdup("/tmp/test_retrieve_XXXXXX"));
         char* msgdir = g_strconcat(tmpd, "/msg", NULL);
-        MMS_VERBOSE("Temporary directory %s", tmpd);
  
+        mms_lib_init(argv[0]);
         mms_lib_default_config(&config);
         config.root_dir = tmpd;
         config.keep_temp_files = keep_temp;
@@ -780,8 +778,9 @@ int main(int argc, char* argv[])
             mms_log_stdout_timestamp = FALSE;
         }
 
+        MMS_VERBOSE("Temporary directory %s", tmpd);
         if (argc < 2) {
-            ret = test_retrieve(&config, test_name, debug);
+            ret = test_retrieve(&config, NULL, debug);
         } else {
             int i;
             for (i=1, ret = RET_OK; i<argc; i++) {
@@ -794,13 +793,13 @@ int main(int argc, char* argv[])
         rmdir(tmpd);
         g_free(msgdir);
         g_free(tmpd);
+        mms_lib_deinit();
     } else {
         fprintf(stderr, "%s\n", MMS_ERRMSG(error));
         g_error_free(error);
         ret = RET_ERR;
     }
     g_option_context_free(options);
-    mms_lib_deinit();
     return ret;
 }
 
