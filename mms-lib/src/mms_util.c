@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013-2014 Jolla Ltd.
+ * Copyright (C) 2013-2015 Jolla Ltd.
+ * Contact: Slava Monich <slava.monich@jolla.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -50,6 +51,42 @@ mms_split_address_list(
         list[0] = NULL;
     }
     return list;
+}
+
+/**
+ * Removes leading and trailing whitespaces from the address and appends
+ * the address type if necessary (defaults to phone number). In any case
+ * the caller must deallocate the returned string. Returns NULL if the
+ * input string is either NULL or empty.
+ */
+char*
+mms_address_normalize(
+    const char* address)
+{
+    if (address) {
+        gssize len;
+
+        /* Skip leading whitespaces */
+        while (*address && g_ascii_isspace(*address)) address++;
+
+        /* Calculate the length without traling whitespaces */
+        len = strlen(address);
+        while (len > 0 && g_ascii_isspace(address[len-1])) len--;
+        if (len > 0) {
+
+            /* Append the address type if necessary */
+            char* out;
+            if (g_strrstr_len(address, len, MMS_ADDRESS_TYPE_SUFFIX)) {
+                out = g_strndup(address, len);
+            } else {
+                out = g_new(char, len+sizeof(MMS_ADDRESS_TYPE_SUFFIX_PHONE));
+                strncpy(out, address, len);
+                strcpy(out+len, MMS_ADDRESS_TYPE_SUFFIX_PHONE);
+            }
+            return out;
+        }
+    }
+    return NULL;
 }
 
 /**

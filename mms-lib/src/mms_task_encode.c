@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013-2014 Jolla Ltd.
+ * Copyright (C) 2013-2015 Jolla Ltd.
+ * Contact: Slava Monich <slava.monich@jolla.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -535,25 +536,6 @@ mms_task_encode_prepare_attachments(
 
 static
 char*
-mms_task_encode_prepare_address(
-    const char* s)
-{
-    if (s && s[0]) {
-        char* str = g_strstrip(g_strdup(s));
-        const char* type = g_strrstr(str, MMS_ADDRESS_TYPE_SUFFIX);
-        if (type) {
-            return str;
-        } else {
-            char* adr = g_strconcat(str, MMS_ADDRESS_TYPE_SUFFIX_PHONE, NULL);
-            g_free(str);
-            return adr;
-        }
-    }
-    return NULL;
-}
-
-static
-char*
 mms_task_encode_prepare_address_list(
     const char* s)
 {
@@ -563,7 +545,7 @@ mms_task_encode_prepare_address_list(
             char** part = g_strsplit(s, ",", 0);
             GString* buf = g_string_sized_new(strlen(s));
             for (i=0; part[i]; i++) {
-                char* addr = mms_task_encode_prepare_address(part[i]);
+                char* addr = mms_address_normalize(part[i]);
                 if (addr) {
                     if (buf->len > 0) g_string_append_c(buf, ',');
                     g_string_append(buf, addr);
@@ -573,7 +555,7 @@ mms_task_encode_prepare_address_list(
             g_strfreev(part);
             return g_string_free(buf, FALSE);
         } else {
-            return mms_task_encode_prepare_address(s);
+            return mms_address_normalize(s);
         }
     }
     return NULL;

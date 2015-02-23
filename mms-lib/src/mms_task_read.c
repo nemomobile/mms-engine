@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013-2014 Jolla Ltd.
+ * Copyright (C) 2013-2015 Jolla Ltd.
+ * Contact: Slava Monich <slava.monich@jolla.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +17,7 @@
 #include "mms_task_http.h"
 #include "mms_file_util.h"
 #include "mms_codec.h"
+#include "mms_util.h"
 #include "mms_log.h"
 #include "mms_error.h"
 
@@ -41,7 +43,7 @@ mms_task_read_encode(
         pdu->ri.rr_status = (status == MMS_READ_STATUS_DELETED) ?
             MMS_MESSAGE_READ_STATUS_DELETED : MMS_MESSAGE_READ_STATUS_READ;
         pdu->ri.msgid = g_strdup(message_id);
-        pdu->ri.to = g_strdup(to);
+        pdu->ri.to = mms_address_normalize(to);
         time(&pdu->ri.date);
         if (mms_message_encode(pdu, fd)) {
             result = file;
