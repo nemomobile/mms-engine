@@ -38,6 +38,7 @@ struct mms_engine {
     OrgNemomobileMmsEngine* proxy;
     GMainLoop* loop;
     gboolean stopped;
+    gboolean stop_requested;
     gboolean keep_running;
     guint start_timeout_id;
     gulong send_message_id;
@@ -68,7 +69,8 @@ mms_engine_stop_callback(
     gpointer data)
 {
     MMSEngine* engine = data;
-    mms_engine_stop(engine);
+    engine->stopped = TRUE;
+    if (engine->loop) g_main_loop_quit(engine->loop);
     mms_engine_unref(engine);
     return FALSE;
 }
@@ -551,6 +553,7 @@ mms_engine_run(
     MMS_ASSERT(!engine->loop);
     engine->loop = loop;
     engine->stopped = FALSE;
+    engine->stop_requested = FALSE;
     if (!mms_dispatcher_start(engine->dispatcher) && !engine->keep_running) {
         mms_engine_start_timeout_schedule(engine);
     }
@@ -563,8 +566,12 @@ void
 mms_engine_stop(
     MMSEngine* engine)
 {
-    engine->stopped = TRUE;
-    if (engine->loop) g_main_loop_quit(engine->loop);
+    if (mms_dispatcher_is_active(engine->dispatcher)) {
+        engine->stop_requested = TRUE;
+        mms_dispatcher_cancel(engine->dispatcher, NULL);
+    } else {
+        mms_engine_stop_schedule(engine);
+    }
 }
 
 void
@@ -604,7 +611,9 @@ mms_engine_delegate_dispatcher_done(
 {
     MMSEngine* engine = mms_engine_from_dispatcher_delegate(delegate);
     MMS_DEBUG("All done");
-    if (!engine->keep_running) mms_engine_stop_schedule(engine);
+    if (!engine->keep_running || engine->stop_requested) {
+        mms_engine_stop_schedule(engine);
+    }
 }
 
 /**
