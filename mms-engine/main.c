@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013-2014 Jolla Ltd.
+ * Copyright (C) 2013-2015 Jolla Ltd.
+ * Contact: Slava Monich <slava.monich@jolla.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -50,14 +51,10 @@ gboolean
 mms_app_signal(
     gpointer arg)
 {
-    GMainLoop* loop = arg;
+    MMSEngine* engine = arg;
     MMS_INFO("Caught signal, shutting down...");
-    if (loop) {
-        g_idle_add((GSourceFunc)g_main_loop_quit, loop);
-    } else {
-        exit(0);
-    }
-    return FALSE;
+    mms_engine_stop(engine);
+    return TRUE;
 }
 
 /* D-Bus event handlers */
@@ -299,15 +296,14 @@ int main(int argc, char* argv[])
         engine = mms_engine_new(&opt.config, &opt.settings, opt.flags,
             mms_app_log_modules, G_N_ELEMENTS(mms_app_log_modules));
         if (engine) {
-            guint name_id;
 
             /* Setup main loop */
             GMainLoop* loop = g_main_loop_new(NULL, FALSE);
-            g_unix_signal_add(SIGTERM, mms_app_signal, loop);
-            g_unix_signal_add(SIGINT, mms_app_signal, loop);
+            guint sigtrm = g_unix_signal_add(SIGTERM, mms_app_signal, engine);
+            guint sigint = g_unix_signal_add(SIGINT, mms_app_signal, engine);
 
             /* Acquire name, don't allow replacement */
-            name_id = g_bus_own_name(opt.bus_type, MMS_ENGINE_SERVICE,
+            guint name_id = g_bus_own_name(opt.bus_type, MMS_ENGINE_SERVICE,
                 G_BUS_NAME_OWNER_FLAGS_REPLACE, mms_app_bus_acquired,
                 mms_app_name_acquired, mms_app_name_lost, engine, NULL);
 
@@ -315,6 +311,8 @@ int main(int argc, char* argv[])
             mms_engine_run(engine, loop);
 
             /* Cleanup and exit */
+            if (sigtrm) g_source_remove(sigtrm);
+            if (sigint) g_source_remove(sigint);
             g_bus_unown_name(name_id);
             g_main_loop_unref(loop);
             mms_engine_unref(engine);

@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013-2014 Jolla Ltd.
+ * Copyright (C) 2013-2015 Jolla Ltd.
+ * Contact: Slava Monich <slava.monich@jolla.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -570,8 +571,15 @@ mms_dispatcher_cancel(
             mms_task_cancel(task);
         }
     }
+
     if (mms_task_match_id(disp->active_task, id)) {
         mms_task_cancel(disp->active_task);
+    }
+
+    /* If we have cancelling all tasks, close the network connection
+     * immediately to finish up as soon as possible. */
+    if (!id && disp->connection) {
+        mms_dispatcher_close_connection(disp);
     }
 }
 
