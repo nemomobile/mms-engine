@@ -273,7 +273,7 @@ mms_file_decode_step(
     size_t (*step)(GMimeEncoding*, const char*, size_t, char*),
     GError** error)
 {
-    ssize_t nbytes;
+    gssize nbytes;
     size_t need = g_mime_encoding_outlen(&dec->state, inlen);
     if (need > dec->outbuflen) {
         g_free(dec->outbuf);
