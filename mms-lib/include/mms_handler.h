@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013-2014 Jolla Ltd.
+ * Copyright (C) 2013-2015 Jolla Ltd.
+ * Contact: Slava Monich <slava.monich@jolla.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -18,7 +19,7 @@
 #include "mms_message.h"
 
 /* Receive state */
-typedef enum _mmm_receive_state {
+typedef enum _mms_receive_state {
     MMS_RECEIVE_STATE_INVALID = -1,
     MMS_RECEIVE_STATE_RECEIVING,
     MMS_RECEIVE_STATE_DEFERRED,
@@ -29,7 +30,7 @@ typedef enum _mmm_receive_state {
 } MMS_RECEIVE_STATE;
 
 /* Send state */
-typedef enum _mmm_send_state {
+typedef enum _mms_send_state {
     MMS_SEND_STATE_INVALID = -1,
     MMS_SEND_STATE_ENCODING,
     MMS_SEND_STATE_TOO_BIG,
@@ -41,7 +42,7 @@ typedef enum _mmm_send_state {
 } MMS_SEND_STATE;
 
 /* Delivery status */
-typedef enum _mmm_delivery_status {
+typedef enum _mms_delivery_status {
     MMS_DELIVERY_STATUS_INVALID = -1,
     MMS_DELIVERY_STATUS_UNKNOWN,
     MMS_DELIVERY_STATUS_EXPIRED,
