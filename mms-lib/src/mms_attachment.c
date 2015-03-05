@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013-2014 Jolla Ltd.
+ * Copyright (C) 2013-2015 Jolla Ltd.
+ * Contact: Slava Monich <slava.monich@jolla.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -45,6 +46,11 @@ G_DEFINE_TYPE(MMSAttachment, mms_attachment, G_TYPE_OBJECT);
 #define MEDIA_VIDEO     "video"
 #define MEDIA_AUDIO     "audio"
 #define MEDIA_OTHER     "ref"
+
+#define MEDIA_TYPE_TEXT_PREFIX  "text/"
+#define MEDIA_TYPE_IMAGE_PREFIX "image/"
+#define MEDIA_TYPE_VIDEO_PREFIX "video/"
+#define MEDIA_TYPE_AUDIO_PREFIX "audio/"
 
 static
 void
@@ -117,40 +123,70 @@ mms_attachment_write_smil(
     int n,
     GError** error)
 {
+    static const char* text_region_1 =
+        "   <region id=\"" REGION_TEXT "\" top=\"0%\" left=\"0%\" "
+            "height=\"100%\" width=\"100%\" fit=\"scroll\"/>\n";
+    static const char* text_region_2 =
+        "   <region id=\"" REGION_TEXT "\" top=\"70%\" left=\"0%\" "
+            "height=\"30%\" width=\"100%\" fit=\"scroll\"/>\n";
+    static const char* media_region_1 =
+        "   <region id=\"" REGION_MEDIA "\" top=\"0%\" left=\"0%\""
+            " height=\"100%\" width=\"100%\" fit=\"meet\"/>\n";
+    static const char* media_region_2 =
+        "   <region id=\"" REGION_MEDIA "\" top=\"0%\" left=\"0%\""
+            " height=\"70%\" width=\"100%\" fit=\"meet\"/>\n";
+
+    int i;
+    const char* text_region = NULL;
+    const char* media_region = NULL;
+
+    /* Check if we have text region, image region or both */
+    for (i=0; i<n && !(text_region && media_region); i++) {
+        const MMSAttachment* at = ats[i];
+        MMS_ASSERT(!(at->flags & MMS_ATTACHMENT_SMIL));
+        if (g_str_has_prefix(at->content_type, MEDIA_TYPE_TEXT_PREFIX)) {
+            text_region = text_region_1;
+        } else {
+            media_region = media_region_1;
+        }
+    }
+
+    /* Select non-overlapping layouts if we have both */
+    if (text_region && media_region) {
+        text_region = text_region_2;
+        media_region = media_region_2;
+    }
+
     if (fputs(
-        "<!DOCTYPE smil PUBLIC \"-//W3C//DTD SMIL 1.0//EN\" "
-        "\"http://www.w3.org/TR/REC-smil/SMIL10.dtd\">\n"
         "<smil>\n"
         " <head>\n"
         "  <layout>\n"
-        "   <root-layout height=\"160\" width=\"120\"/>\n"
-        "    <region fit=\"scroll\" height=\"100%\" left=\"0\" "
-             "top=\"0\" width=\"100%\" id=\"" REGION_TEXT "\"/>\n"
-        "    <region fit=\"meet\" height=\"100%\" left=\"0\" "
-             "top=\"0\" width=\"100%\" id=\"" REGION_MEDIA "\"/>\n"
+        "   <root-layout/>\n", f) >= 0 &&
+        (!media_region || fputs(media_region, f) >= 0) &&
+        (!text_region || fputs(text_region, f) >= 0) && fputs(
         "  </layout>\n"
         " </head>\n"
         " <body>\n"
         "  <par dur=\"5000ms\">\n", f) >= 0) {
-        int i;
         for (i=0; i<n; i++) {
             const MMSAttachment* at = ats[i];
+            const char* ct = at->content_type;
             const char* elem;
             const char* region;
             MMS_ASSERT(!(at->flags & MMS_ATTACHMENT_SMIL));
-            if (g_str_has_prefix(at->content_type, "text/")) {
-                elem = "text";
+            if (g_str_has_prefix(ct, MEDIA_TYPE_TEXT_PREFIX)) {
+                elem = MEDIA_TEXT;
                 region = REGION_TEXT;
             } else {
                 region = REGION_MEDIA;
-                if (g_str_has_prefix(at->content_type, "image/")) {
-                    elem = "img";
-                } else if (g_str_has_prefix(at->content_type, "video/")) {
-                    elem = "video";
-                } else if (g_str_has_prefix(at->content_type, "audio/")) {
-                    elem = "audio";
+                if (g_str_has_prefix(ct, MEDIA_TYPE_IMAGE_PREFIX)) {
+                    elem = MEDIA_IMAGE;
+                } else if (g_str_has_prefix(ct, MEDIA_TYPE_VIDEO_PREFIX)) {
+                    elem = MEDIA_VIDEO;
+                } else if (g_str_has_prefix(ct, MEDIA_TYPE_AUDIO_PREFIX)) {
+                    elem = MEDIA_AUDIO;
                 } else {
-                    elem = "ref";
+                    elem = MEDIA_OTHER;
                 }
             }
             if (fprintf(f, "   <%s src=\"%s\" region=\"%s\"/>\n", elem,
@@ -186,7 +222,7 @@ mms_attachment_guess_content_type(
 
     /* Magic detects SMIL as text/html */
     if ((!detected_type ||
-         g_str_has_prefix(detected_type, "text/")) &&
+         g_str_has_prefix(detected_type, MEDIA_TYPE_TEXT_PREFIX)) &&
          mms_file_is_smil(path)) {
         detected_type = SMIL_CONTENT_TYPE;
     }
@@ -218,7 +254,9 @@ mms_attachment_new_smil(
     if (fd >= 0) {
         FILE* f = fdopen(fd, "w");
         if (f) {
-            gboolean ok = mms_attachment_write_smil(f, ats, n, error);
+            gboolean ok;
+            MMS_VERBOSE("Writing SMIL %s", path);
+            ok = mms_attachment_write_smil(f, ats, n, error);
             fclose(f);
             if (ok) {
                 MMSAttachmentInfo ai;
@@ -295,8 +333,10 @@ mms_attachment_new(
                 if (!strcmp(media_type, SMIL_CONTENT_TYPE)) {
                     flags |= MMS_ATTACHMENT_SMIL;
                     charset = default_charset;
-                } else if (g_str_has_prefix(media_type, "text/")) {
-                    charset = default_charset;
+                } else {
+                    if (g_str_has_prefix(media_type, MEDIA_TYPE_TEXT_PREFIX)) {
+                        charset = default_charset;
+                    }
                 }
 
                 ct[n++] = media_type;
@@ -314,7 +354,7 @@ mms_attachment_new(
 
             if (!strcmp(media_type, "image/jpeg")) {
                 type = MMS_TYPE_ATTACHMENT_JPEG;
-            } else if (g_str_has_prefix(media_type, "image/")) {
+            } else if (g_str_has_prefix(media_type, MEDIA_TYPE_IMAGE_PREFIX)) {
                 type = MMS_TYPE_ATTACHMENT_IMAGE;
             } else {
                 type = MMS_TYPE_ATTACHMENT;
