@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013-2014 Jolla Ltd.
+ * Copyright (C) 2013-2015 Jolla Ltd.
+ * Contact: Slava Monich <slava.monich@jolla.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -444,6 +445,24 @@ mms_handler_dbus_read_report(
     return FALSE;
 }
 
+/* Done with sending MMS read report */
+gboolean
+mms_handler_dbus_read_report_send_status(
+    MMSHandler* handler,
+    const char* id,
+    MMS_READ_REPORT_STATUS status)
+{
+    OrgNemomobileMmsHandler* proxy = mms_handler_dbus_connect(handler);
+    if (id && id[0] && proxy) {
+        mms_handler_ref(handler);
+        mms_handler_busy_inc(handler);
+        org_nemomobile_mms_handler_call_read_report_send_status(proxy, id,
+            status, NULL, mms_handler_dbus_call_done, handler);
+        return TRUE;
+    }
+    return FALSE;
+}
+
 /**
  * First stage of deinitialization (release all references).
  * May be called more than once in the lifetime of the object.
@@ -496,6 +515,8 @@ mms_handler_dbus_class_init(
     klass->fn_message_sent = mms_handler_dbus_message_sent;
     klass->fn_delivery_report = mms_handler_dbus_delivery_report;
     klass->fn_read_report = mms_handler_dbus_read_report;
+    klass->fn_read_report_send_status =
+        mms_handler_dbus_read_report_send_status;
     object_class->dispose = mms_handler_dbus_dispose;
     object_class->finalize = mms_handler_dbus_finalize;
 }
