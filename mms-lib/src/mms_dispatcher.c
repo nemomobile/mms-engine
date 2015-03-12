@@ -659,7 +659,7 @@ mms_dispatcher_handler_done(
     void* param)
 {
     MMSDispatcher* disp = param;
-    MMS_VERBOSE("Handler has nothing to do");
+    MMS_VERBOSE("Handler is inactive");
     mms_dispatcher_next_run_schedule(disp);
 }
 
