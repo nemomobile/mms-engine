@@ -33,6 +33,8 @@
 
 #define TEST_TIMEOUT (10) /* seconds */
 
+#define TEST_IMSI    "IMSI"
+
 typedef struct test_desc {
     const char* name;
     MMSReadStatus status;
@@ -48,6 +50,8 @@ typedef struct test {
     MMSHandler* handler;
     MMSDispatcher* disp;
     GMainLoop* loop;
+    const char* imsi;
+    char* id;
     guint timeout_id;
     TestHttp* http;
     int ret;
@@ -96,7 +100,14 @@ test_done(
                     MMS_ERR("Phone number %s, expected %s",
                         pdu->ri.to, desc->to);
                 } else {
-                    test->ret = RET_OK;
+                    MMS_READ_REPORT_STATUS status =
+                        mms_handler_test_read_report_status(test->handler,
+                        test->id);
+                    if (status != MMS_READ_REPORT_STATUS_OK) {
+                        MMS_ERR("Unexpected status %d", status);
+                    } else {
+                        test->ret = RET_OK;
+                    }
                 }
             } else {
                 MMS_ERR("Can't decode PDU");
@@ -141,6 +152,7 @@ test_init(
     test->delegate.fn_done = test_done;
     mms_dispatcher_set_delegate(test->disp, &test->delegate);
     test->http = test_http_new(NULL, NULL, SOUP_STATUS_OK);
+    test->id = g_strdup(mms_handler_test_receive_new(test->handler, TEST_IMSI));
     mms_connman_test_set_port(test->cm, test_http_get_port(test->http), TRUE);
     mms_settings_unref(settings);
     test->ret = RET_ERR;
@@ -159,6 +171,7 @@ test_finalize(
         g_source_remove(test->timeout_id);
         test->timeout_id = 0;
     }
+    g_free(test->id);
     test_http_close(test->http);
     test_http_unref(test->http);
     mms_connman_test_close_connection(test->cm);
@@ -178,7 +191,7 @@ test_read_report_once(
     Test test;
     GError* error = NULL;
     test_init(&test, config, desc, debug);
-    if (mms_dispatcher_send_read_report(test.disp, "1", "IMSI",
+    if (mms_dispatcher_send_read_report(test.disp, test.id, TEST_IMSI,
         "MessageID", desc->phone, desc->status, &error)) {
         if (mms_dispatcher_start(test.disp)) {
             test.ret = RET_OK;
@@ -273,6 +286,7 @@ int main(int argc, char* argv[])
         rmdir(tmpd);
         remove(tmpd);
         g_free(tmpd);
+        g_free(msgdir);
         mms_lib_deinit();
     } else {
         fprintf(stderr, "%s\n", MMS_ERRMSG(error));

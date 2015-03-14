@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013-2014 Jolla Ltd.
+ * Copyright (C) 2013-2015 Jolla Ltd.
+ * Contact: Slava Monich <slava.monich@jolla.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -57,6 +58,7 @@ typedef struct mms_handler_record_send {
 typedef struct mms_handler_record_receive {
     MMSHandlerRecord rec;
     MMS_RECEIVE_STATE state;
+    MMS_READ_REPORT_STATUS read_report_status;
     MMSDispatcher* dispatcher;
     MMSMessage* msg;
     GBytes* data;
@@ -211,6 +213,16 @@ mms_handler_test_receive_state(
     MMSHandlerRecordReceive* recv =
     mms_handler_test_get_receive_record(MMS_HANDLER_TEST(handler), id);
     return recv ? recv->state : MMS_RECEIVE_STATE_INVALID;
+}
+
+MMS_READ_REPORT_STATUS
+mms_handler_test_read_report_status(
+    MMSHandler* handler,
+    const char* id)
+{
+    MMSHandlerRecordReceive* recv =
+    mms_handler_test_get_receive_record(MMS_HANDLER_TEST(handler), id);
+    return recv ? recv->read_report_status : MMS_READ_REPORT_STATUS_INVALID;
 }
 
 typedef struct mms_handler_test_foreach_received_message_data {
@@ -422,6 +434,32 @@ mms_handler_test_notify(
 }
 
 static
+MMSHandlerRecordReceive*
+mms_handler_test_receive_create(
+    MMSHandlerTest* test,
+    const char* imsi)
+{
+    MMSHandlerRecordReceive* recv = g_new0(MMSHandlerRecordReceive, 1);
+    char* id = g_strdup_printf("%u", (++test->last_id));
+    recv->rec.id = id;
+    recv->rec.imsi = g_strdup(imsi);
+    recv->rec.type = MMS_HANDLER_RECORD_RECEIVE;
+    recv->state = MMS_RECEIVE_STATE_INVALID;
+    recv->read_report_status = MMS_READ_REPORT_STATUS_INVALID;
+    g_hash_table_replace(test->recs, id, &recv->rec);
+    return recv;
+}
+
+const char*
+mms_handler_test_receive_new(
+    MMSHandler* handler,
+    const char* imsi)
+{
+    MMSHandlerTest* test = MMS_HANDLER_TEST(handler);
+    return mms_handler_test_receive_create(test, imsi)->rec.id;
+}
+
+static
 MMSHandlerMessageNotifyCall*
 mms_handler_test_message_notify(
     MMSHandler* handler,
@@ -444,15 +482,11 @@ mms_handler_test_message_notify(
         expiry, data, test->prenotify_data)) {
         MMS_DEBUG("Rejecting push imsi=%s from=%s subj=%s", imsi, from, subj);
     } else {
-        MMSHandlerRecordReceive* recv = g_new0(MMSHandlerRecordReceive, 1);
-        char* id = g_strdup_printf("%u", (++test->last_id));
-        recv->rec.id = id;
-        recv->rec.imsi = g_strdup(imsi);
-        recv->rec.type = MMS_HANDLER_RECORD_RECEIVE;
-        recv->state = MMS_RECEIVE_STATE_INVALID;
+        MMSHandlerRecordReceive* recv =
+            mms_handler_test_receive_create(test, imsi);
+        const char* id = recv->rec.id;
         recv->data = g_bytes_ref(data);
         MMS_DEBUG("Push %s imsi=%s from=%s subj=%s", id, imsi, from, subj);
-        g_hash_table_replace(test->recs, id, &recv->rec);
         recv->notify = notify;
         notify->recv = recv;
         if (test->dispatcher) {
@@ -628,7 +662,7 @@ mms_handler_test_delivery_report(
     MMSHandlerTest* test = MMS_HANDLER_TEST(handler);
     MMSHandlerRecordSend* send =
     mms_handler_get_send_record_for_msgid(test, msgid);
-    MMS_DEBUG("Message %s delivered to %s", msgid, recipient); 
+    MMS_DEBUG("Message %s delivered to %s", msgid, recipient);
     if (send) {
         MMS_ASSERT(send->delivery_status == MMS_DELIVERY_STATUS_INVALID);
         if (send->delivery_status == MMS_DELIVERY_STATUS_INVALID) {
@@ -636,7 +670,7 @@ mms_handler_test_delivery_report(
             return TRUE;
         }
     } else {
-        MMS_DEBUG("Unknown message id %s (this may be OK)", msgid); 
+        MMS_DEBUG("Unknown message id %s (this may be OK)", msgid);
     }
     return FALSE;
 }
@@ -653,7 +687,7 @@ mms_handler_test_read_report(
     MMSHandlerTest* test = MMS_HANDLER_TEST(handler);
     MMSHandlerRecordSend* send =
     mms_handler_get_send_record_for_msgid(test, msgid);
-    MMS_DEBUG("Message %s read by %s", msgid, recipient); 
+    MMS_DEBUG("Message %s read by %s", msgid, recipient);
     if (send) {
         MMS_ASSERT(send->read_status == MMS_READ_STATUS_INVALID);
         if (send->read_status == MMS_READ_STATUS_INVALID) {
@@ -661,9 +695,27 @@ mms_handler_test_read_report(
             return TRUE;
         }
     } else {
-        MMS_DEBUG("Unknown message id %s (this may be OK)", msgid); 
+        MMS_DEBUG("Unknown message id %s (this may be OK)", msgid);
     }
     return FALSE;
+}
+
+gboolean
+mms_handler_test_read_report_send_status(
+    MMSHandler* handler,
+    const char* id,
+    MMS_READ_REPORT_STATUS status)
+{
+    MMSHandlerRecordReceive* recv =
+    mms_handler_test_get_receive_record(MMS_HANDLER_TEST(handler), id);
+    if (recv) {
+        MMS_DEBUG("Read report %s status %d", id, status);
+        recv->read_report_status = status;
+        return TRUE;
+    } else {
+        MMS_DEBUG("Unknown record id %s", id);
+        return FALSE;
+    }
 }
 
 void
@@ -694,7 +746,9 @@ mms_handler_test_class_init(
     klass->fn_message_receive_state_changed =
         mms_handler_test_message_receive_state_changed;
     klass->fn_delivery_report =  mms_handler_test_delivery_report;
-    klass->fn_read_report =  mms_handler_test_read_report;
+    klass->fn_read_report = mms_handler_test_read_report;
+    klass->fn_read_report_send_status =
+        mms_handler_test_read_report_send_status;
 }
 
 static

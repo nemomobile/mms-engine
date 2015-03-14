@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013-2014 Jolla Ltd.
+ * Copyright (C) 2013-2015 Jolla Ltd.
+ * Contact: Slava Monich <slava.monich@jolla.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -26,6 +27,11 @@ mms_handler_test_send_new(
     const char* imsi);
 
 const char*
+mms_handler_test_receive_new(
+    MMSHandler* handler,
+    const char* imsi);
+
+const char*
 mms_handler_test_send_msgid(
     MMSHandler* handler,
     const char* id);
@@ -37,6 +43,11 @@ mms_handler_test_send_state(
 
 MMS_RECEIVE_STATE
 mms_handler_test_receive_state(
+    MMSHandler* handler,
+    const char* id);
+
+MMS_READ_REPORT_STATUS
+mms_handler_test_read_report_status(
     MMSHandler* handler,
     const char* id);
 
