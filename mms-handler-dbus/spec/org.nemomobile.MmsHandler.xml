@@ -254,6 +254,29 @@
     <!--
         ===============================================================
 
+        Reports completion status of read report send request submitted
+        by org.nemomobile.MmsEngine.sendReadReport call.
+
+        ===============================================================
+    -->
+    <method name="readReportSendStatus">
+      <!--
+          Database record id.
+      -->
+      <arg direction="in" type="s" name="recId"/>
+      <!--
+          Indicates the result of the operation:
+
+          0: Read report has been sent
+          1: Transient failure (wrong SIM, no coverage, I/O error)
+          2: Permanent failure (error from the operator)
+      -->
+      <arg direction="in" type="i" name="status"/>
+    </method>
+
+    <!--
+        ===============================================================
+
         Message delivery notification. These are only coming if
         delivery reports were requested when message was sent.
 

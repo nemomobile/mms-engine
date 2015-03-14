@@ -57,6 +57,14 @@ typedef enum _mms_delivery_status {
 /* Read status */
 typedef MMSReadStatus MMS_READ_STATUS;
 
+/* Read report status */
+typedef enum _mms_read_report_status {
+    MMS_READ_REPORT_STATUS_INVALID = -1,
+    MMS_READ_REPORT_STATUS_OK,
+    MMS_READ_REPORT_STATUS_IO_ERROR,
+    MMS_READ_REPORT_STATUS_PERMANENT_ERROR
+} MMS_READ_REPORT_STATUS;
+
 /* Handler event callback */
 typedef void
 (*mms_handler_event_fn)(
@@ -156,6 +164,12 @@ typedef struct mms_handler_class {
         const char* recipient,      /* Recipient's phone number */
         MMS_READ_STATUS rs);        /* Read status */
 
+    /* Done with sending MMS read report */
+    gboolean (*fn_read_report_send_status)(
+        MMSHandler* handler,        /* Handler instance */
+        const char* id,             /* Handler record id */
+        MMS_READ_REPORT_STATUS s);  /* Status */
+
 } MMSHandlerClass;
 
 GType mms_handler_get_type(void);
@@ -230,6 +244,12 @@ mms_handler_read_report(
     const char* msgid,              /* Message id assigned by operator */
     const char* recipient,          /* Recipient's phone number */
     MMS_READ_STATUS rs);            /* Read status */
+
+gboolean
+mms_handler_read_report_send_status(
+    MMSHandler* handler,            /* Handler instance */
+    const char* id,                 /* Handler record id */
+    MMS_READ_REPORT_STATUS status); /* Status */
 
 void
 mms_handler_busy_update(

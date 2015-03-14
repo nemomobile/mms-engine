@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013-2014 Jolla Ltd.
+ * Copyright (C) 2013-2015 Jolla Ltd.
+ * Contact: Slava Monich <slava.monich@jolla.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -258,6 +259,22 @@ mms_handler_read_report(
             return klass->fn_read_report(h, imsi, msgid, recipient, rs);
         }
         MMS_ERR("mms_handler_read_report not implemented");
+    }
+    return FALSE;
+}
+
+gboolean
+mms_handler_read_report_send_status(
+    MMSHandler* h,
+    const char* id,
+    MMS_READ_REPORT_STATUS status)
+{
+    if (h) {
+        MMSHandlerClass* klass = MMS_HANDLER_GET_CLASS(h);
+        if (klass->fn_read_report_send_status) {
+            return klass->fn_read_report_send_status(h, id, status);
+        }
+        MMS_ERR("mms_handler_read_report_send_status not implemented");
     }
     return FALSE;
 }

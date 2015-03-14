@@ -16,10 +16,20 @@
 #include "mms_task.h"
 #include "mms_task_http.h"
 #include "mms_file_util.h"
+#include "mms_handler.h"
 #include "mms_codec.h"
 #include "mms_util.h"
 #include "mms_log.h"
 #include "mms_error.h"
+
+/* Class definition */
+typedef MMSTaskHttpClass MMSTaskReadClass;
+typedef MMSTaskHttp MMSTaskRead;
+
+G_DEFINE_TYPE(MMSTaskRead, mms_task_read, MMS_TYPE_TASK_HTTP);
+#define MMS_TYPE_TASK_READ (mms_task_read_get_type())
+#define MMS_TASK_READ(obj) (G_TYPE_CHECK_INSTANCE_CAST((obj),\
+        MMS_TYPE_TASK_READ, MMSTaskRead))
 
 static
 const char*
@@ -58,6 +68,47 @@ mms_task_read_encode(
     return result;
 }
 
+static
+void
+mms_task_read_done(
+    MMSTaskHttp* http,
+    const char* path,
+    SoupStatus soup_status)
+{
+    MMSTask* task = &http->task;
+    MMS_READ_REPORT_STATUS send_status;
+    if (SOUP_STATUS_IS_INFORMATIONAL(soup_status) ||
+        SOUP_STATUS_IS_SUCCESSFUL(soup_status)) {
+        send_status = MMS_READ_REPORT_STATUS_OK;
+    } else if (SOUP_STATUS_IS_TRANSPORT_ERROR(soup_status)) {
+        send_status = MMS_READ_REPORT_STATUS_IO_ERROR;
+    } else {
+        send_status = MMS_READ_REPORT_STATUS_PERMANENT_ERROR;
+    }
+    mms_handler_read_report_send_status(task->handler, task->id, send_status);
+}
+
+/**
+ * Per class initializer
+ */
+static
+void
+mms_task_read_class_init(
+    MMSTaskReadClass* klass)
+{
+    klass->fn_done = mms_task_read_done;
+}
+
+/**
+ * Per instance initializer
+ */
+static
+void
+mms_task_read_init(
+    MMSTaskRead* self)
+{
+}
+
 /**
  * Create MMS read report task
  */
@@ -75,8 +126,8 @@ mms_task_read_new(
     const char* file = mms_task_read_encode(settings->config,
         id, msg_id, to, rs, err);
     if (file) {
-        return mms_task_http_alloc(0, settings, handler, "Read",
-            id, imsi, NULL, NULL, file);
+        return mms_task_http_alloc(MMS_TYPE_TASK_READ, settings, handler,
+            "Read", id, imsi, NULL, NULL, file);
     }
     return NULL;
 }
