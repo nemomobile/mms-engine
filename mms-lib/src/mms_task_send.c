@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013-2014 Jolla Ltd.
+ * Copyright (C) 2013-2015 Jolla Ltd.
+ * Contact: Slava Monich <slava.monich@jolla.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -39,7 +40,7 @@ mms_task_send_started(
     MMSTaskHttp* http)
 {
     mms_handler_message_send_state_changed(http->task.handler,
-        http->task.id, MMS_SEND_STATE_SENDING);
+        http->task.id, MMS_SEND_STATE_SENDING, NULL);
 }
 
 static
@@ -48,7 +49,7 @@ mms_task_send_paused(
     MMSTaskHttp* http)
 {
     mms_handler_message_send_state_changed(http->task.handler,
-        http->task.id, MMS_SEND_STATE_DEFERRED);
+        http->task.id, MMS_SEND_STATE_DEFERRED, NULL);
 }
 
 static
@@ -61,6 +62,7 @@ mms_task_send_done(
     MMSPdu* pdu = NULL;
     MMS_SEND_STATE state = MMS_SEND_STATE_SEND_ERROR;
     const char* msgid = NULL;
+    const char* details = NULL;
     if (SOUP_STATUS_IS_SUCCESSFUL(status)) {
         /* Decode the result */
         GError* error = NULL;
@@ -81,6 +83,7 @@ mms_task_send_done(
                         }
                     } else {
                         MMS_ERR("MMSC responded with %u", pdu->sc.rsp_status);
+                        details = pdu->sc.rsp_text;
                         switch (pdu->sc.rsp_status) {
                         case MMS_MESSAGE_RSP_STATUS_ERR_SERVICE_DENIED:
                         case MMS_MESSAGE_RSP_STATUS_ERR_CONTENT_NOT_ACCEPTED:
@@ -110,7 +113,7 @@ mms_task_send_done(
         mms_handler_message_sent(http->task.handler, http->task.id, msgid);
     } else {
         mms_handler_message_send_state_changed(http->task.handler,
-            http->task.id, state);
+            http->task.id, state, details);
     }
     if (pdu) mms_message_free(pdu);
 }

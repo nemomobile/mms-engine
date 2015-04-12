@@ -369,7 +369,8 @@ gboolean
 mms_handler_dbus_message_send_state_changed(
     MMSHandler* handler,
     const char* id,
-    MMS_SEND_STATE state)
+    MMS_SEND_STATE state,
+    const char* details)
 {
     OrgNemomobileMmsHandler* proxy = mms_handler_dbus_connect(handler);
     MMS_ASSERT(id && id[0]);
@@ -377,7 +378,8 @@ mms_handler_dbus_message_send_state_changed(
         mms_handler_ref(handler);
         mms_handler_busy_inc(handler);
         org_nemomobile_mms_handler_call_message_send_state_changed(proxy, id,
-            state, NULL, mms_handler_dbus_call_done, handler);
+            state, details ? details : "", NULL, mms_handler_dbus_call_done,
+            handler);
         return TRUE;
     }
     return FALSE;

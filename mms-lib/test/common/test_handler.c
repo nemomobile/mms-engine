@@ -53,6 +53,7 @@ typedef struct mms_handler_record_send {
     MMS_DELIVERY_STATUS delivery_status;
     MMS_READ_STATUS read_status;
     char* msgid;
+    char* details;
 } MMSHandlerRecordSend;
 
 typedef struct mms_handler_record_receive {
@@ -203,6 +204,16 @@ mms_handler_test_send_state(
     MMSHandlerRecordSend* send =
     mms_handler_test_get_send_record(MMS_HANDLER_TEST(handler), id);
     return send ? send->state : MMS_SEND_STATE_INVALID;
+}
+
+const char*
+mms_handler_test_send_details(
+    MMSHandler* handler,
+    const char* id)
+{
+    MMSHandlerRecordSend* send =
+    mms_handler_test_get_send_record(MMS_HANDLER_TEST(handler), id);
+    return send ? send->details : NULL;
 }
 
 MMS_RECEIVE_STATE
@@ -365,6 +376,7 @@ mms_handler_test_hash_remove_record(
         g_free(recv);
     } else {
         MMSHandlerRecordSend* send = mms_handler_test_record_send(rec);
+        g_free(send->details);
         g_free(send->msgid);
         g_free(send);
     }
@@ -615,13 +627,20 @@ gboolean
 mms_handler_test_message_send_state_changed(
     MMSHandler* handler,
     const char* id,
-    MMS_SEND_STATE state)
+    MMS_SEND_STATE state,
+    const char* details)
 {
     MMSHandlerRecordSend* send =
     mms_handler_test_get_send_record(MMS_HANDLER_TEST(handler), id);
     if (send) {
         send->state = state;
-        MMS_DEBUG("Message %s send state %d", id, state);
+        g_free(send->details);
+        send->details = g_strdup(details);
+        if (details) {
+            MMS_DEBUG("Message %s send state %d: %s", id, state, details);
+        } else {
+            MMS_DEBUG("Message %s send state %d", id, state);
+        }
         return TRUE;
     } else {
         MMS_ERR("No such outbound message: %s", id);

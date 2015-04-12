@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013-2014 Jolla Ltd.
+ * Copyright (C) 2013-2015 Jolla Ltd.
+ * Contact: Slava Monich <slava.monich@jolla.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -48,6 +49,7 @@ typedef struct test_desc {
     const char* resp_type;
     unsigned int resp_status;
     MMS_SEND_STATE expected_state;
+    const char* details;
     const char* msgid;
 } TestDesc;
 
@@ -118,6 +120,7 @@ static const TestDesc send_tests[] = {
         MMS_CONTENT_TYPE,
         SOUP_STATUS_OK,
         MMS_SEND_STATE_SENDING,
+        NULL,
         "TestMessageId"
     },{
         "AcceptNoExt",
@@ -133,6 +136,7 @@ static const TestDesc send_tests[] = {
         MMS_CONTENT_TYPE,
         SOUP_STATUS_OK,
         MMS_SEND_STATE_SENDING,
+        NULL,
         "TestMessageId"
     },{
         "ServiceDenied",
@@ -148,6 +152,7 @@ static const TestDesc send_tests[] = {
         MMS_CONTENT_TYPE,
         SOUP_STATUS_OK,
         MMS_SEND_STATE_REFUSED,
+        "Unable to send",
         NULL
     },{
         "Failure",
@@ -163,6 +168,7 @@ static const TestDesc send_tests[] = {
         MMS_CONTENT_TYPE,
         SOUP_STATUS_OK,
         MMS_SEND_STATE_SEND_ERROR,
+        NULL,
         NULL
     },{
         "UnparsableResp",
@@ -178,6 +184,7 @@ static const TestDesc send_tests[] = {
         MMS_CONTENT_TYPE,
         SOUP_STATUS_OK,
         MMS_SEND_STATE_SEND_ERROR,
+        NULL,
         NULL
     },{
         "UnexpectedResp",
@@ -193,6 +200,7 @@ static const TestDesc send_tests[] = {
         MMS_CONTENT_TYPE,
         SOUP_STATUS_OK,
         MMS_SEND_STATE_SEND_ERROR,
+        NULL,
         NULL
     },{
         "EmptyMessageID",
@@ -208,6 +216,7 @@ static const TestDesc send_tests[] = {
         MMS_CONTENT_TYPE,
         SOUP_STATUS_OK,
         MMS_SEND_STATE_SEND_ERROR,
+        NULL,
         NULL
     },{
         "Cancel",
@@ -223,6 +232,7 @@ static const TestDesc send_tests[] = {
         NULL,
         SOUP_STATUS_INTERNAL_SERVER_ERROR,
         MMS_SEND_STATE_SEND_ERROR,
+        NULL,
         NULL
     },{
         "TooBig",
@@ -238,6 +248,7 @@ static const TestDesc send_tests[] = {
         NULL,
         SOUP_STATUS_INTERNAL_SERVER_ERROR,
         MMS_SEND_STATE_TOO_BIG,
+        NULL,
         NULL
     }
 };
@@ -251,11 +262,17 @@ test_finish(
     const char* name = desc->name;
     if (test->ret == RET_OK) {
         MMS_SEND_STATE state;
+        const char* details;
         state = mms_handler_test_send_state(test->handler, test->id);
+        details = mms_handler_test_send_details(test->handler, test->id);
         if (state != desc->expected_state) {
             test->ret = RET_ERR;
             MMS_ERR("%s state %d, expected %d", name, state,
                 desc->expected_state);
+        } else if (g_strcmp0(details, desc->details)) {
+            test->ret = RET_ERR;
+            MMS_ERR("%s details '%s', expected '%s'", name, details,
+                desc->details);
         } else if (desc->msgid) {
             const char* msgid =
             mms_handler_test_send_msgid(test->handler, test->id);

@@ -140,7 +140,8 @@ typedef struct mms_handler_class {
     gboolean (*fn_message_send_state_changed)(
         MMSHandler* handler,        /* Handler instance */
         const char* id,             /* Handler record id */
-        MMS_SEND_STATE state);      /* Receive state */
+        MMS_SEND_STATE state,       /* Receive state */
+        const char* details);       /* Optional details */
 
     /* Message has been sent */
     gboolean (*fn_message_sent)(
@@ -221,7 +222,8 @@ gboolean
 mms_handler_message_send_state_changed(
     MMSHandler* handler,            /* Handler instance */
     const char* id,                 /* Handler record id */
-    MMS_SEND_STATE state);          /* Receive state */
+    MMS_SEND_STATE state,           /* Receive state */
+    const char* details);           /* Optional details */
 
 gboolean
 mms_handler_message_sent(

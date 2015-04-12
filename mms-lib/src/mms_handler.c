@@ -199,12 +199,13 @@ gboolean
 mms_handler_message_send_state_changed(
     MMSHandler* h,
     const char* id,
-    MMS_SEND_STATE state)
+    MMS_SEND_STATE state,
+    const char* details)
 {
     if (h) {
         MMSHandlerClass* klass = MMS_HANDLER_GET_CLASS(h);
         if (klass->fn_message_send_state_changed) {
-            return klass->fn_message_send_state_changed(h, id, state);
+            return klass->fn_message_send_state_changed(h, id, state, details);
         }
         MMS_ERR("mms_handler_message_send_state_changed not implemented");
     }

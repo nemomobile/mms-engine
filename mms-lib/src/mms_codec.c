@@ -1443,6 +1443,8 @@ static gboolean decode_send_conf(struct wsp_header_iter *iter,
 				&out->version,
 				MMS_HEADER_RESPONSE_STATUS,
 				HEADER_FLAG_MANDATORY, &out->sc.rsp_status,
+				MMS_HEADER_RESPONSE_TEXT,
+				0, &out->sc.rsp_text,
 				MMS_HEADER_MESSAGE_ID,
 				0, &out->sc.msgid,
 				MMS_HEADER_INVALID);
@@ -1551,6 +1553,7 @@ void mms_message_free(struct mms_message *msg)
 		g_free(msg->sr.content_type);
 		break;
 	case MMS_MESSAGE_TYPE_SEND_CONF:
+		g_free(msg->sc.rsp_text);
 		g_free(msg->sc.msgid);
 		break;
 	case MMS_MESSAGE_TYPE_NOTIFICATION_IND:

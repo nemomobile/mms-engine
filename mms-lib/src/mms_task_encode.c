@@ -326,7 +326,8 @@ mms_task_encode_job_done(
         } else {
             mms_handler_message_send_state_changed(task->handler, task->id,
                 (job->state == MMS_ENCODE_STATE_TOO_BIG) ?
-                MMS_SEND_STATE_TOO_BIG : MMS_SEND_STATE_SEND_ERROR);
+                MMS_SEND_STATE_TOO_BIG : MMS_SEND_STATE_SEND_ERROR,
+                NULL);
         }
         mms_task_set_state(&enc->task, MMS_TASK_STATE_DONE);
         mms_encode_job_unref(job);
@@ -350,7 +351,7 @@ mms_task_encode_run(
     if (thread) {
         g_thread_unref(thread);
         mms_handler_message_send_state_changed(task->handler, task->id,
-            MMS_SEND_STATE_ENCODING);
+            MMS_SEND_STATE_ENCODING, NULL);
         mms_task_set_state(task, MMS_TASK_STATE_WORKING);
         MMS_ASSERT(!enc->active_job);
         enc->active_job = job;
@@ -361,7 +362,7 @@ mms_task_encode_run(
         mms_encode_job_unref(job);
         mms_handler_message_send_state_changed(task->handler, task->id,
             mms_task_retry(task) ? MMS_SEND_STATE_DEFERRED :
-            MMS_SEND_STATE_SEND_ERROR);
+            MMS_SEND_STATE_SEND_ERROR, NULL);
     }
 }
 
