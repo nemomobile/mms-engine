@@ -225,6 +225,14 @@
           6 (Refused):   Operator refused to accept the message
       -->
       <arg direction="in" type="i" name="state"/>
+      <!--
+          Optional detail string. In most cases it's empty by in case
+          if the message was refused by the operator it contains the
+          value of X-Mms-Response-Text header from M-Send.conf PDU.
+          It could explain the reason for the failure and should be
+          displayed to the user.
+      -->
+      <arg direction="in" type="s" name="details"/>
     </method>
 
     <!--

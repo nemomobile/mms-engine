@@ -41,6 +41,11 @@ mms_handler_test_send_state(
     MMSHandler* handler,
     const char* id);
 
+const char*
+mms_handler_test_send_details(
+    MMSHandler* handler,
+    const char* id);
+
 MMS_RECEIVE_STATE
 mms_handler_test_receive_state(
     MMSHandler* handler,
