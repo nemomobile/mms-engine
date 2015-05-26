@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2013-2014 Jolla Ltd.
+ * Copyright (C) 2013-2015 Jolla Ltd.
+ * Contact: Slava Monich <slava.monich@jolla.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -292,7 +293,8 @@ mms_task_http_finished(
                 soup_message_headers_get_content_type(msg->response_headers,
                 NULL), priv->bytes_received);
         } else {
-            MMS_DEBUG("HTTP status %u", msg->status_code);
+            MMS_DEBUG("HTTP status %u (%s)", msg->status_code,
+                soup_status_get_phrase(msg->status_code));
         }
 #endif /* MMS_LOG_DEBUG */
 
@@ -311,7 +313,8 @@ mms_task_http_finished(
                 }
             } else {
                 next_http_state = MMS_HTTP_DONE;
-                MMS_WARN("HTTP error %u", msg->status_code);
+                MMS_WARN("HTTP error %u (%s)", msg->status_code,
+                    soup_status_get_phrase(msg->status_code));
                 mms_task_set_state(task, MMS_TASK_STATE_DONE);
             }
         }
