@@ -6,7 +6,7 @@ PKGCONFIG += glib-2.0 gio-2.0 gio-unix-2.0
 DBUS_SPEC_DIR = $$_PRO_FILE_PWD_/spec
 INCLUDEPATH += include
 INCLUDEPATH += ../mms-lib/include
-QMAKE_CFLAGS += -Wno-unused
+QMAKE_CFLAGS += -Wno-unused-parameter
 
 CONFIG(debug, debug|release) {
   DEFINES += DEBUG

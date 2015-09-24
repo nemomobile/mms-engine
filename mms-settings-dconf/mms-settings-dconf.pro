@@ -5,7 +5,7 @@ CONFIG += link_pkgconfig
 PKGCONFIG += glib-2.0 dconf
 INCLUDEPATH += include
 INCLUDEPATH += ../mms-lib/include
-QMAKE_CFLAGS += -Wno-unused
+QMAKE_CFLAGS += -Wno-unused-parameter
 
 CONFIG(debug, debug|release) {
   DEFINES += DEBUG

@@ -10,7 +10,7 @@ INCLUDEPATH += $$MMS_OFONO_DIR/include
 INCLUDEPATH += $$MMS_LIB_DIR/include
 INCLUDEPATH += $$MMS_HANDLER_DIR/include
 INCLUDEPATH += $$MMS_SETTINGS_DIR/include
-QMAKE_CFLAGS += -Wno-unused
+QMAKE_CFLAGS += -Wno-unused-parameter
 
 include(../mms-lib/mms-lib-config.pri)
 

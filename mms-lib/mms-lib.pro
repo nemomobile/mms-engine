@@ -3,7 +3,7 @@ CONFIG += staticlib
 CONFIG += link_pkgconfig
 PKGCONFIG += gmime-2.6 glib-2.0 libsoup-2.4 libwspcodec
 INCLUDEPATH += include
-QMAKE_CFLAGS += -Wno-unused
+QMAKE_CFLAGS += -Wno-unused-parameter
 
 include(mms-lib-config.pri)
 
