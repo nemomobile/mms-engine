@@ -1,1 +1,0 @@
-<smil><head><layout><root-layout width="360" height="615"/><region id="Image" width="347" height="260" top="341" left="7" fit="meet"/><region id="Text" width="326" height="320" top="14" left="7" fit="scroll"/></layout></head><body><par dur="5000ms"><img region="Image" src="2014_03_.jpg"/><text region="Text" src="Test_mms.txt"/></par></body></smil>

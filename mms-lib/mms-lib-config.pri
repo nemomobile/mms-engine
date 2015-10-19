@@ -1,2 +1,0 @@
-#CONFIG += ResizeImageMagick
-CONFIG += ResizeQt

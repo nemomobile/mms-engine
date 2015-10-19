@@ -1,5 +1,0 @@
-# Goes to /usr/share/dbus-1/system-services
-[D-BUS Service]
-Name=org.nemomobile.MmsEngine
-Exec=/usr/sbin/mms-engine -o syslog
-User=nemo
